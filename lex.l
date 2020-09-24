@@ -1,15 +1,16 @@
 %{
     //#include "Token.cpp"
     #include "Tag.cpp"
+    #include <iostream>
 
+    using namespace std;
 
-    //using namespace std;
-
-    //string stringLiteral = "";
+    string stringLiteral = "";
+    string comment = "";
 %}
 
  /*some flex states/start conditions for weird stuff like string literals and comments */
-%x STRLIT COMMENT
+%x STRLIT INLINECMT BLOCKCMT
 
 %option noyywrap yylineno header-file="lex.yy.h"
 %%
@@ -59,27 +60,32 @@ t[rR][uU][eE]			        	return TRUE;
 "<"									return LT;
 "<="								return LTE; 
 "="									return EQ;
-\"[^\n"]+\"							return STRING;
+\"									{BEGIN(STRLIT); cout << "Entering <STRLIT> state\n";}
+--                                  {BEGIN(INLINECMT);}
+\(\*                                {BEGIN(BLOCKCMT);}
 
- /* String literal has to be handled carefully, make use of Flex states/start conditions */
-
- /*
-\"									{BEGIN(STRLIT); cout << "read start \"\n"; stringLiteral.clear();}
 <STRLIT>{
-	[A-Za-z ]*							{cout << "Read some letters\n"; stringLiteral += YYText();}
+	[A-Za-z \.,?!]*						{stringLiteral += yytext;}
+    
+    /*this rule is for typing \n within a string*/
+    \\n 							    {stringLiteral += '\n';}
 
+    /*rule for multiline strings. first we see a \ literal then an invisible newline. Net effect is adding a newline*/
+    \\\n                                {stringLiteral += '\n';}
 
-
-
-
-
-
-	\"								{BEGIN(0); 
-									char* cstr; 
-									strcpy(cstr, stringLiteral.c_str());
-									yytext = cstr; 
-									cout << "read ending \"\n"; 
-									return STRING;}
+	\"								    {
+	                                    stringLiteral = "";
+	                                    BEGIN(0);
+	                                    }
 }								
- */
- 
+
+<INLINECMT>{
+    \n                                  BEGIN(0);
+    .*                                  ;
+}
+
+<BLOCKCMT>{
+    \*\)                                {BEGIN(0);}
+    ^[\*\)]                             {}
+    \n                                  {}
+}
