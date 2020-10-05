@@ -1,5 +1,7 @@
 #include <iostream>
 #include <lex.yy.h>
+#include "Tag.h"
+#include "lex.yy.h"
 
 using namespace std;
 
@@ -14,8 +16,20 @@ int main(int argc, char** argv) {
         return 1;
     }
     yyin = inputFile;
-    while(yylex()) {
-        cout << yytext << endl;
+
+    cout.setf(std::ios::unitbuf);
+
+    int token;
+    while( (token = yylex()) ) {
+        if(token != 999) {
+            cout << yylineno << endl << tagMap.at(token) << endl;
+            if(token == IDENTIFIER || token == STRING || token == TYPE || token == INTEGER) {
+                cout << yylval->lexeme << endl;
+            }
+        }
+
     }
+
+
 
 }

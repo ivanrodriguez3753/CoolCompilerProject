@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.17)
 project(CoolCompilerProject)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_STANDARD 99)
+#set(CMAKE_C_STANDARD 99)
+
+message(${CMAKE_CXX_COMPILER_VERSION})
 
 set(FLEX_OUTPUT ley.yy.c lex.yy.h)
 
@@ -12,6 +14,7 @@ if(FLEX_FOUND)
     message("i found flex!!")
     message(${CMAKE_BINARY_DIR})
     #correctly using gdb flex instead of apple flex
+    message("Checking flex version")
     message(${FLEX_VERSION})
 
 
@@ -23,7 +26,7 @@ if(FLEX_FOUND)
     FLEX_TARGET(lexer lex.l  ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.cpp)
 endif()
 
-add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS})
+add_executable(CoolCompilerProject main.cpp Token.cpp ${FLEX_lexer_OUTPUTS} Tag.h Tag.cpp)
 
 target_include_directories(CoolCompilerProject
     PRIVATE

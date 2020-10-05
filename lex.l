@@ -1,11 +1,16 @@
 %{
     //#include "Token.cpp"
-    #include "Tag.cpp"
+    #include "Tag.h"
     #include <iostream>
+    #include <string>
+
+    extern YYLVAL_T* yylval;
+    extern char* yytext;
 
     using namespace std;
 
     string stringLiteral = "";
+    string lexeme = "";
     string comment = "";
 %}
 
@@ -14,7 +19,7 @@
 
 %option noyywrap yylineno header-file="lex.yy.h"
 %%
-[ \n\t]+            {/*do nothing, yylineno is taking care of lineno*/}
+[ \n\t]+            {return 999;/*do nothing, yylineno is taking care of lineno*/}
 
  /*keywords are case insensitive, except for true/false which must begin with a lowercase in
  accordance with the rules for object types*/
@@ -37,18 +42,19 @@ f[aA][lL][sS][eE]					return FALSE;
 [oO][fF]			        		return OF;
 [nN][oO][tT]			        	return NOT;
 t[rR][uU][eE]			        	return TRUE;
-[0-9]+							    return INTEGER;
-[A-Z][a-zA-Z0-9_]*					return TYPEID;
-[a-z][a-zA-Z0-9_]*					return OBJECTID;
+[0-9]+							    {lexeme = string(yytext);
+                                    yylval->lexeme = lexeme; return INTEGER;}
+[A-Z][a-zA-Z0-9_]*					{lexeme = string(yytext);
+                                    yylval->lexeme = lexeme; return TYPE;}
+[a-z][a-zA-Z0-9_]*					{lexeme = string(yytext);
+                                    yylval->lexeme = lexeme; return IDENTIFIER;}
 ":"									return COLON;
-";"									return SEMICOLON;
+";"									return SEMI;
 "("									return LPAREN;
 ")"									return RPAREN;
-"["									return LBRACKET;
-"]"									return RBRACKET;
-"{"									return LCURLY;
-"}"									return RCURLY;
-"<-"								return ASSIGNMENT;
+"{"									return LBRACE;
+"}"									return RBRACE;
+"<-"								return LARROW;
 "."									return DOT;
 ","									return COMMA;
 "@"									return AT;
@@ -56,26 +62,31 @@ t[rR][uU][eE]			        	return TRUE;
 "-"									return MINUS;
 "*"									return TIMES;
 "/"									return DIVIDE;
-"~"									return TILDA;
+"~"									return TILDE;
 "<"									return LT;
-"<="								return LTE; 
-"="									return EQ;
-\"									{BEGIN(STRLIT); cout << "Entering <STRLIT> state\n";}
+"<="								return LE;
+"=>"                                return RARROW;
+"="								    return EQUALS;
+\"									{BEGIN(STRLIT); yylval->lexeme = "";}
 --                                  {BEGIN(INLINECMT);}
 \(\*                                {BEGIN(BLOCKCMT);}
 
 <STRLIT>{
-	[A-Za-z \.,?!]*						{stringLiteral += yytext;}
+	[0-9A-Za-z \.,?!\-\+_=/\\:;]*					{yylval->lexeme = string(yytext);
+	                                    stringLiteral += string(yytext);}
     
     /*this rule is for typing \n within a string*/
-    \\n 							    {stringLiteral += '\n';}
-
-    /*rule for multiline strings. first we see a \ literal then an invisible newline. Net effect is adding a newline*/
-    \\\n                                {stringLiteral += '\n';}
-
+    /*
+    \\n 							    {yylval->lexeme += "\\n";
+                                        stringLiteral += '\n';}
+    \\t                                 {yylval->lexeme += "\\t";
+                                        stringLiteral += '\t';}
+    */
 	\"								    {
+	                                    //yylval.lexeme += "";
 	                                    stringLiteral = "";
 	                                    BEGIN(0);
+	                                    return STRING;
 	                                    }
 }								
 
@@ -86,6 +97,6 @@ t[rR][uU][eE]			        	return TRUE;
 
 <BLOCKCMT>{
     \*\)                                {BEGIN(0);}
-    ^[\*\)]                             {}
-    \n                                  {}
+    [\n\t ]                             {}
+    ^[\*\)]                             {/*yylval->lexeme =*/ "";}
 }
