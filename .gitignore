@@ -2,3 +2,4 @@
 /.idea/*
 /CoolPrograms
 .DS_Store
+*.cl-lex

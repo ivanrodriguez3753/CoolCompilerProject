@@ -9,7 +9,10 @@ add_subdirectory(vendor)
 
 add_executable(
     tests
-    src/dummyTest.cpp
+    src/lexer.cpp
+    src/main.cpp
+    ../../Tag.cpp
+    ../../cmake-build-debug/lex.yy.cpp
     #insert .cpp test files here, like src/tests.cpp
 )
 add_test(NAME aName COMMAND tests)
@@ -20,8 +23,6 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src #test source code
     ${CMAKE_CURRENT_SOURCE_DIR}/../src #main project source code
 )
-message(${CMAKE_CURRENT_SOURCE_DIR})
-message(${CMAKE_CURRENT_BINARY_DIR})
 
 target_include_directories(tests
         PRIVATE
@@ -32,8 +33,8 @@ target_include_directories(tests
         ${CMAKE_CURRENT_BINARY_DIR}/../
         #other source files like Tag.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../
-        )
+)
 
 
 #Link against Google Test library
-target_link_libraries(tests gmock_main)
+target_link_libraries(tests gmock_main gmock gtest)

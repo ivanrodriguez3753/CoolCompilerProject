@@ -1,5 +1,4 @@
 #include <iostream>
-#include <lex.yy.h>
 #include "Tag.h"
 #include "lex.yy.h"
 

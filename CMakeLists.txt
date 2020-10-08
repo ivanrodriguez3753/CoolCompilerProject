@@ -42,6 +42,5 @@ target_include_directories(CoolCompilerProject
 include(CTest)
 enable_testing()
 if(BUILD_TESTING)
-    message("entered BUILD_TESTING")
     add_subdirectory(tests)
 endif()
