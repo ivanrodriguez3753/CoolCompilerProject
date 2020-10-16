@@ -9,10 +9,17 @@ set(CMAKE_CXX_STANDARD 11)
 
 message(${CMAKE_CXX_COMPILER_VERSION})
 
-set(FLEX_OUTPUT ley.yy.c lex.yy.h)
-
-
+find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
+
+if(BISON_FOUND)
+    message("I found bison!!")
+    message("Checking bison version")
+    message(${BISON_VERSION})
+
+    BISON_TARGET(parser parse.yy ${CMAKE_CURRENT_BINARY_DIR}/parser.cc)
+endif()
+
 if(FLEX_FOUND)
     message("i found flex!!")
     #correctly using gnu flex instead of apple flex
@@ -23,29 +30,23 @@ if(FLEX_FOUND)
     #compiler. Right now it is generating C code that is compiled with a C++ compiler, so that we avoid undefined symbol
     #errors when including in another source file. This is because C and C++ linkage get messy and I couldn't figure out
     #the extern stuff. So just generate C code, name it with .cpp extension so FLEX_TARGET uses g++, and make sure that
-    #the .l file has %option
-    FLEX_TARGET(lexer lex.l ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.cpp)
+    #the .l file has %option header-file="lex.yy.h" or whatever you want to call it
+    FLEX_TARGET(lexer lex.ll ${CMAKE_CURRENT_BINARY_DIR}/lexer.cc)
 endif()
 
-find_package(BISON REQUIRED)
-if(BISON_FOUND)
-    message("I found bison!!")
-    message("Checking bison version")
-    message(${BISON_VERSION})
-endif()
+add_flex_bison_dependency(lexer parser)
 
-add_library(MyLibrary Tag.h Tag.cpp ${FLEX_lexer_OUTPUTS} Token.cpp)
-add_executable(CoolCompilerProject main.cpp Tag.h)
+add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp)
+add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp)
 target_link_libraries(CoolCompilerProject MyLibrary)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 target_include_directories(CoolCompilerProject
-    PRIVATE
+    PUBLIC
         ..
-        #${FLEX_INCLUDE_DIRS}
         ${CMAKE_CURRENT_BINARY_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
+target_link_directories(CoolCompilerProject PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 

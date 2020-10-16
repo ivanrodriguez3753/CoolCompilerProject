@@ -2,6 +2,7 @@
 #include "lex.yy.h"
 #include "Tag.h"
 #include "gtest/gtest.h"
+#include "parse.tab.hpp"
 using namespace std;
 
 const string RESOURCES_DIR = "../../tests/resources/";
