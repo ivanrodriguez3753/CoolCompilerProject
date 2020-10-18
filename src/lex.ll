@@ -116,13 +116,14 @@ t[rR][uU][eE]			        	return make_TRUE(yytext, loc);
 }								
 
 <INLINECMT>{
-    \n                                  BEGIN(0);
+    \n                                  {BEGIN(0); loc.lines(yyleng);}
     .*                                  ;
 }
 
 <BLOCKCMT>{
     \*\)                                {BEGIN(0);}
-    [\n\t ]                             {}
+    [ \t\r]+                            {loc.step();}
+    \n+                                 {loc.lines(yyleng); loc.step();}
     ^[\*\)]                             {/*yylval->lexeme =*/ "";}
 }
 
@@ -148,7 +149,7 @@ make_FALSE(const std::string& s, const yy::parser::location_type& loc) {
 yy::parser::symbol_type
 make_TRUE(const std::string& s, const yy::parser::location_type& loc) {
     //don't need to convert the string like we did the integer helper
-    return yy::parser::make_FALSE(false, loc);
+    return yy::parser::make_TRUE(true, loc);
 }
 
 void
