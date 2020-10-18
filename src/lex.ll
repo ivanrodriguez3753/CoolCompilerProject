@@ -150,3 +150,21 @@ make_TRUE(const std::string& s, const yy::parser::location_type& loc) {
     //don't need to convert the string like we did the integer helper
     return yy::parser::make_FALSE(false, loc);
 }
+
+void
+ParserDriver::scan_begin() {
+     yy_flex_debug = trace_scanning;
+      if (file.empty () || file == "-")
+        yyin = stdin;
+      else if (!(yyin = fopen (file.c_str (), "r")))
+        {
+          std::cerr << "cannot open " << file << ": " << strerror (errno) << '\n';
+          exit (EXIT_FAILURE);
+        }
+}
+
+void
+ParserDriver::scan_end ()
+{
+  fclose (yyin);
+}

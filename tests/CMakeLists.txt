@@ -10,7 +10,7 @@ message("hiiii")
 message(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(
     tests
-    src/lexer.cpp
+        src/lexerTests.cpp
     src/main.cpp
     #insert .cpp test files here, like src/tests.cpp
 )
@@ -39,7 +39,7 @@ add_dependencies(tests CoolCompilerProject)
 
 #Link against Google Test library
 target_link_libraries(tests gmock_main gmock gtest MyLibrary)
-
+target_link_directories(tests PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../src)
 
 #Build Google Test library
 add_subdirectory(vendor)
