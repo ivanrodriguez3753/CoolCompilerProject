@@ -1,8 +1,7 @@
 
 #include "ParserDriver.hh"
 #include "parser.hh"
-#include "lexerTests.hh"
-
+#include "parseTree/parseTreeNodes.h"
 ParserDriver::ParserDriver() : trace_parsing{false}, trace_scanning{false} {}
 
 int ParserDriver::parse(const std::string& f) {
@@ -15,6 +14,22 @@ int ParserDriver::parse(const std::string& f) {
     scan_end();
     return res;
 }
+
+void ParserDriver::postorderTraversal() {
+    postorderRecurs(rootIVAN);
+}
+
+void ParserDriver::postorderRecurs(node *current) {
+    for(auto child : *current->children) {
+        postorderRecurs(child);
+    }
+    if(current->children->empty()) { //terminal node
+        terminalNode* term = (terminalNode*)current;
+        cout << term->tokenType << endl;
+    }
+
+}
+
 
 //void ParserDriver::scan_begin() {
 //    yy_flex_debug = trace_scanning;

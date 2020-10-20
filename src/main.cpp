@@ -29,6 +29,7 @@ int main(int argc, char** argv) {
             res = 1;
         }
     }
+    drv.postorderTraversal();
     return res;
 
 

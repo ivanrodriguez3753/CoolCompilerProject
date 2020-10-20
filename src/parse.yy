@@ -11,8 +11,18 @@
 %define parse.assert
 
 %code requires {
+    class node;
+
     #include <string>
+    #include <list>
+    #include "parseTree/parseTreeNodes.h"
+
     class ParserDriver;
+    class programNode;
+    class classNode;
+    class classListNode;
+
+
 }
 
 //ParserDriver is passed by ref to parser and scanner. Provides simple but effective pure interface without globals
@@ -31,6 +41,7 @@
 //This will be output in the *.cc file, it needs detailed knowledge about the driver
 %code {
     #include "ParserDriver.hh"
+    #include "parseTree/parseTreeNodes.h"
 }
 
 //prefix tokens with TOK to avoid name clashes in generated files
@@ -82,6 +93,14 @@
 %token <bool> FALSE "false"
 %token <std::string> TYPE "type"
 
+//%nterm < std::list<classNode *>* > classlist
+%nterm <programNode*> program
+%nterm <classListNode*> classlist
+%nterm <classNode*> class
+%nterm <featureListNode*> featureList
+%nterm <featureNode*> feature
+
+
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
 //all values are printed using their operator<<
 %printer {yyo << $$;} <*>;
@@ -90,19 +109,19 @@
 //start grammar
 %%
 //from the reference manual:
-/*
-The precedence of infix binary and prefix unary operations, from highest to lowest, is given by the following table:
-.
-@
-~
-isvoid
-* /
-+ -
-<=  <  =
-not
-<-
-All binary operations are left-associative, with the exception of assignment, which is right-associative, and the three comparison operations, which do not associate.
-*/
+
+//The precedence of infix binary and prefix unary operations, from highest to lowest, is given by the following table:
+//.
+//@
+//~
+//isvoid
+//* /
+//+ -
+//<=  <  =
+//not
+//<-
+//All binary operations are left-associative, with the exception of assignment, which is right-associative, and the three comparison operations, which do not associate.
+
 
 //bison needs precedence to be from lowest to highest
 //%right "<-"
@@ -115,25 +134,59 @@ All binary operations are left-associative, with the exception of assignment, wh
 //%left "@"
 //%left "."
 
-
-
-
+%start program;
 program:
-	classlist
-	;
+    classlist
+    {
+        //this should be the only rule that doesn't use $$ =
+        //instead it uses the global rootIVAN which is the root of the parse tree
+        rootIVAN = new programNode{$1};
+    }
+;
 
 classlist:
-	/*epsilon*/
-	| class SEMI classlist
-	;
-class:
-	CLASS TYPE LBRACE featurelist RBRACE
-	| CLASS TYPE INHERITS TYPE LBRACE featurelist RBRACE
-	;
+    classlist class
+    {
+        $$ = $1;
+        $1->classList.push_back($2);
+        $1->children->push_back($2);
+
+    }
+|   %empty
+	{
+        $$ = new classListNode{};
+	}
+
+;
+
+
+class: //took off optionalInh and featureList for now
+    CLASS TYPE LBRACE RBRACE SEMI
+    {
+        $$ = new classNode{new terminalNode{"class"},
+                           new wordNode{"type", $2},
+                           new terminalNode{ "{" },
+                           new terminalNode{ "}" },
+                           new terminalNode{ ";" }
+                           };
+    }
+;
+
+optionalInh:
+    %empty
+    {
+
+    }
+|   INHERITS TYPE
+    {
+    }
+;
+
 
 featurelist:
 	/*epsilon*/
-	;
+|   featureList feature
+;
 
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {

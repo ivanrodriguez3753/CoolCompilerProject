@@ -11,6 +11,7 @@
 #include <string>
 #include "parser.hh"
 
+
 //give Flex the prototype of yylex we want...
 #define YY_DECL yy::parser::symbol_type yylex(ParserDriver& drv)
 //...and declare it for the parser's sake
@@ -37,5 +38,10 @@ public:
 
     //Token's location used by scanner
     yy::location location;
+
+    void postorderTraversal();
+
+private:
+    void postorderRecurs(node* current);
 };
 #endif //PARSERDRIVER_H
