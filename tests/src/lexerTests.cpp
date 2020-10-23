@@ -100,6 +100,7 @@ TEST(LexerFull, hs) {
     stringstream lexerOutput;
     lexInput(pdrv, lexerOutput);
 
+
     stringstream reference = makeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), lexerOutput.str());
 }

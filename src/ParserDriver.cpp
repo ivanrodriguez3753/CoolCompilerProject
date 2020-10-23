@@ -1,7 +1,7 @@
 
 #include "ParserDriver.hh"
 #include "parser.hh"
-#include "parseTree/parseTreeNodes.h"
+#include "parseTreeNodes.h"
 ParserDriver::ParserDriver() : trace_parsing{false}, trace_scanning{false} {}
 
 int ParserDriver::parse(const std::string& f) {
@@ -15,17 +15,28 @@ int ParserDriver::parse(const std::string& f) {
     return res;
 }
 
-void ParserDriver::postorderTraversal() {
-    postorderRecurs(rootIVAN);
+/**
+ * Driver method for testing the parse tree. Prints the input file by traversing the parse tree
+ * and printing leaf nodes (terminals).
+ */
+void ParserDriver::postorderTraversal(ostream& out) {
+    postorderRecurs(rootIVAN, out);
 }
 
-void ParserDriver::postorderRecurs(node *current) {
+void ParserDriver::postorderRecurs(node *current, ostream& out) {
     for(auto child : *current->children) {
-        postorderRecurs(child);
+        postorderRecurs(child, out);
     }
     if(current->children->empty()) { //terminal node
         terminalNode* term = (terminalNode*)current;
-        cout << term->tokenType << endl;
+        if(term->tokenType == "identifier" || term->tokenType == "type" || term->tokenType == "string") {
+            wordNode* word = (wordNode*)term;
+            out << word->value << endl;
+        }
+        else {
+            out << term->tokenType << endl;
+        }
+
     }
 
 }

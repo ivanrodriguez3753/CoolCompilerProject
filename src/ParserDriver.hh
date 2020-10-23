@@ -12,10 +12,13 @@
 #include "parser.hh"
 
 
+
 //give Flex the prototype of yylex we want...
 #define YY_DECL yy::parser::symbol_type yylex(ParserDriver& drv)
 //...and declare it for the parser's sake
 YY_DECL;
+
+using namespace std;
 
 class ParserDriver {
 public:
@@ -39,9 +42,9 @@ public:
     //Token's location used by scanner
     yy::location location;
 
-    void postorderTraversal();
+    void postorderTraversal(ostream& out);
 
 private:
-    void postorderRecurs(node* current);
+    void postorderRecurs(node* current, ostream& out);
 };
 #endif //PARSERDRIVER_H

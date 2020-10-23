@@ -4,14 +4,13 @@
 
 #include "parseTreeNodes.h"
 
-//programNode::programNode(list<klassNode *> *klassList) : klassListNode{klassList} {
-//
-//}
+
 programNode* rootIVAN = nullptr;
 
 programNode::programNode(classListNode *cln) : clNode{cln} {
     std::cout << "constructing program node\n";
     children->push_back(clNode);
+
 }
 
 /**
@@ -42,12 +41,13 @@ terminalNode::terminalNode(string ttype) : tokenType{ttype} {
 }
 
 
-classNode::classNode(terminalNode *tn1, wordNode *wn1, terminalNode *tn2, terminalNode *tn3, terminalNode *tn4) :
-    CLASS{tn1}, TYPE{wn1}, LBRACE{tn2}, RBRACE{tn3}, SEMI{tn4}
+classNode::classNode(terminalNode *tn1, wordNode *wn1, optionalInhNode* optInh, terminalNode *tn2, terminalNode *tn3, terminalNode *tn4) :
+    CLASS{tn1}, TYPE{wn1}, optionalInh{optInh}, LBRACE{tn2}, RBRACE{tn3}, SEMI{tn4}
 {
     cout << "Constructing class node\n";
     children->push_back(CLASS);
     children->push_back(TYPE);
+    if(optInh != nullptr) children->push_back(optionalInh);
     children->push_back(LBRACE);
     children->push_back(RBRACE);
     children->push_back(SEMI);
@@ -57,4 +57,12 @@ wordNode::wordNode(string type, string v) :
     terminalNode(type) , value{v}
 {
     cout << "constructing word node " << v << endl;
+}
+
+optionalInhNode::optionalInhNode(terminalNode *INH, wordNode *T) :
+    INHERITS{INH}, TYPE{T}
+{
+    cout << "constructing optionalInh node" << endl;
+    children->push_back(INHERITS);
+    children->push_back(TYPE);
 }

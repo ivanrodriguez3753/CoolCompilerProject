@@ -15,12 +15,12 @@
 
     #include <string>
     #include <list>
-    #include "parseTree/parseTreeNodes.h"
 
     class ParserDriver;
     class programNode;
     class classNode;
     class classListNode;
+    class optionalInhNode;
 
 
 }
@@ -41,7 +41,8 @@
 //This will be output in the *.cc file, it needs detailed knowledge about the driver
 %code {
     #include "ParserDriver.hh"
-    #include "parseTree/parseTreeNodes.h"
+    #include "parseTreeNodes.h"
+
 }
 
 //prefix tokens with TOK to avoid name clashes in generated files
@@ -99,6 +100,7 @@
 %nterm <classNode*> class
 %nterm <featureListNode*> featureList
 %nterm <featureNode*> feature
+%nterm <optionalInhNode*> optionalInh
 
 
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
@@ -161,13 +163,16 @@ classlist:
 
 
 class: //took off optionalInh and featureList for now
-    CLASS TYPE LBRACE RBRACE SEMI
+    CLASS TYPE optionalInh LBRACE RBRACE SEMI
     {
+
+
         $$ = new classNode{new terminalNode{"class"},
                            new wordNode{"type", $2},
-                           new terminalNode{ "{" },
-                           new terminalNode{ "}" },
-                           new terminalNode{ ";" }
+                           $3,
+                           new terminalNode{"lbrace"},
+                           new terminalNode{"rbrace"},
+                           new terminalNode{"semi"}
                            };
     }
 ;
@@ -175,10 +180,12 @@ class: //took off optionalInh and featureList for now
 optionalInh:
     %empty
     {
-
+        $$ = nullptr;
     }
 |   INHERITS TYPE
     {
+        $$ = new optionalInhNode{new terminalNode{"inherits"},
+                                 new wordNode{"type", $2}};
     }
 ;
 
