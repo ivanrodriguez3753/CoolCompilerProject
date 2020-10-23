@@ -26,7 +26,6 @@ stringstream makeStringStreamFromReference(string fileName) {
 
 void lexInput(ParserDriver& pdrv, stringstream& lexerOutput) {
     pdrv.scan_begin();
-    bool eof = false;
     string tokenType = "";
     while(tokenType != "end of file") { //the token name that bison generates for <EOF> token
         yy::parser::symbol_type current{yylex(pdrv)};

@@ -21,6 +21,9 @@
     class classNode;
     class classListNode;
     class optionalInhNode;
+    class featureListNode;
+    class featureNode;
+    class fieldNode;
 
 
 }
@@ -96,11 +99,13 @@
 
 //%nterm < std::list<classNode *>* > classlist
 %nterm <programNode*> program
-%nterm <classListNode*> classlist
+%nterm <classListNode*> classList
 %nterm <classNode*> class
 %nterm <featureListNode*> featureList
 %nterm <featureNode*> feature
 %nterm <optionalInhNode*> optionalInh
+%nterm <fieldNode*> field
+%nterm <methodNode*> method
 
 
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
@@ -138,16 +143,17 @@
 
 %start program;
 program:
-    classlist
+    classList
     {
         //this should be the only rule that doesn't use $$ =
         //instead it uses the global rootIVAN which is the root of the parse tree
-        rootIVAN = new programNode{$1};
+        rootIVAN = new programNode{"program",
+                                   $1};
     }
 ;
 
-classlist:
-    classlist class
+classList:
+    classList class
     {
         $$ = $1;
         $1->classList.push_back($2);
@@ -156,21 +162,23 @@ classlist:
     }
 |   %empty
 	{
-        $$ = new classListNode{};
+        $$ = new classListNode{"classList"};
 	}
 
 ;
 
 
-class: //took off optionalInh and featureList for now
-    CLASS TYPE optionalInh LBRACE RBRACE SEMI
+class:
+    CLASS TYPE optionalInh LBRACE featureList RBRACE SEMI
     {
 
 
-        $$ = new classNode{new terminalNode{"class"},
+        $$ = new classNode{"classNode",
+                           new terminalNode{"class"},
                            new wordNode{"type", $2},
                            $3,
                            new terminalNode{"lbrace"},
+                           $5,
                            new terminalNode{"rbrace"},
                            new terminalNode{"semi"}
                            };
@@ -184,17 +192,46 @@ optionalInh:
     }
 |   INHERITS TYPE
     {
-        $$ = new optionalInhNode{new terminalNode{"inherits"},
+        $$ = new optionalInhNode{"optionalInhNode",
+                                 new terminalNode{"inherits"},
                                  new wordNode{"type", $2}};
     }
 ;
 
 
-featurelist:
-	/*epsilon*/
+featureList:
+	%empty
+	{
+	    $$ = new featureListNode{"featureListNode"};
+	}
 |   featureList feature
+    {
+        $$ = $1;
+        $1->featureList.push_back($2);
+        $1->children->push_back($2);
+    }
 ;
 
+feature:
+    field
+    {
+        $$ = $1;
+    }
+|   method
+    {
+
+    }
+;
+field:
+    IDENTIFIER COLON TYPE SEMI//optionalInit
+    {
+        $$ = new fieldNode{"fieldNode",
+                           new wordNode{"identifier", $1},
+                           new terminalNode{"colon"},
+                           new wordNode{"type", $3},
+                           new terminalNode{"semi"}};
+    }
+;
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {
     std::cerr << l << ": " << m << '\n';

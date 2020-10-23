@@ -3,32 +3,46 @@
 
 using namespace std;
 
-int main(int argc, char** argv) {
-//    if(argc != 2) {
-//        cout << "Please provide a .cl source file\n";
-//    }
-//    FILE* inputFile = fopen(argv[1], "r");
-//
-//    if(!inputFile) {
-//        cout << "Couldn't find input file!" << endl;
-//        return 1;
-//    }
-    int res = 0;
-    ParserDriver drv;
-    for(int i = 1; i < argc; ++i) {
-        if(argv[i] == std::string("-p")) {
-            drv.trace_parsing = true;
-        }
-        else if(argv[i] == std::string("-s")) {
-            drv.trace_scanning = true;
-        }
-        else if(!drv.parse(argv[i])) {
-            std::cout << drv.result << '\n';
-        }
-        else {
-            res = 1;
+void lexInput(ParserDriver& pdrv) {
+    pdrv.scan_begin();
+    string tokenType = "";
+    while(tokenType != "end of file") { //the token name that bison generates for <EOF> token
+        yy::parser::symbol_type current{yylex(pdrv)};
+        tokenType = current.name();
+        if(tokenType != "end of file") {
+            cout << current.location.begin.line << '\n';
+            cout << current.name() << endl;
+
+            if (tokenType == "identifier" || tokenType == "type" || tokenType == "string") {
+                cout << current.value.as<string>() << endl;
+            } else if (tokenType == "integer") {
+                cout << current.value.as<int>() << endl;
+            }
         }
     }
-    drv.postorderTraversal(cout);
-    return res;
+}
+
+
+
+int main(int argc, char** argv) {
+
+    string file = argv[1];
+    string option = argv[2];
+
+    if(argc != 3) {
+        cout << "Incorrect number of arguments. Please enter a file name and an option." << endl;
+        exit(1);
+    }
+
+    ParserDriver pdrv;
+
+    if(option == "--lex") {
+        pdrv.file = file;
+        lexInput(pdrv);
+    }
+    else if(option == "--concreteParse") {
+        pdrv.parse(file);
+        pdrv.prettyPrintTree(cout);
+    }
+
 }

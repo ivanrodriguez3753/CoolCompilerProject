@@ -43,8 +43,10 @@ public:
     yy::location location;
 
     void postorderTraversal(ostream& out);
+    void prettyPrintTree(ostream& out);
 
 private:
     void postorderRecurs(node* current, ostream& out);
+    void prettyPrintRecurs(node* current, const string& prefix, ostream& out);
 };
 #endif //PARSERDRIVER_H

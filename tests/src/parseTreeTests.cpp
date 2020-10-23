@@ -59,6 +59,13 @@ stringstream makeStringStreamFromReferenceAndFormatForParseTree(string fileName)
     return s;
 }
 
+TEST(Fragments, bareMinPrettyPrint) {
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + "multipleClassesMultipleFields.cl");
+
+    pdrv.prettyPrintTree(cout);
+}
+
 TEST(Fragments, bareMin) {
     const string localFile = "bareMinInput.cl";
     stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
@@ -74,6 +81,45 @@ TEST(Fragments, bareMin) {
 
 TEST(Fragments, bareMinWithInh) {
     const string localFile = "bareMinInputWithInh.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, bareMinNoInhSingleFeatureField) {
+    const string localFile = "bareMinNoInhSingleFeature.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, bareMinInhSingleFeatureField) {
+    const string localFile = "bareMinInhSingleFeature.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, multipleClassesMultipleFields) {
+    const string localFile = "multipleClassesMultipleFields.cl";
     stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
 
     ParserDriver pdrv;

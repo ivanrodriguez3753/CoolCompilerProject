@@ -27,18 +27,42 @@ void ParserDriver::postorderRecurs(node *current, ostream& out) {
     for(auto child : *current->children) {
         postorderRecurs(child, out);
     }
-    if(current->children->empty()) { //terminal node
-        terminalNode* term = (terminalNode*)current;
-        if(term->tokenType == "identifier" || term->tokenType == "type" || term->tokenType == "string") {
-            wordNode* word = (wordNode*)term;
-            out << word->value << endl;
+    if(current->children->empty()) { //node with no children
+        if(current->isTerminal) { //we need this because we can have empty lists, which we don't want to print anything for
+            terminalNode *term = (terminalNode *) current;
+            if (term->grammarSymbol == "identifier" || term->grammarSymbol == "type" || term->grammarSymbol == "string") {
+                wordNode *word = (wordNode *) term;
+                out << word->value << endl;
+            } else {
+                out << term->grammarSymbol << endl;
+            }
         }
-        else {
-            out << term->tokenType << endl;
-        }
-
     }
 
+}
+
+//taken and adapted from https://stackoverflow.com/questions/36802354/print-binary-tree-in-a-pretty-way-using-c
+void ParserDriver::prettyPrintTree(ostream& out) {
+    prettyPrintRecurs(rootIVAN, "", out);
+}
+
+//uses preorder traversal strategy
+void ParserDriver::prettyPrintRecurs(node* current, const string& prefix, ostream& out) {
+    if(current != nullptr) {
+        out << prefix;
+        out << "├──";
+
+        //print the node
+        out << current->grammarSymbol << endl;
+
+        //enter the next tree level
+        for(auto child : *current->children) {
+            string newPrefix = prefix + "|   ";
+            prettyPrintRecurs(child, newPrefix, out);
+        }
+
+
+    }
 }
 
 

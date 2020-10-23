@@ -27,8 +27,10 @@ class node {
      * of order from left to right.
      */
 public:
+    bool isTerminal = false;
+    string grammarSymbol;
     list<node*> *children;
-    node() : children{new list<node*>()} {}
+    node(string gSym) : grammarSymbol{gSym}, children{new list<node*>()} {}
 
 
 
@@ -44,8 +46,7 @@ public:
 class terminalNode : public node {
 
 public:
-    string tokenType;
-    terminalNode(string ttype);
+    terminalNode(string gSym);
 };
 
 /**
@@ -72,26 +73,52 @@ public:
     wordNode(string type, string v);
 };
 
-//for now let's try without possible initialization, and only fields, no methods
+//for now let's try without possible initialization, and only fields
 class featureNode : public node {
     wordNode* IDENTIFIER;
     terminalNode* COLON;
     wordNode* TYPE;
+    terminalNode* SEMI;
+
+public:
+    featureNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S);
+
 };
+
+class fieldNode : public featureNode {
+    //will add initialization options later
+public:
+    fieldNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S);
+};
+
+class parameterNode : public node {
+
+};
+
+class parameterListNode : public node {
+
+};
+
+class methodNode : public featureNode {
+    terminalNode* LPAREN;
+    parameterListNode* parameterList;
+    terminalNode* RPAREN;
+};
+
+
 
 class optionalInhNode : public node {
     terminalNode *INHERITS;
     wordNode *TYPE;
 
 public:
-    optionalInhNode(terminalNode *INH, wordNode *T);
+    optionalInhNode(string gSym, terminalNode *INH, wordNode *T);
 };
 
-class featureListNode : node {
-    list<featureNode*> featureList;
-
+class featureListNode : public node {
 public:
-    featureListNode();
+    list<featureNode*> featureList;
+    featureListNode(string gSym);
 };
 
 class classNode : public node {
@@ -99,11 +126,11 @@ class classNode : public node {
     wordNode *TYPE;
     optionalInhNode *optionalInh;
     terminalNode *LBRACE;
-    //featureListNode *featureList;
+    featureListNode *featureList;
     terminalNode *RBRACE;
     terminalNode *SEMI;
 public:
-    classNode(terminalNode* tn1, wordNode* wn1, optionalInhNode* optInh, terminalNode* tn2, terminalNode* tn3, terminalNode* tn4);
+    classNode(string gSym, terminalNode* tn1, wordNode* wn1, optionalInhNode* optInh, terminalNode* tn2, featureListNode* ftList, terminalNode* tn3, terminalNode* tn4);
 };
 
 
@@ -111,7 +138,7 @@ class classListNode : public node {
 public:
     list<classNode*> classList; //not a pointer because inherited children field from node class will contain
                                 //what we need to be a pointer, which are the members of this list
-    classListNode();
+    classListNode(string gSym);
 };
 
 
@@ -120,7 +147,7 @@ protected:
     classListNode *clNode;
 
 public:
-    explicit programNode(classListNode* cln);
+    programNode(string gSym, classListNode* cln);
 };
 
 extern programNode* rootIVAN;
