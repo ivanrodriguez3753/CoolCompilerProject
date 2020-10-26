@@ -7,11 +7,11 @@ using namespace std;
 
 /**
  * Testing the parse tree is simple: just print the leaves of the tree (postorder), and we SHOULD end up with the exact
- * same input we started with, except we use token names. This way we can easily match the format of the reference lexer,
- * we just strip away the line numbers. For trivial terminals, we leave the terminal type name. For nontrivial terminals,
- * we REMOVE the terminal type and include only the lexeme (whether it be an integer or word).
- *
- *
+ * same input we started with. This way we can easily match the format of the reference lexer,
+ * we just strip away the line numbers. For trivial terminals, we map the reference compiler's terminal name to the character.
+ * For nontrivial terminals, we REMOVE the terminal type and include only the lexeme (whether it be an integer or word).
+ * Since the parser can parse cLAsS as a class token, we will take care of converting to lowercase to match the reference
+ * compiler.
  */
 
 
@@ -22,21 +22,20 @@ const string COOL_PROGRAMS_DIR = RESOURCES_DIR + "CoolPrograms/";
 
 
 /**
- * This method is just putting each token on its own line while keeping the original text (trivial terminals turned into
- * the name of their token).
+ * This method is just putting each token on its own line while keeping the original text.
  * Example:
  *      class Main{};
  * would be turned into
  *      class
  *      Main
- *      lbrace
- *      rbrace
- *      semi
+ *      (
+ *      )
+ *      ;
  * @param fileName
  * @return
  */
 stringstream makeStringStreamFromReferenceAndFormatForParseTree(string fileName) {
-    //generate the reference output
+    //generate the reference output, unformatted
     string command = "cd " + RESOURCES_DIR + " && ./cool --lex CoolPrograms/" + fileName;
     system(command.c_str());
 
@@ -52,19 +51,21 @@ stringstream makeStringStreamFromReferenceAndFormatForParseTree(string fileName)
         if(currLine == "identifier" || currLine == "type" || currLine == "string" || currLine == "integer") {
             //discard the line, get the next line which is the lexeme associated with this terminal
             getline(referenceLexerOutput, currLine);
+            s << currLine << endl;
         }
-        s << currLine << endl;
+        else {  //character and keyword tokens
+            if(tokenReqTranslation.find(currLine) != tokenReqTranslation.end()) {
+                s << tokenReqTranslation[currLine] << endl;
+            }
+            else {
+                s << currLine << endl;
+            }
+        }
     }
 
     return s;
 }
 
-TEST(Fragments, bareMinPrettyPrint) {
-    ParserDriver pdrv;
-    pdrv.parse(COOL_PROGRAMS_DIR + "multipleClassesMultipleFields.cl");
-
-    pdrv.prettyPrintTree(cout);
-}
 
 TEST(Fragments, bareMin) {
     const string localFile = "bareMinInput.cl";

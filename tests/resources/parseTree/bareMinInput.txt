@@ -1,7 +1,0 @@
--- This file contains the bare minimum to obey the grammar. Note that this is not a
---valid cool program.
---I guess an empty file would obey the grammar since the []+ is not being enforced by the parser.
-
-class Main {
-
-} ;

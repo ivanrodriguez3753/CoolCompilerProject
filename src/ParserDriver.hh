@@ -49,4 +49,7 @@ private:
     void postorderRecurs(node* current, ostream& out);
     void prettyPrintRecurs(node* current, const string& prefix, ostream& out);
 };
+
+extern map<string, string> tokenReqTranslation;
+
 #endif //PARSERDRIVER_H

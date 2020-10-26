@@ -34,7 +34,12 @@ void ParserDriver::postorderRecurs(node *current, ostream& out) {
                 wordNode *word = (wordNode *) term;
                 out << word->value << endl;
             } else {
-                out << term->grammarSymbol << endl;
+                if(tokenReqTranslation.find(term->grammarSymbol) != tokenReqTranslation.end()) {
+                    out << tokenReqTranslation[term->grammarSymbol] << endl;
+                }
+                else {
+                    out << term->grammarSymbol << endl;
+                }
             }
         }
     }
@@ -65,18 +70,28 @@ void ParserDriver::prettyPrintRecurs(node* current, const string& prefix, ostrea
     }
 }
 
+/**
+ * This is a global map for tokens whose name differ from its lexeme
+ */
+map<string, string> tokenReqTranslation{
+    {"at", "@"},
+    {"colon", ":"},
+    {"comma", ","},
+    {"divide", "/"},
+    {"dot", "."},
+    {"equals", "="},
+    {"larrow", "<-"},
+    {"lbrace", "{"},
+    {"le", "<="},
+    {"lparen", "("},
+    {"lt", "<"},
+    {"minus", "-"},
+    {"plus", "+"},
+    {"rarrow", "->"},
 
-//void ParserDriver::scan_begin() {
-//    yy_flex_debug = trace_scanning;
-//    if (file.empty () || file == "-")
-//        yyin = stdin;
-//    else if (!(yyin = fopen (file.c_str (), "r")))
-//    {
-//        std::cerr << "cannot open " << file << ": " << strerror (errno) << '\n';
-//        exit (EXIT_FAILURE);
-//    }
-//}
-
-//void ParserDriver::scan_end() {
-//
-//}
+    {"rbrace", "}"},
+    {"rparen", ")"},
+    {"semi", ";"},
+    {"tilde", "~"},
+    {"times", "*"}
+};
