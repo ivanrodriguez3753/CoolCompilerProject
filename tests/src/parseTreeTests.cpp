@@ -22,7 +22,8 @@ const string COOL_PROGRAMS_DIR = RESOURCES_DIR + "CoolPrograms/";
 
 
 /**
- * This method is just putting each token on its own line while keeping the original text.
+ * This method is just putting each token on its own line while keeping the original text (mostly original text, case insensitive
+ * words are converted to all lowercase by the reference lexer)
  * Example:
  *      class Main{};
  * would be turned into
