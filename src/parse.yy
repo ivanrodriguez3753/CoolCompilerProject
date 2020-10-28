@@ -24,6 +24,12 @@
     class featureListNode;
     class featureNode;
     class fieldNode;
+    class exprNode;
+    class optionalInitNode;
+    class booleanNode;
+    class methodNode;
+    class formalNode;
+    class formalsListNode;
 
 
 }
@@ -106,6 +112,12 @@
 %nterm <optionalInhNode*> optionalInh
 %nterm <fieldNode*> field
 %nterm <methodNode*> method
+%nterm <exprNode*> expr
+%nterm <optionalInitNode*> optionalInit
+%nterm <formalsListNode*> formalsList
+%nterm <formalNode*> formal
+%nterm <formalNode*> firstFormal
+%nterm <formalsListNode*> moreFormalsList
 
 
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
@@ -202,7 +214,7 @@ optionalInh:
 featureList:
 	%empty
 	{
-	    $$ = new featureListNode{"featureListNode"};
+	    $$ = new featureListNode{"featureList"};
 	}
 |   featureList feature
     {
@@ -219,19 +231,112 @@ feature:
     }
 |   method
     {
-
+        $$ = $1;
     }
 ;
+
+
 field:
-    IDENTIFIER COLON TYPE SEMI//optionalInit
+    IDENTIFIER COLON TYPE optionalInit SEMI
     {
         $$ = new fieldNode{"fieldNode",
                            new wordNode{"identifier", $1},
                            new terminalNode{"colon"},
                            new wordNode{"type", $3},
+                           $4,
                            new terminalNode{"semi"}};
     }
 ;
+
+optionalInit:
+    %empty
+    {
+        $$ = nullptr;
+    }
+|   LARROW expr
+    {
+        $$ = new optionalInitNode{"optionalInit",
+                                  new terminalNode{"larrow"},
+                                  $2};
+    }
+;
+
+expr:
+    FALSE
+    {
+        $$ = new exprNode{"expr",
+                          new booleanNode{"false", $1}};
+    }
+;
+
+method:
+    IDENTIFIER LPAREN formalsList RPAREN COLON TYPE LBRACE expr RBRACE SEMI
+    {
+        $$ = new methodNode{"method",
+                            new wordNode{"identifier", $1},
+                            new terminalNode{"lparen"},
+                            $3,
+                            new terminalNode{"rparen"},
+                            new terminalNode{"colon"},
+                            new wordNode{"type", $6},
+                            new terminalNode{"lbrace"},
+                            $8,
+                            new terminalNode{"rbrace"},
+                            new terminalNode{"semi"}};
+    }
+;
+
+
+formalsList:
+    formalsList firstFormal moreFormalsList
+    {
+        $$ = $1;
+        $$->formalsList.push_back($2);
+        $$->children->push_back($2);
+        if($3 != nullptr) {
+            for(auto child : *$3->children) {
+                $$->children->push_back(child);
+            }
+        }
+    }
+|   %empty
+    {
+        $$ = new formalsListNode{"formalsList"};
+    }
+;
+
+firstFormal:
+    formal
+    {
+        $$ = $1;
+    }
+
+moreFormalsList:
+    moreFormalsList COMMA formal
+    {
+        $$ = $1;
+        $$->formalsList.push_back($3);
+        $$->children->push_back(new terminalNode{"comma"});
+        $$->children->push_back($3);
+    }
+|   %empty
+    {
+        $$ = new formalsListNode{"formalsList"};
+    }
+;
+
+
+formal:
+    IDENTIFIER COLON TYPE
+    {
+        $$ = new formalNode{"formal",
+                            new wordNode{"identifier", $1},
+                            new terminalNode{"colon"},
+                            new wordNode{"type", $3}};
+    }
+;
+
+
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {
     std::cerr << l << ": " << m << '\n';

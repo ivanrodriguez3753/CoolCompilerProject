@@ -53,7 +53,9 @@ public:
 * For true/false terminals
 */
 class booleanNode : public terminalNode {
+public:
     bool value;
+    booleanNode(string gSym, bool b);
 };
 
 /**
@@ -75,35 +77,69 @@ public:
 
 //for now let's try without possible initialization, and only fields
 class featureNode : public node {
+public:
     wordNode* IDENTIFIER;
     terminalNode* COLON;
     wordNode* TYPE;
     terminalNode* SEMI;
 
-public:
-    featureNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S);
+    featureNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* semi);
 
+};
+
+/**
+ * For now, just implement the last rule for expr which is
+ * expr -> false so we can finish other rules that use an expression
+ */
+class exprNode : public node {
+public:
+    booleanNode* boolean;
+    exprNode(string gSym, booleanNode* b);
+};
+
+class optionalInitNode : public node {
+public:
+    terminalNode* LARROW;
+    exprNode* expr;
+    optionalInitNode(string gSym, terminalNode* l, exprNode* e);
 };
 
 class fieldNode : public featureNode {
-    //will add initialization options later
 public:
-    fieldNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S);
+    optionalInitNode* init;
+    fieldNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, optionalInitNode* in, terminalNode* S);
 };
 
-class parameterNode : public node {
 
+class formalNode : public node {
+public:
+    wordNode* IDENTIFIER;
+    terminalNode* COLON;
+    wordNode* TYPE;
+    formalNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY);
 };
 
-class parameterListNode : public node {
-
+class formalsListNode : public node {
+public:
+    list<formalNode*> formalsList;
+    formalsListNode(string gSym);
 };
+
 
 class methodNode : public featureNode {
+public:
     terminalNode* LPAREN;
-    parameterListNode* parameterList;
+    formalsListNode* formalsList;
     terminalNode* RPAREN;
+    terminalNode* LBRACE;
+    exprNode* expr;
+    terminalNode* RBRACE;
+
+    methodNode(string gSym, wordNode *ID, terminalNode *LP, formalsListNode *flNode, terminalNode *RP,
+               terminalNode *COL, wordNode *ty, terminalNode *LB, exprNode *exp, terminalNode *RB, terminalNode* S);
 };
+
+
 
 
 

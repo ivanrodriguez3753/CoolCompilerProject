@@ -63,16 +63,65 @@ optionalInhNode::optionalInhNode(string gSym, terminalNode *INH, wordNode *T) :
 }
 
 featureNode::featureNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S) :
-    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{ty}, SEMI{S}
+    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{ty}, SEMI{S} {
+    //let fieldNode/methodNode subclass constructor take care of all this so we can
+    //selectively include/exclude optional fields
+}
+
+
+
+
+booleanNode::booleanNode(string gSym, bool b) : terminalNode{gSym}, value{b} {
+
+}
+
+exprNode::exprNode(string gSym, booleanNode* b) : node{gSym}, boolean{b} {
+    children->push_back(b);
+}
+
+fieldNode::fieldNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *ty, optionalInitNode *in, terminalNode *S) :
+    featureNode{gSym, ID, COL, ty, S}, init{in}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);
     children->push_back(TYPE);
+    if(in != nullptr) children->push_back(in);
     children->push_back(SEMI);
 }
 
-fieldNode::fieldNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S) :
-    featureNode{gSym, ID, COL, ty, S}
+optionalInitNode::optionalInitNode(string gSym, terminalNode *l, exprNode *e) :
+    node{gSym}, LARROW{l}, expr{e}
+{
+    children->push_back(l);
+    children->push_back(e);
+}
+
+methodNode::methodNode(string gSym, wordNode *ID, terminalNode *LP, formalsListNode *flNode, terminalNode *RP,
+                       terminalNode *COL, wordNode *ty, terminalNode *LB, exprNode *exp, terminalNode *RB, terminalNode* S) :
+    featureNode{gSym, ID, COL, ty, S}, LPAREN{LP}, formalsList{flNode}, RPAREN{RP}, LBRACE{LB}, expr{exp}, RBRACE{RB}
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(LPAREN);
+    children->push_back(formalsList);
+    children->push_back(RPAREN);
+    children->push_back(COLON);
+    children->push_back(ty);
+    children->push_back(LBRACE);
+    children->push_back(expr);
+    children->push_back(RBRACE);
+    children->push_back(SEMI);
+}
+
+formalNode::formalNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY) :
+    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(COLON);
+    children->push_back(TYPE);
+}
+
+formalsListNode::formalsListNode(string gSym) :
+    node(gSym)
 {
 
 }

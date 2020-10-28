@@ -132,3 +132,86 @@ TEST(Fragments, multipleClassesMultipleFields) {
 
     ASSERT_EQ(reference.str(), parserOutput.str());
 }
+
+TEST(Fragments, singleFieldInit) {
+    const string localFile = "singleFieldInit.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, twoFieldsOneInit) {
+    const string localFile = "twoFieldsOneInit.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, singleMethodNoFormals) {
+    const string localFile = "singleMethodNoFormals.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    pdrv.prettyPrintTree(cout);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, singleMethodOneFormals) {
+    const string localFile = "singleMethodOneFormals.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, singleMethodTwoFormals) {
+    const string localFile = "singleMethodTwoFormals.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    pdrv.prettyPrintTree(cout);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, singleMethodFiveFormals) {
+    const string localFile = "singleMethodFiveFormals.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    pdrv.prettyPrintTree(cout);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
