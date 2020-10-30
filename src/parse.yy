@@ -30,7 +30,10 @@
     class methodNode;
     class formalNode;
     class formalsListNode;
-
+    class boolExprNode;
+    class exprListNode;
+    class ifExprNode;
+    class whileExprNode;
 
 }
 
@@ -118,6 +121,9 @@
 %nterm <formalNode*> formal
 %nterm <formalNode*> firstFormal
 %nterm <formalsListNode*> moreFormalsList
+%nterm <exprListNode*> exprList
+%nterm <exprListNode*> moreExprList
+%nterm <exprNode*> firstExpr
 
 
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
@@ -262,12 +268,73 @@ optionalInit:
 ;
 
 expr:
-    FALSE
+    IDENTIFIER LARROW expr
     {
-        $$ = new exprNode{"expr",
-                          new booleanNode{"false", $1}};
+        $$ = new assignExprNode{"expr",
+                                new wordNode{"identifier", $1},
+                                new terminalNode{"larrow"},
+                                $3};
+    }
+|   IDENTIFIER LPAREN exprList RPAREN
+    {
+        $$ = new selfDispatchNode{"expr",
+                                  new wordNode{"identifier", $1},
+                                  new terminalNode{"lparen"},
+                                  $3,
+                                  new terminalNode{"rparen"}};
+    }
+|   expr DOT IDENTIFIER LPAREN exprList RPAREN
+    {
+        $$ = new dynamicDispatchNode{"expr",
+                                  $1,
+                                  new terminalNode{"dot"},
+                                  new wordNode{"identifier", $3},
+                                  new terminalNode{"lparen"},
+                                  $5,
+                                  new terminalNode{"rparen"}};
+    }
+|   expr AT TYPE DOT IDENTIFIER LPAREN exprList RPAREN
+    {
+        $$ = new staticDispatchNode{"expr",
+                                      $1,
+                                      new terminalNode{"at"},
+                                      new wordNode{"type", $3},
+                                      new terminalNode{"dot"},
+                                      new wordNode{"identifier", $5},
+                                      new terminalNode{"lparen"},
+                                      $7,
+                                      new terminalNode{"rparen"}};
+    }
+|   IF expr THEN expr ELSE expr FI
+    {
+        $$ = new ifExprNode{"expr",
+                            new terminalNode{"if"},
+                            $2,
+                            new terminalNode{"then"},
+                            $4,
+                            new terminalNode{"else"},
+                            $6,
+                            new terminalNode{"fi"}
+                            };
+    }
+|   WHILE expr LOOP expr POOL
+    {
+        $$ = new whileExprNode{"expr",
+                               new terminalNode{"while"},
+                               $2,
+                               new terminalNode{"loop"},
+                               $4,
+                               new terminalNode{"pool"}
+                              };
+    }
+|   FALSE
+    {
+        $$ = new boolExprNode{"expr",
+                              new booleanNode{"false", $1}};
     }
 ;
+
+
 
 method:
     IDENTIFIER LPAREN formalsList RPAREN COLON TYPE LBRACE expr RBRACE SEMI
@@ -283,6 +350,45 @@ method:
                             $8,
                             new terminalNode{"rbrace"},
                             new terminalNode{"semi"}};
+    }
+;
+
+exprList:
+    exprList firstExpr moreExprList
+    {
+        $$ = $1;
+        $$->exprList.push_back($2);
+        $$->children->push_back($2);
+        if($3 != nullptr) {
+            for(auto child : *$3->children) {
+                $$->children->push_back(child);
+            }
+        }
+    }
+|   %empty
+    {
+        $$ = new exprListNode{"exprList"};
+    }
+;
+
+firstExpr:
+    expr
+    {
+        $$ = $1;
+    }
+;
+
+moreExprList:
+    moreExprList COMMA expr
+    {
+        $$ = $1;
+        $$->exprList.push_back($3);
+        $$->children->push_back(new terminalNode{"comma"});
+        $$->children->push_back($3);
+    }
+|   %empty
+    {
+        $$ = new exprListNode{"exprList"};
     }
 ;
 
@@ -310,7 +416,7 @@ firstFormal:
     {
         $$ = $1;
     }
-
+;
 moreFormalsList:
     moreFormalsList COMMA formal
     {

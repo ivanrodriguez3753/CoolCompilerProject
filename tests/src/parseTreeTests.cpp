@@ -215,3 +215,84 @@ TEST(Fragments, singleMethodFiveFormals) {
 
     ASSERT_EQ(reference.str(), parserOutput.str());
 }
+
+TEST(Fragments, assignExpr) {
+    const string localFile = "assignExpr.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    pdrv.prettyPrintTree(cout);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, allDispatchesNoArguments) {
+    const string localFile = "allDispatchesNoArguments.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, allDispatchesOneArguments) {
+    const string localFile = "allDispatchesOneArguments.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, allDispatchesTwoArguments) {
+    const string localFile = "allDispatchesTwoArguments.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, allDispatchesFiveArguments) {
+    const string localFile = "allDispatchesFiveArguments.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, ifWhileExpressions) {
+    const string localFile = "ifWhileExpressions.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}

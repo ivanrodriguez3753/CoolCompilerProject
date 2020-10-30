@@ -75,8 +75,7 @@ booleanNode::booleanNode(string gSym, bool b) : terminalNode{gSym}, value{b} {
 
 }
 
-exprNode::exprNode(string gSym, booleanNode* b) : node{gSym}, boolean{b} {
-    children->push_back(b);
+exprNode::exprNode(string gSym) : node{gSym}{
 }
 
 fieldNode::fieldNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *ty, optionalInitNode *in, terminalNode *S) :
@@ -124,4 +123,85 @@ formalsListNode::formalsListNode(string gSym) :
     node(gSym)
 {
 
+}
+
+boolExprNode::boolExprNode(string gSym, booleanNode *b) :
+    exprNode{gSym},BOOLEAN{b}
+{
+    children->push_back(b);
+}
+
+
+assignExprNode::assignExprNode(string gSym, wordNode* ID, terminalNode* L, exprNode* e) :
+    exprNode{gSym}, IDENTIFIER{ID}, LARROW{L}, expr{e}
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(LARROW);
+    children->push_back(expr);
+}
+
+dispatchNode::dispatchNode(string gSym, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    exprNode{gSym}, IDENTIFIER{ID}, LPAREN{LP}, exprList{el}, RPAREN{RP}
+{
+
+}
+
+selfDispatchNode::selfDispatchNode(string gSym, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    dispatchNode(gSym, ID, LP, el, RP)
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(LPAREN);
+    children->push_back(exprList);
+    children->push_back(RPAREN);
+}
+
+dynamicDispatchNode::dynamicDispatchNode(string gSym, exprNode *e, terminalNode *D, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    dispatchNode{gSym, ID, LP, el, RP}, expr{e}, DOT{D}
+{
+    children->push_back(expr);
+    children->push_back(DOT);
+    children->push_back(IDENTIFIER);
+    children->push_back(LPAREN);
+    children->push_back(exprList);
+    children->push_back(RPAREN);
+}
+
+
+staticDispatchNode::staticDispatchNode(string gSym, exprNode *e, terminalNode *A, wordNode *TY, terminalNode *D, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    dispatchNode{gSym, ID, LP, el, RP}, expr{e}, AT{A}, TYPE{TY}, DOT{D}
+{
+    children->push_back(expr);
+    children->push_back(AT);
+    children->push_back(TYPE);
+    children->push_back(DOT);
+    children->push_back(IDENTIFIER);
+    children->push_back(LPAREN);
+    children->push_back(exprList);
+    children->push_back(RPAREN);
+}
+
+exprListNode::exprListNode(string gSym) : node(gSym) {
+
+}
+
+ifExprNode::ifExprNode(string gSym, terminalNode *I, exprNode *pe, terminalNode *TH, exprNode *te, terminalNode *EL, exprNode* ee, terminalNode* F) :
+    exprNode{gSym}, IF{I}, predicateExpr{pe}, THEN{TH}, thenExpr{te}, ELSE{EL}, elseExpr{ee}, FI{F}
+{
+    children->push_back(IF);
+    children->push_back(predicateExpr);
+    children->push_back(THEN);
+    children->push_back(thenExpr);
+    children->push_back(ELSE);
+    children->push_back(elseExpr);
+    children->push_back(FI);
+}
+
+whileExprNode::whileExprNode(string gSym, terminalNode *W, exprNode *pe, terminalNode *L, exprNode *le, terminalNode *P) :
+    exprNode{gSym}, WHILE{W}, predicateExpr{pe}, LOOP{L}, loopExpr{le}, POOL{P}
+{
+    children->push_back(WHILE);
+    children->push_back(predicateExpr);
+    children->push_back(LOOP);
+    children->push_back(loopExpr);
+    children->push_back(POOL);
 }

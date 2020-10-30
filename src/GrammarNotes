@@ -91,8 +91,7 @@ formal ->
 ;
 There's really just nothing to do here
 ========================================================================
-
-
+***ORIGINAL***
 expr ->
     ID <- expr
 |   expr [@TYPE].ID([ expr [[, expr]]* ] )
@@ -120,3 +119,23 @@ expr ->
 |   true
 |   false
 ;
+
+This is gonna take a while. Most rules are different constructs
+ID <- expr
+    pretty easy, done
+
+
+expr[@TYPE].ID([ expr [[, expr]]* ] )
+    with the @TYPE it is static dispatch
+    without the @TYPE it is dynamic dispatch
+
+ID ( [ expr [[, expr]]* ] )
+    this is the self dispatch
+
+ID ( exprList )
+|   expr DOT ID ( exprList )
+|   expr @ TYPE DOT ID ( exprList )
+
+if expressions are pretty easy, same for while
+if expr then expr else expr fi
+|   while expr loop expr pool

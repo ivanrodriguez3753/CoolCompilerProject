@@ -93,8 +93,81 @@ public:
  */
 class exprNode : public node {
 public:
-    booleanNode* boolean;
-    exprNode(string gSym, booleanNode* b);
+    exprNode(string gSym);
+};
+
+class ifExprNode : public exprNode {
+public:
+    terminalNode* IF;
+    exprNode* predicateExpr;
+    terminalNode* THEN;
+    exprNode* thenExpr;
+    terminalNode* ELSE;
+    exprNode* elseExpr;
+    terminalNode* FI;
+    ifExprNode(string gSym, terminalNode* I, exprNode* pe, terminalNode* TH, exprNode* te, terminalNode* EL, exprNode* ee, terminalNode* F);
+};
+
+class whileExprNode : public exprNode {
+public:
+    terminalNode* WHILE;
+    exprNode* predicateExpr;
+    terminalNode* LOOP;
+    exprNode* loopExpr;
+    terminalNode* POOL;
+    whileExprNode(string gSym, terminalNode* W, exprNode* pe, terminalNode* L, exprNode* le, terminalNode* P);
+};
+
+class boolExprNode : public exprNode {
+public:
+    booleanNode* BOOLEAN;
+    boolExprNode(string gSym, booleanNode* b);
+};
+
+class assignExprNode : public exprNode {
+public:
+    wordNode* IDENTIFIER;
+    terminalNode* LARROW;
+    exprNode* expr;
+
+    assignExprNode(string gSym, wordNode* ID, terminalNode* L, exprNode* e);
+};
+
+class exprListNode : public node {
+public:
+    list<exprNode*> exprList;
+    exprListNode(string gSym);
+};
+
+class dispatchNode : public exprNode {
+public:
+    wordNode* IDENTIFIER;
+    terminalNode* LPAREN;
+    exprListNode* exprList;
+    terminalNode* RPAREN;
+    dispatchNode(string gSym, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+};
+
+class selfDispatchNode : public dispatchNode {
+public:
+    selfDispatchNode(string gSym, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+};
+
+class dynamicDispatchNode : public dispatchNode {
+public:
+    exprNode* expr;
+    terminalNode* DOT;
+    dynamicDispatchNode(string gSym, exprNode* e, terminalNode* D, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+};
+
+class staticDispatchNode : public dispatchNode {
+public:
+    exprNode* expr;
+    terminalNode* AT;
+    wordNode* TYPE;
+    terminalNode* DOT;
+    staticDispatchNode(string gSym, exprNode* e, terminalNode* A, wordNode* TY, terminalNode* D, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+
 };
 
 class optionalInitNode : public node {
