@@ -294,6 +294,7 @@ public:
     caseExprNode(string gSym, terminalNode* C, exprNode* e, terminalNode* O, caseListNode* cln, terminalNode* E);
 };
 
+<<<<<<< HEAD
 class newExprNode : public exprNode {
 public:
     terminalNode* NEW;
@@ -306,6 +307,8 @@ class isvoidExprNode : public exprNode {
 public:
     terminalNode* ISVOID;
     exprNode* expr;
+=======
+>>>>>>> a96d9340a3a6a08d406deabfe53e8c975c028e4e
 
     isvoidExprNode(string gSym, terminalNode* IV, exprNode* e);
 };

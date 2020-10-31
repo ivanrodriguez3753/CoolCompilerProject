@@ -41,6 +41,7 @@
     class caseExprNode;
     class caseListNode;
     class caseNode;
+<<<<<<< HEAD
     class arithExprNode;
     class relExprNode;
     class unaryExprNode;
@@ -48,6 +49,8 @@
     class identifierExprNode;
     class intExprNode;
     class stringExprNode;
+=======
+>>>>>>> a96d9340a3a6a08d406deabfe53e8c975c028e4e
 }
 
 //ParserDriver is passed by ref to parser and scanner. Provides simple but effective pure interface without globals
@@ -375,6 +378,7 @@ expr:
                               new terminalNode{"esac"}
                              };
     }
+<<<<<<< HEAD
 |   NEW TYPE
     {
         $$ = new newExprNode{"expr",
