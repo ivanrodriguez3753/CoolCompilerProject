@@ -248,6 +248,33 @@ public:
     letExprNode(string gSym, terminalNode* L, bindingListNode* bln, terminalNode* I, exprNode* e);
 };
 
+class caseNode : public node {
+public:
+    wordNode* IDENTIFIER;
+    terminalNode* COLON;
+    wordNode* TYPE;
+    terminalNode* RARROW;
+    exprNode* expr;
+    terminalNode* SEMI;
+    caseNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY, terminalNode* RA, exprNode* e, terminalNode* S);
+};
+
+class caseListNode : public node {
+public:
+    list<caseNode*> caseList;
+    caseListNode(string gSym);
+};
+
+class caseExprNode : public exprNode {
+public:
+    terminalNode* CASE;
+    exprNode* expr;
+    terminalNode* OF;
+    caseListNode* clNode;
+    terminalNode* ESAC;
+    caseExprNode(string gSym, terminalNode* C, exprNode* e, terminalNode* O, caseListNode* cln, terminalNode* E);
+};
+
 
 
 

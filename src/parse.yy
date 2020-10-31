@@ -38,7 +38,9 @@
     class letExprNode;
     class bindingListNode;
     class bindingNode;
-
+    class caseExprNode;
+    class caseListNode;
+    class caseNode;
 }
 
 //ParserDriver is passed by ref to parser and scanner. Provides simple but effective pure interface without globals
@@ -133,6 +135,8 @@
 %nterm <bindingNode*> binding
 %nterm <bindingListNode*> bindingList
 %nterm <bindingListNode*> moreBindingList
+%nterm <caseListNode*> caseList
+%nterm <caseNode*> case
 
 
 
@@ -354,11 +358,47 @@ expr:
                              $4
                             };
     }
-
+|   CASE expr OF caseList ESAC
+    {
+        $$ = new caseExprNode{"expr",
+                              new terminalNode{"case"},
+                              $2,
+                              new terminalNode{"of"},
+                              $4,
+                              new terminalNode{"esac"}
+                             };
+    }
 |   FALSE
     {
         $$ = new boolExprNode{"expr",
                               new booleanNode{"false", $1}};
+    }
+;
+
+caseList:
+    caseList case
+    {
+        $$ = $1;
+        $$->caseList.push_back($2);
+        $$->children->push_back($2);
+    }
+|   %empty
+    {
+        $$ = new caseListNode{"expr"};
+    }
+;
+
+case:
+    IDENTIFIER COLON TYPE RARROW expr SEMI
+    {
+        $$ = new caseNode{"expr",
+                          new wordNode{"identifier", $1},
+                          new terminalNode{"colon"},
+                          new wordNode{"type", $3},
+                          new terminalNode{"rarrow"},
+                          $5,
+                          new terminalNode{"semi"}
+                          };
     }
 ;
 

@@ -387,3 +387,29 @@ TEST(Fragments, letExprMultipleBindingMixedInit) {
     cout << parserOutput.str();
     ASSERT_EQ(reference.str(), parserOutput.str());
 }
+
+TEST(Fragments, caseExprOneCase) {
+    const string localFile = "caseExprOneCase.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, caseExprManyCase) {
+    const string localFile = "caseExprManyCase.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}

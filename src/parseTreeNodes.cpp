@@ -242,3 +242,32 @@ bindingNode::bindingNode(string gSym, wordNode *ID, terminalNode *COL, wordNode 
     children->push_back(TYPE);
     if(init != nullptr) children->push_back(init);
 }
+
+caseNode::caseNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, terminalNode *RA, exprNode *e, terminalNode *S) :
+    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, RARROW{RA}, expr{e}, SEMI{S}
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(COLON);
+    children->push_back(TYPE);
+    children->push_back(RARROW);
+    children->push_back(expr);
+    children->push_back(SEMI);
+}
+
+caseListNode::caseListNode(string gSym) :
+    node{gSym}
+{
+    for(auto kase : caseList) {
+        children->push_back(kase);
+    }
+}
+
+caseExprNode::caseExprNode(string gSym, terminalNode *C, exprNode *e, terminalNode *O, caseListNode *cln, terminalNode *E) :
+    exprNode{gSym}, CASE{C}, expr{e}, OF{O}, clNode{cln}, ESAC{E}
+{
+    children->push_back(CASE);
+    children->push_back(expr);
+    children->push_back(OF);
+    children->push_back(clNode);
+    children->push_back(ESAC);
+}
