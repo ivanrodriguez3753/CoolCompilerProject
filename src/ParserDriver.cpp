@@ -33,7 +33,12 @@ void ParserDriver::postorderRecurs(node *current, ostream& out) {
             if (term->grammarSymbol == "identifier" || term->grammarSymbol == "type" || term->grammarSymbol == "string") {
                 wordNode *word = (wordNode *) term;
                 out << word->value << endl;
-            } else {
+            }
+            else if(term->grammarSymbol == "integer") {
+                integerNode *integer = (integerNode*) term;
+                out << integer->value << endl;
+            }
+            else {
                 if(tokenReqTranslation.find(term->grammarSymbol) != tokenReqTranslation.end()) {
                     out << tokenReqTranslation[term->grammarSymbol] << endl;
                 }

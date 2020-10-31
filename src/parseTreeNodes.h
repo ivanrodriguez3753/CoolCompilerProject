@@ -61,15 +61,16 @@ public:
 /**
 * For integer terminals
 */
-class integerNode : terminalNode {
+class integerNode : public terminalNode {
+public:
     int value;
+    integerNode(string gSym, int v);
 };
 
 /**
 * For type, identifier, and string terminals
 */
 class wordNode : public terminalNode {
-
 public:
     string value;
     wordNode(string type, string v);
@@ -131,6 +132,24 @@ class boolExprNode : public exprNode {
 public:
     booleanNode* BOOLEAN;
     boolExprNode(string gSym, booleanNode* b);
+};
+
+class identifierExprNode : public exprNode {
+public:
+    wordNode* IDENTIFIER;
+    identifierExprNode(string gSym, wordNode* ID);
+};
+
+class intExprNode : public exprNode {
+public:
+    integerNode* INTEGER;
+    intExprNode(string gSym, integerNode* INT);
+};
+
+class stringExprNode : public exprNode {
+public:
+    wordNode* STRING;
+    stringExprNode(string gSym, wordNode* S);
 };
 
 class assignExprNode : public exprNode {
@@ -248,8 +267,83 @@ public:
     letExprNode(string gSym, terminalNode* L, bindingListNode* bln, terminalNode* I, exprNode* e);
 };
 
+class caseNode : public node {
+public:
+    wordNode* IDENTIFIER;
+    terminalNode* COLON;
+    wordNode* TYPE;
+    terminalNode* RARROW;
+    exprNode* expr;
+    terminalNode* SEMI;
+    caseNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY, terminalNode* RA, exprNode* e, terminalNode* S);
+};
 
+class caseListNode : public node {
+public:
+    list<caseNode*> caseList;
+    caseListNode(string gSym);
+};
 
+class caseExprNode : public exprNode {
+public:
+    terminalNode* CASE;
+    exprNode* expr;
+    terminalNode* OF;
+    caseListNode* clNode;
+    terminalNode* ESAC;
+    caseExprNode(string gSym, terminalNode* C, exprNode* e, terminalNode* O, caseListNode* cln, terminalNode* E);
+};
+
+class newExprNode : public exprNode {
+public:
+    terminalNode* NEW;
+    wordNode* TYPE;
+
+    newExprNode(string gSym, terminalNode* N, wordNode* TY);
+};
+
+class isvoidExprNode : public exprNode {
+public:
+    terminalNode* ISVOID;
+    exprNode* expr;
+
+    isvoidExprNode(string gSym, terminalNode* IV, exprNode* e);
+};
+
+class arithExprNode : public exprNode{
+public:
+    exprNode* expr1;
+    terminalNode* ARITHOP;
+    exprNode* expr2;
+
+    arithExprNode(string gSym, exprNode* e1, terminalNode* OP, exprNode* e2);
+};
+
+class relExprNode : public exprNode {
+public:
+    exprNode* expr1;
+    terminalNode* RELOP;
+    exprNode* expr2;
+
+    relExprNode(string gSym, exprNode* e1, terminalNode* OP, exprNode* e2);
+};
+
+class unaryExprNode : public exprNode {
+public:
+    terminalNode* UNARYOP;
+    exprNode* expr;
+
+    unaryExprNode(string gSym, terminalNode* OP, exprNode* e);
+};
+
+class termExprNode : public exprNode {
+public:
+    terminalNode* LPAREN;
+    exprNode* expr;
+    terminalNode* RPAREN;
+
+    termExprNode(string gSym, terminalNode* LP, exprNode* e, terminalNode* RP);
+};
 
 class optionalInhNode : public node {
     terminalNode *INHERITS;

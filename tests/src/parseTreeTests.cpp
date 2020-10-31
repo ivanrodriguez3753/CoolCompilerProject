@@ -387,3 +387,149 @@ TEST(Fragments, letExprMultipleBindingMixedInit) {
     cout << parserOutput.str();
     ASSERT_EQ(reference.str(), parserOutput.str());
 }
+
+TEST(Fragments, caseExprOneCase) {
+    const string localFile = "caseExprOneCase.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, caseExprManyCase) {
+    const string localFile = "caseExprManyCase.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, arith) {
+    const string localFile = "arith.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, atoi) {
+    const string localFile = "atoi.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, cells) {
+    const string localFile = "cells.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, helloworld) {
+    const string localFile = "hello-world.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, hs) {
+    const string localFile = "hs.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, list) {
+    const string localFile = "list.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, newcomplex) {
+    const string localFile = "new-complex.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, primes) {
+    const string localFile = "primes.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, printcool) {
+    const string localFile = "print-cool.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(ParserFull, sortlist) {
+    const string localFile = "sort-list.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}

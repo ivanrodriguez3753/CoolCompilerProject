@@ -38,7 +38,16 @@
     class letExprNode;
     class bindingListNode;
     class bindingNode;
-
+    class caseExprNode;
+    class caseListNode;
+    class caseNode;
+    class arithExprNode;
+    class relExprNode;
+    class unaryExprNode;
+    class termExprNode;
+    class identifierExprNode;
+    class intExprNode;
+    class stringExprNode;
 }
 
 //ParserDriver is passed by ref to parser and scanner. Provides simple but effective pure interface without globals
@@ -133,6 +142,8 @@
 %nterm <bindingNode*> binding
 %nterm <bindingListNode*> bindingList
 %nterm <bindingListNode*> moreBindingList
+%nterm <caseListNode*> caseList
+%nterm <caseNode*> case
 
 
 
@@ -354,11 +365,163 @@ expr:
                              $4
                             };
     }
+|   CASE expr OF caseList ESAC
+    {
+        $$ = new caseExprNode{"expr",
+                              new terminalNode{"case"},
+                              $2,
+                              new terminalNode{"of"},
+                              $4,
+                              new terminalNode{"esac"}
+                             };
+    }
+|   NEW TYPE
+    {
+        $$ = new newExprNode{"expr",
+                             new terminalNode{"new"},
+                             new wordNode{"type", $2}
+                            };
+    }
+|   ISVOID expr
+    {
+        $$ = new isvoidExprNode{"expr",
+                                new terminalNode{"isvoid"},
+                                $2
+                               };
+    }
+|   expr PLUS expr
+    {
+        $$ = new arithExprNode{"expr",
+                              $1,
+                              new terminalNode{"plus"},
+                              $3
+                             };
+    }
+|   expr MINUS expr
+    {
+        $$ = new arithExprNode{"expr",
+                              $1,
+                              new terminalNode{"minus"},
+                              $3
+                             };
+    }
+|   expr TIMES expr
+    {
+        $$ = new arithExprNode{"expr",
+                              $1,
+                              new terminalNode{"times"},
+                              $3
+                             };
+    }
+|   expr DIVIDE expr
+    {
+        $$ = new arithExprNode{"expr",
+                              $1,
+                              new terminalNode{"divide"},
+                              $3
+                             };
+    }
+|   TILDE expr
+    {
+        $$ = new unaryExprNode{"expr",
+                               new terminalNode{"tilde"},
+                               $2
+                              };
+    }
+|   NOT expr
+    {
+        $$ = new unaryExprNode{"expr",
+                               new terminalNode{"not"},
+                               $2
+                              };
+    }
+|   expr LT expr
+    {
+        $$ = new relExprNode{"expr",
+                             $1,
+                             new terminalNode{"lt"},
+                             $3
+                            };
+    }
+|   expr LE expr
+    {
+        $$ = new relExprNode{"expr",
+                             $1,
+                             new terminalNode{"le"},
+                             $3
+                            };
+    }
+|   expr EQUALS expr
+    {
+        $$ = new relExprNode{"expr",
+                             $1,
+                             new terminalNode{"equals"},
+                             $3
+                            };
+    }
+|   LPAREN expr RPAREN
+    {
+        $$ = new termExprNode{"expr",
+                              new terminalNode{"lparen"},
+                              $2,
+                              new terminalNode{"rparen"}
+                             };
+    }
+|   IDENTIFIER
+    {
+        $$ = new identifierExprNode{"expr",
+                                    new wordNode{"identifier", $1}
+                                   };
+    }
+|   INTEGER
+    {
+        $$ = new intExprNode{"expr",
+                             new integerNode{"integer", $1}
+                            };
+    }
+|   STRING
+    {
+        $$ = new stringExprNode{"expr",
+                                new wordNode{"string", $1}
+                               };
+    }
+|   TRUE
+    {   $$ = new boolExprNode{"expr",
+                              new booleanNode{"true", $1}
+                             };
 
+    }
 |   FALSE
     {
         $$ = new boolExprNode{"expr",
                               new booleanNode{"false", $1}};
+    }
+;
+
+caseList:
+    caseList case
+    {
+        $$ = $1;
+        $$->caseList.push_back($2);
+        $$->children->push_back($2);
+    }
+|   %empty
+    {
+        $$ = new caseListNode{"expr"};
+    }
+;
+
+case:
+    IDENTIFIER COLON TYPE RARROW expr SEMI
+    {
+        $$ = new caseNode{"expr",
+                          new wordNode{"identifier", $1},
+                          new terminalNode{"colon"},
+                          new wordNode{"type", $3},
+                          new terminalNode{"rarrow"},
+                          $5,
+                          new terminalNode{"semi"}
+                          };
     }
 ;
 

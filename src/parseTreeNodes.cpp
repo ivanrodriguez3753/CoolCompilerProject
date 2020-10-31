@@ -242,3 +242,103 @@ bindingNode::bindingNode(string gSym, wordNode *ID, terminalNode *COL, wordNode 
     children->push_back(TYPE);
     if(init != nullptr) children->push_back(init);
 }
+
+caseNode::caseNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, terminalNode *RA, exprNode *e, terminalNode *S) :
+    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, RARROW{RA}, expr{e}, SEMI{S}
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(COLON);
+    children->push_back(TYPE);
+    children->push_back(RARROW);
+    children->push_back(expr);
+    children->push_back(SEMI);
+}
+
+caseListNode::caseListNode(string gSym) :
+    node{gSym}
+{
+    for(auto kase : caseList) {
+        children->push_back(kase);
+    }
+}
+
+caseExprNode::caseExprNode(string gSym, terminalNode *C, exprNode *e, terminalNode *O, caseListNode *cln, terminalNode *E) :
+    exprNode{gSym}, CASE{C}, expr{e}, OF{O}, clNode{cln}, ESAC{E}
+{
+    children->push_back(CASE);
+    children->push_back(expr);
+    children->push_back(OF);
+    children->push_back(clNode);
+    children->push_back(ESAC);
+}
+
+newExprNode::newExprNode(string gSym, terminalNode* N, wordNode* TY) :
+    exprNode{gSym}, NEW{N}, TYPE{TY}
+{
+    children->push_back(NEW);
+    children->push_back(TYPE);
+}
+
+isvoidExprNode::isvoidExprNode(string gSym, terminalNode *IV, exprNode *e) :
+    exprNode{gSym}, ISVOID{IV}, expr{e}
+{
+    children->push_back(ISVOID);
+    children->push_back(e);
+}
+
+arithExprNode::arithExprNode(string gSym, exprNode *e1, terminalNode *OP, exprNode *e2) :
+    exprNode{gSym}, expr1{e1}, ARITHOP{OP}, expr2{e2}
+{
+    children->push_back(expr1);
+    children->push_back(ARITHOP);
+    children->push_back(expr2);
+}
+
+relExprNode::relExprNode(string gSym, exprNode *e1, terminalNode *OP, exprNode *e2) :
+    exprNode{gSym}, expr1{e1}, RELOP{OP}, expr2{e2}
+{
+    children->push_back(expr1);
+    children->push_back(RELOP);
+    children->push_back(expr2);
+}
+
+unaryExprNode::unaryExprNode(string gSym, terminalNode *OP, exprNode *e) :
+    exprNode{gSym}, UNARYOP{OP}, expr{e}
+{
+    children->push_back(UNARYOP);
+    children->push_back(expr);
+}
+
+termExprNode::termExprNode(string gSym, terminalNode *LP, exprNode *e, terminalNode *RP) :
+    exprNode{gSym}, LPAREN{LP}, expr{e}, RPAREN{RP}
+{
+    children->push_back(LPAREN);
+    children->push_back(expr);
+    children->push_back(RPAREN);
+}
+
+
+identifierExprNode::identifierExprNode(string gSym, wordNode *ID) :
+    exprNode{gSym}, IDENTIFIER{ID}
+{
+    children->push_back(IDENTIFIER);
+}
+
+
+intExprNode::intExprNode(string gSym, integerNode *INT) :
+    exprNode{gSym}, INTEGER{INT}
+{
+    children->push_back(INTEGER);
+}
+
+stringExprNode::stringExprNode(string gSym, wordNode *S) :
+    exprNode{gSym}, STRING{S}
+{
+    children->push_back(STRING);
+}
+
+integerNode::integerNode(string gSym, int v) :
+    terminalNode{gSym}, value{v}
+{
+
+}
