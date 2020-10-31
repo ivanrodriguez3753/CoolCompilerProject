@@ -24,7 +24,6 @@
     //utility to convert string denoting an integer into INTEGER token
 	yy::parser::symbol_type make_INTEGER(const std::string &s, const yy::parser::location_type& loc);
 
-    //TODO: will probably need some more for the booleans
 	yy::parser::symbol_type make_FALSE(const std::string &s, const yy::parser::location_type& loc);
 	yy::parser::symbol_type make_TRUE(const std::string &s, const yy::parser::location_type& loc);
 %}
@@ -121,10 +120,11 @@ t[rR][uU][eE]			        	return make_TRUE(yytext, loc);
 }
 
 <BLOCKCMT>{
+    [^*\n]*                            {loc.step();} //anything that is not a star
+    "*"+[^*\)\n]*                        {loc.step();} //any star that is not followed by )
+    \n                                 {loc.lines(yyleng); loc.step();}
     \*\)                                {BEGIN(0);}
-    [ \t\r]+                            {loc.step();}
-    \n+                                 {loc.lines(yyleng); loc.step();}
-    ^[\*\)]                             {/*yylval->lexeme =*/ "";}
+
 }
 
 %%
