@@ -412,7 +412,6 @@ TEST(Fragments, caseExprManyCase) {
     pdrv.postorderTraversal(parserOutput);
     cout << parserOutput.str();
     ASSERT_EQ(reference.str(), parserOutput.str());
-<<<<<<< HEAD
 }
 
 TEST(ParserFull, arith) {
@@ -533,6 +532,4 @@ TEST(ParserFull, sortlist) {
     stringstream parserOutput;
     pdrv.postorderTraversal(parserOutput);
     ASSERT_EQ(reference.str(), parserOutput.str());
-=======
->>>>>>> a96d9340a3a6a08d406deabfe53e8c975c028e4e
 }
