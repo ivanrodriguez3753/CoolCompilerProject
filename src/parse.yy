@@ -34,6 +34,10 @@
     class exprListNode;
     class ifExprNode;
     class whileExprNode;
+    class blockExprNode;
+    class letExprNode;
+    class bindingListNode;
+    class bindingNode;
 
 }
 
@@ -124,6 +128,12 @@
 %nterm <exprListNode*> exprList
 %nterm <exprListNode*> moreExprList
 %nterm <exprNode*> firstExpr
+%nterm <exprListNode*> blockExprList
+%nterm <bindingNode*> firstBinding
+%nterm <bindingNode*> binding
+%nterm <bindingListNode*> bindingList
+%nterm <bindingListNode*> moreBindingList
+
 
 
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
@@ -327,10 +337,42 @@ expr:
                                new terminalNode{"pool"}
                               };
     }
+|   LBRACE blockExprList RBRACE
+    {
+        $$ = new blockExprNode{"expr",
+                          new terminalNode{"lbrace"},
+                          $2,
+                          new terminalNode{"rbrace"}
+                          };
+    }
+|   LET bindingList IN expr
+    {
+        $$ = new letExprNode{"expr",
+                             new terminalNode{"let"},
+                             $2,
+                             new terminalNode{"in"},
+                             $4
+                            };
+    }
+
 |   FALSE
     {
         $$ = new boolExprNode{"expr",
                               new booleanNode{"false", $1}};
+    }
+;
+
+blockExprList:
+    %empty
+    {
+        $$ = new exprListNode{"exprList"};
+    }
+|   blockExprList expr SEMI
+    {
+        $$ = $1;
+        $$->exprList.push_back($2);
+        $$->children->push_back($2);
+        $$->children->push_back(new terminalNode{"semi"});
     }
 ;
 
@@ -350,6 +392,57 @@ method:
                             $8,
                             new terminalNode{"rbrace"},
                             new terminalNode{"semi"}};
+    }
+;
+
+bindingList:
+    bindingList firstBinding moreBindingList
+    {
+        $$ = $1;
+        $$->bindingList.push_back($2);
+        $$->children->push_back($2);
+        if($3 != nullptr) {
+            for(auto child : *$3->children) {
+                $$->children->push_back(child);
+            }
+        }
+    }
+|   %empty
+    {
+        $$ = new bindingListNode{"bindingList"};
+    }
+;
+
+firstBinding:
+    binding
+    {
+        $$ = $1;
+    }
+;
+
+moreBindingList:
+    moreBindingList COMMA binding
+    {
+        $$ = $1;
+        $$->bindingList.push_back($3);
+        $$->children->push_back(new terminalNode{"comma"});
+        $$->children->push_back($3);
+    }
+|   %empty
+    {
+        $$ = new bindingListNode{"bindingList"};
+    }
+;
+
+binding:
+    IDENTIFIER COLON TYPE optionalInit
+    {
+        $$ = new bindingNode{"expr",
+                             new wordNode{"identifier", $1},
+                             new terminalNode{"colon"},
+                             new wordNode{"type", $3},
+                             $4
+                            };
     }
 ;
 

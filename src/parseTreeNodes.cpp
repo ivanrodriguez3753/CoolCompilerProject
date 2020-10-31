@@ -205,3 +205,40 @@ whileExprNode::whileExprNode(string gSym, terminalNode *W, exprNode *pe, termina
     children->push_back(loopExpr);
     children->push_back(POOL);
 }
+
+blockExprNode::blockExprNode(string gSym, terminalNode *LB, exprListNode *el, terminalNode *RB) :
+    exprNode{gSym}, LBRACE{LB}, exprList{el}, RBRACE{RB}
+{
+    children->push_back(LBRACE);
+    for(auto child : *exprList->children) {
+        children->push_back(child);
+    }
+    children->push_back(RBRACE);
+}
+
+letExprNode::letExprNode(string gSym, terminalNode *L, bindingListNode *bln, terminalNode *I, exprNode *e) :
+    exprNode{gSym}, LET{L}, blNode{bln}, IN{I}, expr{e}
+{
+    children->push_back(LET);
+    children->push_back(blNode);
+    children->push_back(IN);
+    children->push_back(expr);
+}
+
+bindingListNode::bindingListNode(string gSym) :
+    node(gSym)
+{
+    for(auto binding : bindingList) {
+        children->push_back(binding);
+    }
+}
+
+
+bindingNode::bindingNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, optionalInitNode *i) :
+    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, init{i}
+{
+    children->push_back(IDENTIFIER);
+    children->push_back(COLON);
+    children->push_back(TYPE);
+    if(init != nullptr) children->push_back(init);
+}

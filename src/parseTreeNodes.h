@@ -118,6 +118,15 @@ public:
     whileExprNode(string gSym, terminalNode* W, exprNode* pe, terminalNode* L, exprNode* le, terminalNode* P);
 };
 
+class blockExprNode : public exprNode {
+public:
+    terminalNode* LBRACE;
+    exprListNode* exprList;
+    terminalNode* RBRACE;
+
+    blockExprNode(string gSym, terminalNode* LB, exprListNode* el, terminalNode* RB);
+};
+
 class boolExprNode : public exprNode {
 public:
     booleanNode* BOOLEAN;
@@ -212,6 +221,32 @@ public:
                terminalNode *COL, wordNode *ty, terminalNode *LB, exprNode *exp, terminalNode *RB, terminalNode* S);
 };
 
+class bindingNode : public node {
+public:
+    wordNode* IDENTIFIER;
+    terminalNode* COLON;
+    wordNode* TYPE;
+    optionalInitNode* init;
+
+    bindingNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY, optionalInitNode* i);
+};
+
+class bindingListNode : public node {
+public:
+    list<bindingNode*> bindingList;
+    bindingListNode(string gSym);
+
+};
+
+class letExprNode : public exprNode {
+public:
+    terminalNode* LET;
+    bindingListNode* blNode;
+    terminalNode* IN;
+    exprNode* expr;
+
+    letExprNode(string gSym, terminalNode* L, bindingListNode* bln, terminalNode* I, exprNode* e);
+};
 
 
 

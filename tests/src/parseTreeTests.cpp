@@ -296,3 +296,94 @@ TEST(Fragments, ifWhileExpressions) {
 
     ASSERT_EQ(reference.str(), parserOutput.str());
 }
+
+TEST(Fragments, blockExprNoExpressions) {
+    const string localFile = "blockExprNoExpressions.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, blockExprOneExpressions) {
+    const string localFile = "blockExprOneExpressions.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, blockExprTwoExpressions) {
+    const string localFile = "blockExprTwoExpressions.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, blockExprFiveExpressions) {
+    const string localFile = "blockExprFiveExpressions.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, letExprOneBindingNoInit) {
+    const string localFile = "letExprOneBindingNoInit.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, letExprOneBindingYesInit) {
+    const string localFile = "letExprOneBindingYesInit.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
+
+TEST(Fragments, letExprMultipleBindingMixedInit) {
+    const string localFile = "letExprMultipleBindingMixedInit.cl";
+    stringstream reference = makeStringStreamFromReferenceAndFormatForParseTree(localFile);
+
+    ParserDriver pdrv;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+
+    stringstream parserOutput;
+    pdrv.postorderTraversal(parserOutput);
+    cout << parserOutput.str();
+    ASSERT_EQ(reference.str(), parserOutput.str());
+}
