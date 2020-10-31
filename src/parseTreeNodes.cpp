@@ -271,7 +271,6 @@ caseExprNode::caseExprNode(string gSym, terminalNode *C, exprNode *e, terminalNo
     children->push_back(clNode);
     children->push_back(ESAC);
 }
-<<<<<<< HEAD
 
 newExprNode::newExprNode(string gSym, terminalNode* N, wordNode* TY) :
     exprNode{gSym}, NEW{N}, TYPE{TY}
@@ -343,5 +342,3 @@ integerNode::integerNode(string gSym, int v) :
 {
 
 }
-=======
->>>>>>> a96d9340a3a6a08d406deabfe53e8c975c028e4e
