@@ -7,7 +7,7 @@
 
 programNode* rootIVAN = nullptr;
 
-programNode::programNode(string gSym, classListNode *cln) :node{gSym}, clNode{cln} {
+programNode::programNode(string gSym, string pb, classListNode *cln) : node{gSym, pb}, clNode{cln} {
     children->push_back(clNode);
 
 }
@@ -20,26 +20,26 @@ programNode::programNode(string gSym, classListNode *cln) :node{gSym}, clNode{cl
  * which of course has a reference to the list of classes through the
  * classList member which is NOT a pointer.
  */
-classListNode::classListNode(string gSym) : node{gSym} {
+classListNode::classListNode(string gSym) : node{gSym, ""} {
     for(auto clazz : classList) {
         children->push_back(clazz);
     }
 }
 
-featureListNode::featureListNode(string gSym) : node{gSym} {
+featureListNode::featureListNode(string gSym) : node{gSym, ""} {
     for(auto feature : featureList) {
         children->push_back(feature);
     }
 }
 
 
-terminalNode::terminalNode(string gSym) : node{gSym} {
+terminalNode::terminalNode(string gSym) : node{gSym, ""} {
     isTerminal = true;
 }
 
 
-classNode::classNode(string gSym, terminalNode *tn1, wordNode *wn1, optionalInhNode* optInh, terminalNode *tn2, featureListNode* ftList, terminalNode *tn3, terminalNode *tn4) :
-    node{gSym}, CLASS{tn1}, TYPE{wn1}, optionalInh{optInh}, LBRACE{tn2}, featureList{ftList}, RBRACE{tn3}, SEMI{tn4}
+classNode::classNode(string gSym, string pb, terminalNode *tn1, wordNode *wn1, optionalInhNode* optInh, terminalNode *tn2, featureListNode* ftList, terminalNode *tn3, terminalNode *tn4) :
+    node{gSym, pb}, CLASS{tn1}, TYPE{wn1}, optionalInh{optInh}, LBRACE{tn2}, featureList{ftList}, RBRACE{tn3}, SEMI{tn4}
 {
     children->push_back(CLASS);
     children->push_back(TYPE);
@@ -56,14 +56,14 @@ wordNode::wordNode(string gSym, string v) :
 }
 
 optionalInhNode::optionalInhNode(string gSym, terminalNode *INH, wordNode *T) :
-    node{gSym}, INHERITS{INH}, TYPE{T}
+    node{gSym, ""}, INHERITS{INH}, TYPE{T}
 {
     children->push_back(INHERITS);
     children->push_back(TYPE);
 }
 
-featureNode::featureNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S) :
-    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{ty}, SEMI{S} {
+featureNode::featureNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* S) :
+    node{gSym, pb}, IDENTIFIER{ID}, COLON{COL}, TYPE{ty}, SEMI{S} {
     //let fieldNode/methodNode subclass constructor take care of all this so we can
     //selectively include/exclude optional fields
 }
@@ -75,11 +75,12 @@ booleanNode::booleanNode(string gSym, bool b) : terminalNode{gSym}, value{b} {
 
 }
 
-exprNode::exprNode(string gSym) : node{gSym}{
+exprNode::exprNode(string gSym, string pb) : node{gSym, pb}{
+
 }
 
-fieldNode::fieldNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *ty, optionalInitNode *in, terminalNode *S) :
-    featureNode{gSym, ID, COL, ty, S}, init{in}
+fieldNode::fieldNode(string gSym, string pb, wordNode *ID, terminalNode *COL, wordNode *ty, optionalInitNode *in, terminalNode *S) :
+    featureNode{gSym, pb, ID, COL, ty, S}, init{in}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);
@@ -89,15 +90,15 @@ fieldNode::fieldNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *ty,
 }
 
 optionalInitNode::optionalInitNode(string gSym, terminalNode *l, exprNode *e) :
-    node{gSym}, LARROW{l}, expr{e}
+    node{gSym, ""}, LARROW{l}, expr{e}
 {
     children->push_back(l);
     children->push_back(e);
 }
 
-methodNode::methodNode(string gSym, wordNode *ID, terminalNode *LP, formalsListNode *flNode, terminalNode *RP,
+methodNode::methodNode(string gSym, string pb, wordNode *ID, terminalNode *LP, formalsListNode *flNode, terminalNode *RP,
                        terminalNode *COL, wordNode *ty, terminalNode *LB, exprNode *exp, terminalNode *RB, terminalNode* S) :
-    featureNode{gSym, ID, COL, ty, S}, LPAREN{LP}, formalsList{flNode}, RPAREN{RP}, LBRACE{LB}, expr{exp}, RBRACE{RB}
+    featureNode{gSym, pb, ID, COL, ty, S}, LPAREN{LP}, formalsList{flNode}, RPAREN{RP}, LBRACE{LB}, expr{exp}, RBRACE{RB}
 {
     children->push_back(IDENTIFIER);
     children->push_back(LPAREN);
@@ -112,7 +113,7 @@ methodNode::methodNode(string gSym, wordNode *ID, terminalNode *LP, formalsListN
 }
 
 formalNode::formalNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY) :
-    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}
+    node{gSym, ""}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);
@@ -120,34 +121,34 @@ formalNode::formalNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *T
 }
 
 formalsListNode::formalsListNode(string gSym) :
-    node(gSym)
+    node(gSym, "")
 {
 
 }
 
-boolExprNode::boolExprNode(string gSym, booleanNode *b) :
-    exprNode{gSym},BOOLEAN{b}
+boolExprNode::boolExprNode(string gSym, string pb, booleanNode *b) :
+    exprNode{gSym, pb},BOOLEAN{b}
 {
     children->push_back(b);
 }
 
 
-assignExprNode::assignExprNode(string gSym, wordNode* ID, terminalNode* L, exprNode* e) :
-    exprNode{gSym}, IDENTIFIER{ID}, LARROW{L}, expr{e}
+assignExprNode::assignExprNode(string gSym, string pb, wordNode* ID, terminalNode* L, exprNode* e) :
+    exprNode{gSym, pb}, IDENTIFIER{ID}, LARROW{L}, expr{e}
 {
     children->push_back(IDENTIFIER);
     children->push_back(LARROW);
     children->push_back(expr);
 }
 
-dispatchNode::dispatchNode(string gSym, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
-    exprNode{gSym}, IDENTIFIER{ID}, LPAREN{LP}, exprList{el}, RPAREN{RP}
+dispatchNode::dispatchNode(string gSym, string pb, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    exprNode{gSym, pb}, IDENTIFIER{ID}, LPAREN{LP}, exprList{el}, RPAREN{RP}
 {
 
 }
 
-selfDispatchNode::selfDispatchNode(string gSym, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
-    dispatchNode(gSym, ID, LP, el, RP)
+selfDispatchNode::selfDispatchNode(string gSym, string pb, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    dispatchNode(gSym, pb, ID, LP, el, RP)
 {
     children->push_back(IDENTIFIER);
     children->push_back(LPAREN);
@@ -155,8 +156,8 @@ selfDispatchNode::selfDispatchNode(string gSym, wordNode *ID, terminalNode *LP, 
     children->push_back(RPAREN);
 }
 
-dynamicDispatchNode::dynamicDispatchNode(string gSym, exprNode *e, terminalNode *D, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
-    dispatchNode{gSym, ID, LP, el, RP}, expr{e}, DOT{D}
+dynamicDispatchNode::dynamicDispatchNode(string gSym, string pb, exprNode *e, terminalNode *D, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    dispatchNode{gSym, pb, ID, LP, el, RP}, expr{e}, DOT{D}
 {
     children->push_back(expr);
     children->push_back(DOT);
@@ -167,8 +168,8 @@ dynamicDispatchNode::dynamicDispatchNode(string gSym, exprNode *e, terminalNode 
 }
 
 
-staticDispatchNode::staticDispatchNode(string gSym, exprNode *e, terminalNode *A, wordNode *TY, terminalNode *D, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
-    dispatchNode{gSym, ID, LP, el, RP}, expr{e}, AT{A}, TYPE{TY}, DOT{D}
+staticDispatchNode::staticDispatchNode(string gSym, string pb, exprNode *e, terminalNode *A, wordNode *TY, terminalNode *D, wordNode *ID, terminalNode *LP, exprListNode *el, terminalNode *RP) :
+    dispatchNode{gSym, pb, ID, LP, el, RP}, expr{e}, AT{A}, TYPE{TY}, DOT{D}
 {
     children->push_back(expr);
     children->push_back(AT);
@@ -180,12 +181,12 @@ staticDispatchNode::staticDispatchNode(string gSym, exprNode *e, terminalNode *A
     children->push_back(RPAREN);
 }
 
-exprListNode::exprListNode(string gSym) : node(gSym) {
+exprListNode::exprListNode(string gSym) : node(gSym, "") {
 
 }
 
-ifExprNode::ifExprNode(string gSym, terminalNode *I, exprNode *pe, terminalNode *TH, exprNode *te, terminalNode *EL, exprNode* ee, terminalNode* F) :
-    exprNode{gSym}, IF{I}, predicateExpr{pe}, THEN{TH}, thenExpr{te}, ELSE{EL}, elseExpr{ee}, FI{F}
+ifExprNode::ifExprNode(string gSym, string pb, terminalNode *I, exprNode *pe, terminalNode *TH, exprNode *te, terminalNode *EL, exprNode* ee, terminalNode* F) :
+    exprNode{gSym, pb}, IF{I}, predicateExpr{pe}, THEN{TH}, thenExpr{te}, ELSE{EL}, elseExpr{ee}, FI{F}
 {
     children->push_back(IF);
     children->push_back(predicateExpr);
@@ -196,8 +197,8 @@ ifExprNode::ifExprNode(string gSym, terminalNode *I, exprNode *pe, terminalNode 
     children->push_back(FI);
 }
 
-whileExprNode::whileExprNode(string gSym, terminalNode *W, exprNode *pe, terminalNode *L, exprNode *le, terminalNode *P) :
-    exprNode{gSym}, WHILE{W}, predicateExpr{pe}, LOOP{L}, loopExpr{le}, POOL{P}
+whileExprNode::whileExprNode(string gSym, string pb, terminalNode *W, exprNode *pe, terminalNode *L, exprNode *le, terminalNode *P) :
+    exprNode{gSym, pb}, WHILE{W}, predicateExpr{pe}, LOOP{L}, loopExpr{le}, POOL{P}
 {
     children->push_back(WHILE);
     children->push_back(predicateExpr);
@@ -206,8 +207,8 @@ whileExprNode::whileExprNode(string gSym, terminalNode *W, exprNode *pe, termina
     children->push_back(POOL);
 }
 
-blockExprNode::blockExprNode(string gSym, terminalNode *LB, exprListNode *el, terminalNode *RB) :
-    exprNode{gSym}, LBRACE{LB}, exprList{el}, RBRACE{RB}
+blockExprNode::blockExprNode(string gSym, string pb, terminalNode *LB, exprListNode *el, terminalNode *RB) :
+    exprNode{gSym, pb}, LBRACE{LB}, exprList{el}, RBRACE{RB}
 {
     children->push_back(LBRACE);
     for(auto child : *exprList->children) {
@@ -216,8 +217,8 @@ blockExprNode::blockExprNode(string gSym, terminalNode *LB, exprListNode *el, te
     children->push_back(RBRACE);
 }
 
-letExprNode::letExprNode(string gSym, terminalNode *L, bindingListNode *bln, terminalNode *I, exprNode *e) :
-    exprNode{gSym}, LET{L}, blNode{bln}, IN{I}, expr{e}
+letExprNode::letExprNode(string gSym, string pb, terminalNode *L, bindingListNode *bln, terminalNode *I, exprNode *e) :
+    exprNode{gSym, pb}, LET{L}, blNode{bln}, IN{I}, expr{e}
 {
     children->push_back(LET);
     children->push_back(blNode);
@@ -226,7 +227,7 @@ letExprNode::letExprNode(string gSym, terminalNode *L, bindingListNode *bln, ter
 }
 
 bindingListNode::bindingListNode(string gSym) :
-    node(gSym)
+    node{gSym, ""}
 {
     for(auto binding : bindingList) {
         children->push_back(binding);
@@ -234,8 +235,8 @@ bindingListNode::bindingListNode(string gSym) :
 }
 
 
-bindingNode::bindingNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, optionalInitNode *i) :
-    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, init{i}
+bindingNode::bindingNode(string gSym, string pb, wordNode *ID, terminalNode *COL, wordNode *TY, optionalInitNode *i) :
+    node{gSym, pb}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, init{i}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);
@@ -244,7 +245,7 @@ bindingNode::bindingNode(string gSym, wordNode *ID, terminalNode *COL, wordNode 
 }
 
 caseNode::caseNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, terminalNode *RA, exprNode *e, terminalNode *S) :
-    node{gSym}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, RARROW{RA}, expr{e}, SEMI{S}
+    node{gSym, ""}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, RARROW{RA}, expr{e}, SEMI{S}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);
@@ -255,15 +256,15 @@ caseNode::caseNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, t
 }
 
 caseListNode::caseListNode(string gSym) :
-    node{gSym}
+    node{gSym, ""}
 {
     for(auto kase : caseList) {
         children->push_back(kase);
     }
 }
 
-caseExprNode::caseExprNode(string gSym, terminalNode *C, exprNode *e, terminalNode *O, caseListNode *cln, terminalNode *E) :
-    exprNode{gSym}, CASE{C}, expr{e}, OF{O}, clNode{cln}, ESAC{E}
+caseExprNode::caseExprNode(string gSym, string pb, terminalNode *C, exprNode *e, terminalNode *O, caseListNode *cln, terminalNode *E) :
+    exprNode{gSym, pb}, CASE{C}, expr{e}, OF{O}, clNode{cln}, ESAC{E}
 {
     children->push_back(CASE);
     children->push_back(expr);
@@ -272,45 +273,45 @@ caseExprNode::caseExprNode(string gSym, terminalNode *C, exprNode *e, terminalNo
     children->push_back(ESAC);
 }
 
-newExprNode::newExprNode(string gSym, terminalNode* N, wordNode* TY) :
-    exprNode{gSym}, NEW{N}, TYPE{TY}
+newExprNode::newExprNode(string gSym, string pb, terminalNode* N, wordNode* TY) :
+    exprNode{gSym, pb}, NEW{N}, TYPE{TY}
 {
     children->push_back(NEW);
     children->push_back(TYPE);
 }
 
-isvoidExprNode::isvoidExprNode(string gSym, terminalNode *IV, exprNode *e) :
-    exprNode{gSym}, ISVOID{IV}, expr{e}
+isvoidExprNode::isvoidExprNode(string gSym, string pb, terminalNode *IV, exprNode *e) :
+    exprNode{gSym, pb}, ISVOID{IV}, expr{e}
 {
     children->push_back(ISVOID);
     children->push_back(e);
 }
 
-arithExprNode::arithExprNode(string gSym, exprNode *e1, terminalNode *OP, exprNode *e2) :
-    exprNode{gSym}, expr1{e1}, ARITHOP{OP}, expr2{e2}
+arithExprNode::arithExprNode(string gSym, string pb, exprNode *e1, terminalNode *OP, exprNode *e2) :
+    exprNode{gSym, pb}, expr1{e1}, ARITHOP{OP}, expr2{e2}
 {
     children->push_back(expr1);
     children->push_back(ARITHOP);
     children->push_back(expr2);
 }
 
-relExprNode::relExprNode(string gSym, exprNode *e1, terminalNode *OP, exprNode *e2) :
-    exprNode{gSym}, expr1{e1}, RELOP{OP}, expr2{e2}
+relExprNode::relExprNode(string gSym, string pb, exprNode *e1, terminalNode *OP, exprNode *e2) :
+    exprNode{gSym, pb}, expr1{e1}, RELOP{OP}, expr2{e2}
 {
     children->push_back(expr1);
     children->push_back(RELOP);
     children->push_back(expr2);
 }
 
-unaryExprNode::unaryExprNode(string gSym, terminalNode *OP, exprNode *e) :
-    exprNode{gSym}, UNARYOP{OP}, expr{e}
+unaryExprNode::unaryExprNode(string gSym, string pb, terminalNode *OP, exprNode *e) :
+    exprNode{gSym, pb}, UNARYOP{OP}, expr{e}
 {
     children->push_back(UNARYOP);
     children->push_back(expr);
 }
 
-termExprNode::termExprNode(string gSym, terminalNode *LP, exprNode *e, terminalNode *RP) :
-    exprNode{gSym}, LPAREN{LP}, expr{e}, RPAREN{RP}
+termExprNode::termExprNode(string gSym, string pb, terminalNode *LP, exprNode *e, terminalNode *RP) :
+    exprNode{gSym, pb}, LPAREN{LP}, expr{e}, RPAREN{RP}
 {
     children->push_back(LPAREN);
     children->push_back(expr);
@@ -318,21 +319,21 @@ termExprNode::termExprNode(string gSym, terminalNode *LP, exprNode *e, terminalN
 }
 
 
-identifierExprNode::identifierExprNode(string gSym, wordNode *ID) :
-    exprNode{gSym}, IDENTIFIER{ID}
+identifierExprNode::identifierExprNode(string gSym, string pb, wordNode *ID) :
+    exprNode{gSym, pb}, IDENTIFIER{ID}
 {
     children->push_back(IDENTIFIER);
 }
 
 
-intExprNode::intExprNode(string gSym, integerNode *INT) :
-    exprNode{gSym}, INTEGER{INT}
+intExprNode::intExprNode(string gSym, string pb, integerNode *INT) :
+    exprNode{gSym, pb}, INTEGER{INT}
 {
     children->push_back(INTEGER);
 }
 
-stringExprNode::stringExprNode(string gSym, wordNode *S) :
-    exprNode{gSym}, STRING{S}
+stringExprNode::stringExprNode(string gSym, string pb, wordNode *S) :
+    exprNode{gSym, pb}, STRING{S}
 {
     children->push_back(STRING);
 }

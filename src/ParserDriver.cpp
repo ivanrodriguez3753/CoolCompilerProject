@@ -76,6 +76,42 @@ void ParserDriver::prettyPrintRecurs(node* current, const string& prefix, ostrea
 }
 
 /**
+ * Do a postorder traversal of the parse tree to construct the abstract syntax tree
+ * @param root
+ * @return
+ */
+_programNode *ParserDriver::buildSyntaxTree(programNode *root) {
+    _programNode* ast = (_programNode*) buildSyntaxNode(root);
+    return ast;
+}
+
+_node *ParserDriver::buildSyntaxNode(node* current) {
+    string syntaxNodeType = current->productionBody;
+    if(syntaxNodeType == "program") {
+        programNode* castedCurrent = (programNode*) current;
+        _programNode* result = new _programNode{castedCurrent->lineNo};
+        for(classNode* klass : castedCurrent->clNode->classList) {
+            result->classList.push_back((_classNode*)buildSyntaxNode(klass));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "no_inherits") {
+        classNode* castedCurrent = (classNode*) current;
+        _classNoInhNode* result = new _classNoInhNode{_identifier{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
+        for(featureNode* feature : castedCurrent->featureList->featureList) {
+            result->featureList.push_back((_featureNode*)buildSyntaxNode(feature));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "attribute_no_init") {
+        fieldNode* castedCurrent = (fieldNode*) current;
+        _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _identifier{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value}, _identifier{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
+        return result;
+    }
+
+}
+
+/**
  * This is a global map for tokens whose name differ from its lexeme
  */
 map<string, string> tokenReqTranslation{

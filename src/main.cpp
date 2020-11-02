@@ -44,5 +44,11 @@ int main(int argc, char** argv) {
         pdrv.parse(file);
         pdrv.prettyPrintTree(cout);
     }
+    else if(option == "--abstractParse") {
+        pdrv.parse(file);
+        _programNode* AST = (_programNode*) pdrv.buildSyntaxTree(rootIVAN);
+        cout << *AST;
+    }
+
 
 }

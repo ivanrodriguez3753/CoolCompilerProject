@@ -151,9 +151,6 @@
 //all values are printed using their operator<<
 %printer {yyo << $$;} <*>;
 
-
-//start grammar
-%%
 //from the reference manual:
 
 //The precedence of infix binary and prefix unary operations, from highest to lowest, is given by the following table:
@@ -170,15 +167,19 @@
 
 
 //bison needs precedence to be from lowest to highest
-//%right "<-"
-//%precedence NOT
-//%precedence LE LT EQUALS
-//%left "+" "-"
-//%left "*" "/"
-//%precedence ISVOID
-//%precedence TILDE
-//%left "@"
-//%left "."
+%right LARROW
+%right NOT
+%nonassoc LE LT EQUALS
+%left "+" "-"
+%left "*" "/"
+%left ISVOID
+%left TILDE
+%left "@"
+%left "."
+
+//start grammar
+%%
+
 
 %start program;
 program:
@@ -187,7 +188,9 @@ program:
         //this should be the only rule that doesn't use $$ =
         //instead it uses the global rootIVAN which is the root of the parse tree
         rootIVAN = new programNode{"program",
+                                   "program",
                                    $1};
+        rootIVAN->lineNo = @$.begin.line;
     }
 ;
 
@@ -202,6 +205,7 @@ classList:
 |   %empty
 	{
         $$ = new classListNode{"classList"};
+        $$->lineNo = @$.begin.line;
 	}
 
 ;
@@ -210,9 +214,13 @@ classList:
 class:
     CLASS TYPE optionalInh LBRACE featureList RBRACE SEMI
     {
-
+        string productionBody = "no_inherits";
+        if($3 != nullptr) {
+            productionBody = "inherits";
+        }
 
         $$ = new classNode{"classNode",
+                           productionBody,
                            new terminalNode{"class"},
                            new wordNode{"type", $2},
                            $3,
@@ -221,6 +229,8 @@ class:
                            new terminalNode{"rbrace"},
                            new terminalNode{"semi"}
                            };
+       $$->lineNo = @$.begin.line;
+       $$->TYPE->lineNo = @2.begin.line;
     }
 ;
 
@@ -234,6 +244,9 @@ optionalInh:
         $$ = new optionalInhNode{"optionalInhNode",
                                  new terminalNode{"inherits"},
                                  new wordNode{"type", $2}};
+        $$->lineNo = @$.begin.line;
+        $$->TYPE->lineNo = @2.begin.line;
+
     }
 ;
 
@@ -242,6 +255,7 @@ featureList:
 	%empty
 	{
 	    $$ = new featureListNode{"featureList"};
+        $$->lineNo = @$.begin.line;
 	}
 |   featureList feature
     {
@@ -266,12 +280,20 @@ feature:
 field:
     IDENTIFIER COLON TYPE optionalInit SEMI
     {
+        string productionBody = "attribute_no_init";
+        if($4 != nullptr) {
+            productionBody = "attribute_init)";
+        }
         $$ = new fieldNode{"fieldNode",
+                           productionBody,
                            new wordNode{"identifier", $1},
                            new terminalNode{"colon"},
                            new wordNode{"type", $3},
                            $4,
                            new terminalNode{"semi"}};
+        $$->lineNo = @$.begin.line;
+        $$->IDENTIFIER->lineNo = @1.begin.line;
+        $$->TYPE->lineNo = @3.begin.line;
     }
 ;
 
@@ -285,6 +307,7 @@ optionalInit:
         $$ = new optionalInitNode{"optionalInit",
                                   new terminalNode{"larrow"},
                                   $2};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -292,43 +315,52 @@ expr:
     IDENTIFIER LARROW expr
     {
         $$ = new assignExprNode{"expr",
+                                "assign",
                                 new wordNode{"identifier", $1},
                                 new terminalNode{"larrow"},
                                 $3};
+        $$->lineNo = @$.begin.line;
     }
 |   IDENTIFIER LPAREN exprList RPAREN
     {
         $$ = new selfDispatchNode{"expr",
+                                  "self_dispatch",
                                   new wordNode{"identifier", $1},
                                   new terminalNode{"lparen"},
                                   $3,
                                   new terminalNode{"rparen"}};
+        $$->lineNo = @$.begin.line;
     }
 |   expr DOT IDENTIFIER LPAREN exprList RPAREN
     {
         $$ = new dynamicDispatchNode{"expr",
-                                  $1,
-                                  new terminalNode{"dot"},
-                                  new wordNode{"identifier", $3},
-                                  new terminalNode{"lparen"},
-                                  $5,
-                                  new terminalNode{"rparen"}};
+                                     "dynamic_dispatch",
+                                     $1,
+                                     new terminalNode{"dot"},
+                                     new wordNode{"identifier", $3},
+                                     new terminalNode{"lparen"},
+                                     $5,
+                                     new terminalNode{"rparen"}};
+        $$->lineNo = @$.begin.line;
     }
 |   expr AT TYPE DOT IDENTIFIER LPAREN exprList RPAREN
     {
         $$ = new staticDispatchNode{"expr",
-                                      $1,
-                                      new terminalNode{"at"},
-                                      new wordNode{"type", $3},
-                                      new terminalNode{"dot"},
-                                      new wordNode{"identifier", $5},
-                                      new terminalNode{"lparen"},
-                                      $7,
-                                      new terminalNode{"rparen"}};
+                                    "static_dispatch",
+                                    $1,
+                                    new terminalNode{"at"},
+                                    new wordNode{"type", $3},
+                                    new terminalNode{"dot"},
+                                    new wordNode{"identifier", $5},
+                                    new terminalNode{"lparen"},
+                                    $7,
+                                    new terminalNode{"rparen"}};
+        $$->lineNo = @$.begin.line;
     }
 |   IF expr THEN expr ELSE expr FI
     {
         $$ = new ifExprNode{"expr",
+                            "if",
                             new terminalNode{"if"},
                             $2,
                             new terminalNode{"then"},
@@ -337,164 +369,208 @@ expr:
                             $6,
                             new terminalNode{"fi"}
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   WHILE expr LOOP expr POOL
     {
         $$ = new whileExprNode{"expr",
+                               "while",
                                new terminalNode{"while"},
                                $2,
                                new terminalNode{"loop"},
                                $4,
                                new terminalNode{"pool"}
                               };
+        $$->lineNo = @$.begin.line;
     }
 |   LBRACE blockExprList RBRACE
     {
         $$ = new blockExprNode{"expr",
-                          new terminalNode{"lbrace"},
-                          $2,
-                          new terminalNode{"rbrace"}
-                          };
+                               "block",
+                               new terminalNode{"lbrace"},
+                               $2,
+                               new terminalNode{"rbrace"}
+                              };
+        $$->lineNo = @$.begin.line;
     }
 |   LET bindingList IN expr
     {
         $$ = new letExprNode{"expr",
+                             "let",
                              new terminalNode{"let"},
                              $2,
                              new terminalNode{"in"},
                              $4
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   CASE expr OF caseList ESAC
     {
         $$ = new caseExprNode{"expr",
+                              "case",
                               new terminalNode{"case"},
                               $2,
                               new terminalNode{"of"},
                               $4,
                               new terminalNode{"esac"}
                              };
+        $$->lineNo = @$.begin.line;
     }
 |   NEW TYPE
     {
         $$ = new newExprNode{"expr",
+                             "new",
                              new terminalNode{"new"},
                              new wordNode{"type", $2}
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   ISVOID expr
     {
         $$ = new isvoidExprNode{"expr",
+                                "isvoid",
                                 new terminalNode{"isvoid"},
                                 $2
                                };
+        $$->lineNo = @$.begin.line;
     }
 |   expr PLUS expr
     {
         $$ = new arithExprNode{"expr",
+                               "plus",
                               $1,
                               new terminalNode{"plus"},
                               $3
                              };
+        $$->lineNo = @$.begin.line;
     }
 |   expr MINUS expr
     {
         $$ = new arithExprNode{"expr",
+                               "minus",
                               $1,
                               new terminalNode{"minus"},
                               $3
                              };
+        $$->lineNo = @$.begin.line;
     }
 |   expr TIMES expr
     {
         $$ = new arithExprNode{"expr",
+                               "times",
                               $1,
                               new terminalNode{"times"},
                               $3
                              };
+        $$->lineNo = @$.begin.line;
     }
 |   expr DIVIDE expr
     {
         $$ = new arithExprNode{"expr",
+                               "divide",
                               $1,
                               new terminalNode{"divide"},
                               $3
                              };
+        $$->lineNo = @$.begin.line;
     }
 |   TILDE expr
     {
         $$ = new unaryExprNode{"expr",
+                               "negate",
                                new terminalNode{"tilde"},
                                $2
                               };
+        $$->lineNo = @$.begin.line;
     }
 |   NOT expr
     {
         $$ = new unaryExprNode{"expr",
+                               "not",
                                new terminalNode{"not"},
                                $2
                               };
+        $$->lineNo = @$.begin.line;
     }
 |   expr LT expr
     {
         $$ = new relExprNode{"expr",
+                             "lt",
                              $1,
                              new terminalNode{"lt"},
                              $3
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   expr LE expr
     {
         $$ = new relExprNode{"expr",
+                             "le",
                              $1,
                              new terminalNode{"le"},
                              $3
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   expr EQUALS expr
     {
         $$ = new relExprNode{"expr",
+                             "eq",
                              $1,
                              new terminalNode{"equals"},
                              $3
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   LPAREN expr RPAREN
     {
         $$ = new termExprNode{"expr",
+                              "termExpr", //this is not in the list of possible syntax nodes, it'll just pass through and become an expression
                               new terminalNode{"lparen"},
                               $2,
                               new terminalNode{"rparen"}
                              };
+        $$->lineNo = @$.begin.line;
     }
 |   IDENTIFIER
     {
         $$ = new identifierExprNode{"expr",
+                                    "identifier",
                                     new wordNode{"identifier", $1}
                                    };
+        $$->lineNo = @$.begin.line;
     }
 |   INTEGER
     {
         $$ = new intExprNode{"expr",
+                             "integer",
                              new integerNode{"integer", $1}
                             };
+        $$->lineNo = @$.begin.line;
     }
 |   STRING
     {
         $$ = new stringExprNode{"expr",
+                                "string",
                                 new wordNode{"string", $1}
                                };
+        $$->lineNo = @$.begin.line;
     }
 |   TRUE
-    {   $$ = new boolExprNode{"expr",
+    {
+        $$ = new boolExprNode{"expr",
+                              "true",
                               new booleanNode{"true", $1}
                              };
+        $$->lineNo = @$.begin.line;
 
     }
 |   FALSE
     {
         $$ = new boolExprNode{"expr",
+                              "false",
                               new booleanNode{"false", $1}};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -508,6 +584,7 @@ caseList:
 |   %empty
     {
         $$ = new caseListNode{"expr"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -522,6 +599,7 @@ case:
                           $5,
                           new terminalNode{"semi"}
                           };
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -529,6 +607,7 @@ blockExprList:
     %empty
     {
         $$ = new exprListNode{"exprList"};
+        $$->lineNo = @$.begin.line;
     }
 |   blockExprList expr SEMI
     {
@@ -545,6 +624,7 @@ method:
     IDENTIFIER LPAREN formalsList RPAREN COLON TYPE LBRACE expr RBRACE SEMI
     {
         $$ = new methodNode{"method",
+                            "method",
                             new wordNode{"identifier", $1},
                             new terminalNode{"lparen"},
                             $3,
@@ -555,6 +635,7 @@ method:
                             $8,
                             new terminalNode{"rbrace"},
                             new terminalNode{"semi"}};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -573,6 +654,7 @@ bindingList:
 |   %empty
     {
         $$ = new bindingListNode{"bindingList"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -594,18 +676,25 @@ moreBindingList:
 |   %empty
     {
         $$ = new bindingListNode{"bindingList"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
 binding:
     IDENTIFIER COLON TYPE optionalInit
     {
+        string productionBody = "let_binding_no_init";
+        if($4 != nullptr) {
+            productionBody = "let_binding_init";
+        }
         $$ = new bindingNode{"expr",
+                             productionBody,
                              new wordNode{"identifier", $1},
                              new terminalNode{"colon"},
                              new wordNode{"type", $3},
                              $4
                             };
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -624,6 +713,7 @@ exprList:
 |   %empty
     {
         $$ = new exprListNode{"exprList"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -645,6 +735,7 @@ moreExprList:
 |   %empty
     {
         $$ = new exprListNode{"exprList"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -664,6 +755,7 @@ formalsList:
 |   %empty
     {
         $$ = new formalsListNode{"formalsList"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -684,6 +776,7 @@ moreFormalsList:
 |   %empty
     {
         $$ = new formalsListNode{"formalsList"};
+        $$->lineNo = @$.begin.line;
     }
 ;
 
@@ -695,6 +788,7 @@ formal:
                             new wordNode{"identifier", $1},
                             new terminalNode{"colon"},
                             new wordNode{"type", $3}};
+        $$->lineNo = @$.begin.line;
     }
 ;
 

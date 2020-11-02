@@ -13,7 +13,7 @@ add_executable(
         src/lexerTests.cpp
     src/main.cpp
     #insert .cpp test files here, like src/tests.cpp
-        src/parseTreeTests.cpp)
+        src/parseTreeTests.cpp src/syntaxTreeTests.cpp src/syntaxTreeTests.h)
 
 target_include_directories(
     tests

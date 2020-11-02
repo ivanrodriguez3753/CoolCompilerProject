@@ -2,7 +2,6 @@
 #include "gtest/gtest.h"
 #include "parser.hh"
 #include "ParserDriver.hh"
-//#include "lexerTests.hh"
 using namespace std;
 
 /**
@@ -459,6 +458,7 @@ TEST(ParserFull, helloworld) {
 
     stringstream parserOutput;
     pdrv.postorderTraversal(parserOutput);
+    pdrv.prettyPrintTree(cout);
     ASSERT_EQ(reference.str(), parserOutput.str());
 }
 

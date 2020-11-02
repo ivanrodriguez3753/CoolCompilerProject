@@ -3,4 +3,5 @@
 /CoolPrograms
 .DS_Store
 *.cl-lex
+*.cl-ast
 bison.pdf

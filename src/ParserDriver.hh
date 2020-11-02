@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include "parser.hh"
+#include "syntaxTreeNodes.h"
 
 
 
@@ -44,6 +45,10 @@ public:
 
     void postorderTraversal(ostream& out);
     void prettyPrintTree(ostream& out);
+
+    _programNode* buildSyntaxTree(programNode* root);
+    _node* buildSyntaxNode(node* current);
+
 
 private:
     void postorderRecurs(node* current, ostream& out);
