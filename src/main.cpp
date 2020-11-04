@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     }
     else if(option == "--abstractParse") {
         pdrv.parse(file);
-        _programNode* AST = (_programNode*) pdrv.buildSyntaxTree(rootIVAN);
+        _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
         cout << *AST;
     }
 

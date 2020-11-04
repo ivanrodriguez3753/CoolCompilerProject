@@ -170,12 +170,12 @@
 %right LARROW
 %right NOT
 %nonassoc LE LT EQUALS
-%left "+" "-"
-%left "*" "/"
+%left PLUS MINUS
+%left TIMES DIVIDE
 %left ISVOID
 %left TILDE
-%left "@"
-%left "."
+%left AT
+%left DOT
 
 //start grammar
 %%
@@ -282,7 +282,7 @@ field:
     {
         string productionBody = "attribute_no_init";
         if($4 != nullptr) {
-            productionBody = "attribute_init)";
+            productionBody = "attribute_init";
         }
         $$ = new fieldNode{"fieldNode",
                            productionBody,
@@ -320,6 +320,7 @@ expr:
                                 new terminalNode{"larrow"},
                                 $3};
         $$->lineNo = @$.begin.line;
+        ((assignExprNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
     }
 |   IDENTIFIER LPAREN exprList RPAREN
     {
@@ -330,6 +331,7 @@ expr:
                                   $3,
                                   new terminalNode{"rparen"}};
         $$->lineNo = @$.begin.line;
+        ((selfDispatchNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
     }
 |   expr DOT IDENTIFIER LPAREN exprList RPAREN
     {
@@ -342,6 +344,7 @@ expr:
                                      $5,
                                      new terminalNode{"rparen"}};
         $$->lineNo = @$.begin.line;
+        ((dynamicDispatchNode*)$$)->IDENTIFIER->lineNo = @3.begin.line;
     }
 |   expr AT TYPE DOT IDENTIFIER LPAREN exprList RPAREN
     {
@@ -356,6 +359,9 @@ expr:
                                     $7,
                                     new terminalNode{"rparen"}};
         $$->lineNo = @$.begin.line;
+        ((staticDispatchNode*)$$)->TYPE->lineNo = @3.begin.line;
+        ((staticDispatchNode*)$$)->IDENTIFIER->lineNo = @5.begin.line;
+
     }
 |   IF expr THEN expr ELSE expr FI
     {
@@ -424,6 +430,7 @@ expr:
                              new wordNode{"type", $2}
                             };
         $$->lineNo = @$.begin.line;
+        ((newExprNode*)$$)->TYPE->lineNo = @2.begin.line;
     }
 |   ISVOID expr
     {
@@ -539,6 +546,7 @@ expr:
                                     new wordNode{"identifier", $1}
                                    };
         $$->lineNo = @$.begin.line;
+        ((identifierExprNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
     }
 |   INTEGER
     {
@@ -592,6 +600,7 @@ case:
     IDENTIFIER COLON TYPE RARROW expr SEMI
     {
         $$ = new caseNode{"expr",
+                          "caseElement",
                           new wordNode{"identifier", $1},
                           new terminalNode{"colon"},
                           new wordNode{"type", $3},
@@ -600,6 +609,8 @@ case:
                           new terminalNode{"semi"}
                           };
         $$->lineNo = @$.begin.line;
+        ((caseNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
+        ((caseNode*)$$)->TYPE->lineNo = @3.begin.line;
     }
 ;
 
@@ -635,7 +646,8 @@ method:
                             $8,
                             new terminalNode{"rbrace"},
                             new terminalNode{"semi"}};
-        $$->lineNo = @$.begin.line;
+        $$->IDENTIFIER->lineNo = @1.begin.line;
+        $$->TYPE->lineNo = @6.begin.line;
     }
 ;
 
@@ -646,8 +658,11 @@ bindingList:
         $$->bindingList.push_back($2);
         $$->children->push_back($2);
         if($3 != nullptr) {
-            for(auto child : *$3->children) {
+            for(auto child : *$3->children) { //push back bindings and commas
                 $$->children->push_back(child);
+            }
+            for(auto binding : $3->bindingList) {//push only bindings
+                $$->bindingList.push_back(binding);
             }
         }
     }
@@ -695,6 +710,8 @@ binding:
                              $4
                             };
         $$->lineNo = @$.begin.line;
+        ((bindingNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
+        ((bindingNode*)$$)->TYPE->lineNo = @3.begin.line;
     }
 ;
 
@@ -705,8 +722,11 @@ exprList:
         $$->exprList.push_back($2);
         $$->children->push_back($2);
         if($3 != nullptr) {
-            for(auto child : *$3->children) {
+            for(auto child : *$3->children) { //push back COMMAs and exprs
                 $$->children->push_back(child);
+            }
+            for(auto expr : $3->exprList) {//push only exprs
+                $$->exprList.push_back(expr);
             }
         }
     }
@@ -747,8 +767,11 @@ formalsList:
         $$->formalsList.push_back($2);
         $$->children->push_back($2);
         if($3 != nullptr) {
-            for(auto child : *$3->children) {
+            for(auto child : *$3->children) { //push COMMAs and formals
                 $$->children->push_back(child);
+            }
+            for(auto formal : $3->formalsList) {//push only formals
+                $$->formalsList.push_back(formal);
             }
         }
     }
@@ -785,10 +808,12 @@ formal:
     IDENTIFIER COLON TYPE
     {
         $$ = new formalNode{"formal",
+                            "formal",
                             new wordNode{"identifier", $1},
                             new terminalNode{"colon"},
                             new wordNode{"type", $3}};
-        $$->lineNo = @$.begin.line;
+        $$->IDENTIFIER->lineNo = @1.begin.line;
+        $$->TYPE->lineNo = @3.begin.line;
     }
 ;
 

@@ -46,7 +46,7 @@ public:
     void postorderTraversal(ostream& out);
     void prettyPrintTree(ostream& out);
 
-    _programNode* buildSyntaxTree(programNode* root);
+    _program* buildSyntaxTree(programNode* root);
     _node* buildSyntaxNode(node* current);
 
 

@@ -112,8 +112,8 @@ methodNode::methodNode(string gSym, string pb, wordNode *ID, terminalNode *LP, f
     children->push_back(SEMI);
 }
 
-formalNode::formalNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY) :
-    node{gSym, ""}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}
+formalNode::formalNode(string gSym, string pb, wordNode *ID, terminalNode *COL, wordNode *TY) :
+    node{gSym, pb}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);
@@ -244,8 +244,8 @@ bindingNode::bindingNode(string gSym, string pb, wordNode *ID, terminalNode *COL
     if(init != nullptr) children->push_back(init);
 }
 
-caseNode::caseNode(string gSym, wordNode *ID, terminalNode *COL, wordNode *TY, terminalNode *RA, exprNode *e, terminalNode *S) :
-    node{gSym, ""}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, RARROW{RA}, expr{e}, SEMI{S}
+caseNode::caseNode(string gSym, string pb, wordNode *ID, terminalNode *COL, wordNode *TY, terminalNode *RA, exprNode *e, terminalNode *S) :
+    node{gSym, pb}, IDENTIFIER{ID}, COLON{COL}, TYPE{TY}, RARROW{RA}, expr{e}, SEMI{S}
 {
     children->push_back(IDENTIFIER);
     children->push_back(COLON);

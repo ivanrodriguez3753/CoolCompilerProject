@@ -80,8 +80,8 @@ void ParserDriver::prettyPrintRecurs(node* current, const string& prefix, ostrea
  * @param root
  * @return
  */
-_programNode *ParserDriver::buildSyntaxTree(programNode *root) {
-    _programNode* ast = (_programNode*) buildSyntaxNode(root);
+_program *ParserDriver::buildSyntaxTree(programNode *root) {
+    _program* ast = (_program*) buildSyntaxNode(root);
     return ast;
 }
 
@@ -89,25 +89,266 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     string syntaxNodeType = current->productionBody;
     if(syntaxNodeType == "program") {
         programNode* castedCurrent = (programNode*) current;
-        _programNode* result = new _programNode{castedCurrent->lineNo};
+        _program* result = new _program{castedCurrent->lineNo};
         for(classNode* klass : castedCurrent->clNode->classList) {
-            result->classList.push_back((_classNode*)buildSyntaxNode(klass));
+            result->classList.push_back((_class*)buildSyntaxNode(klass));
         }
         return result;
     }
     else if(syntaxNodeType == "no_inherits") {
         classNode* castedCurrent = (classNode*) current;
-        _classNoInhNode* result = new _classNoInhNode{_identifier{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
+        _classNoInh* result = new _classNoInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
         for(featureNode* feature : castedCurrent->featureList->featureList) {
-            result->featureList.push_back((_featureNode*)buildSyntaxNode(feature));
+            result->featureList.push_back((_feature*)buildSyntaxNode(feature));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "inherits") {
+        classNode* castedCurrent = (classNode*) current;
+        _classInh* result = new _classInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
+                                          _idMeta{castedCurrent->optionalInh->TYPE->lineNo, castedCurrent->optionalInh->TYPE->value}};
+        for(featureNode* feature : castedCurrent->featureList->featureList) {
+            result->featureList.push_back((_feature*)buildSyntaxNode(feature));
         }
         return result;
     }
     else if(syntaxNodeType == "attribute_no_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
-        _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _identifier{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value}, _identifier{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
+        _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value}, _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
         return result;
     }
+    else if(syntaxNodeType == "attribute_init") {
+        fieldNode* castedCurrent = (fieldNode*) current;
+        _attributeInit* result = new _attributeInit{
+                castedCurrent->lineNo,
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
+                (_expr*)buildSyntaxNode(castedCurrent->init->expr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "method") {
+        methodNode* castedCurrent = (methodNode*) current;
+        _method* result = new _method{
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
+                (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        for(formalNode* formal : castedCurrent->formalsList->formalsList) {
+            result->formalList.push_back((_formal*)buildSyntaxNode(formal));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "formal") {
+        formalNode* castedCurrent = (formalNode*) current;
+        _formal* result = new _formal{
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "assign") {
+        assignExprNode* castedCurrent = (assignExprNode*)current;
+        _assign* result = new _assign {
+            castedCurrent->lineNo,
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+            (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "dynamic_dispatch") {
+        dynamicDispatchNode* castedCurrent = (dynamicDispatchNode*) current;
+        _dynamicDispatch* result = new _dynamicDispatch{
+                castedCurrent->lineNo,
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        for(exprNode* arg : castedCurrent->exprList->exprList) {
+            result->args.push_back((_expr*) buildSyntaxNode(arg));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "static_dispatch") {
+        staticDispatchNode* castedCurrent = (staticDispatchNode*) current;
+        _staticDispatch* result = new _staticDispatch{
+                castedCurrent->lineNo,
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                (_expr*)buildSyntaxNode(castedCurrent->expr),
+                _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}
+        };
+        for(exprNode* arg : castedCurrent->exprList->exprList) {
+            result->args.push_back((_expr*) buildSyntaxNode(arg));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "self_dispatch") {
+        selfDispatchNode* castedCurrent = (selfDispatchNode*) current;
+        _selfDispatch* result = new _selfDispatch{
+                castedCurrent->lineNo,
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+        };
+        for(exprNode* arg : castedCurrent->exprList->exprList) {
+            result->args.push_back((_expr*) buildSyntaxNode(arg));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "if") {
+        ifExprNode* castedCurrent = (ifExprNode*) current;
+        _if* result = new _if{
+            castedCurrent->lineNo,
+            (_expr*)buildSyntaxNode(castedCurrent->predicateExpr),
+            (_expr*)buildSyntaxNode(castedCurrent->thenExpr),
+            (_expr*)buildSyntaxNode(castedCurrent->elseExpr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "while") {
+        whileExprNode* castedCurrent = (whileExprNode*) current;
+        _while* result = new _while{
+                castedCurrent->lineNo,
+                (_expr*)buildSyntaxNode(castedCurrent->predicateExpr),
+                (_expr*)buildSyntaxNode(castedCurrent->loopExpr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "block") {
+        blockExprNode* castedCurrent = (blockExprNode*) current;
+        _block* result = new _block{castedCurrent->lineNo};
+        for(exprNode* expr : castedCurrent->exprList->exprList) {
+            result->body.push_back((_expr*)buildSyntaxNode(expr));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "new") {
+        newExprNode* castedCurrent = (newExprNode*) current;
+        _new* result = new _new{
+                castedCurrent->lineNo,
+                _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "isvoid") {
+        isvoidExprNode* castedCurrent = (isvoidExprNode*)current;
+        _isvoid* result = new _isvoid{
+            castedCurrent->lineNo,
+            (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "plus" || syntaxNodeType == "minus" || syntaxNodeType == "times" || syntaxNodeType == "divide") {
+        arithExprNode* castedCurrent = (arithExprNode*)current;
+        _arith* result = new _arith{
+            castedCurrent->lineNo,
+            (_expr*)buildSyntaxNode(castedCurrent->expr1),
+            castedCurrent->productionBody,
+            (_expr*)buildSyntaxNode(castedCurrent->expr2),
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "lt" || syntaxNodeType == "le" || syntaxNodeType == "eq") {
+        relExprNode* castedCurrent = (relExprNode*)current;
+        _relational* result = new _relational{
+                castedCurrent->lineNo,
+                (_expr*)buildSyntaxNode(castedCurrent->expr1),
+                castedCurrent->productionBody,
+                (_expr*)buildSyntaxNode(castedCurrent->expr2),
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "not" || syntaxNodeType == "negate") {
+        unaryExprNode* castedCurrent = (unaryExprNode*)current;
+        _unary* result = new _unary{
+                castedCurrent->lineNo,
+                castedCurrent->productionBody,
+                (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "termExpr") {
+        termExprNode* castedCurrent = (termExprNode*)current;
+        return (_expr*)buildSyntaxNode(castedCurrent->expr);
+    }
+    else if(syntaxNodeType == "integer") {
+        intExprNode* castedCurrent = (intExprNode*)current;
+        _integer* result = new _integer{
+            castedCurrent->lineNo,
+            castedCurrent->INTEGER->value
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "string") {
+        stringExprNode* castedCurrent = (stringExprNode*)current;
+        _string* result = new _string{
+                castedCurrent->lineNo,
+                castedCurrent->STRING->value
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "identifier") {
+        identifierExprNode* castedCurrent = (identifierExprNode*)current;
+        _identifier* result = new _identifier{
+            castedCurrent->lineNo,
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value}
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "true" || syntaxNodeType == "false") {
+        boolExprNode* castedCurrent = (boolExprNode*)current;
+        _bool* result = new _bool{
+            castedCurrent->lineNo,
+            castedCurrent->BOOLEAN->value
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "let") {
+        letExprNode* castedCurrent = (letExprNode*)current;
+        _let* result = new _let{
+            castedCurrent->lineNo,
+            (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        for(bindingNode* binding : castedCurrent->blNode->bindingList) {
+            result->bindings.push_back((_letBinding*)buildSyntaxNode(binding));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "let_binding_no_init") {
+        bindingNode* castedCurrent = (bindingNode*)current;
+        _letBindingNoInit* result = new _letBindingNoInit{
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+            _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "let_binding_init") {
+        bindingNode* castedCurrent = (bindingNode*)current;
+        _letBindingInit* result = new _letBindingInit{
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+            _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
+            (_expr*)buildSyntaxNode(castedCurrent->init->expr)
+        };
+        return result;
+    }
+    else if(syntaxNodeType == "case") {
+        caseExprNode* castedCurrent = (caseExprNode*)current;
+        _case* result = new _case {
+            castedCurrent->lineNo,
+            (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        for(caseNode* caseElement : castedCurrent->clNode->caseList) {
+            result->cases.push_back((_caseElement*)buildSyntaxNode(caseElement));
+        }
+        return result;
+    }
+    else if(syntaxNodeType == "caseElement") {
+        caseNode* castedCurrent = (caseNode*)current;
+        _caseElement* result = new _caseElement {
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+            _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
+            (_expr*)buildSyntaxNode(castedCurrent->expr)
+        };
+        return result;
+    }
+
 
 }
 

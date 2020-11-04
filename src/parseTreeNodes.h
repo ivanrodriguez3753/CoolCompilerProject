@@ -225,7 +225,7 @@ public:
     wordNode* IDENTIFIER;
     terminalNode* COLON;
     wordNode* TYPE;
-    formalNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY);
+    formalNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* TY);
 };
 
 class formalsListNode : public node {
@@ -283,7 +283,7 @@ public:
     terminalNode* RARROW;
     exprNode* expr;
     terminalNode* SEMI;
-    caseNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY, terminalNode* RA, exprNode* e, terminalNode* S);
+    caseNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* TY, terminalNode* RA, exprNode* e, terminalNode* S);
 };
 
 class caseListNode : public node {
