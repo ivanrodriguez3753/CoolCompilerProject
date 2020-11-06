@@ -10,6 +10,8 @@
 %define api.value.type variant //semantic values are genuine C++ objects
 %define parse.assert
 
+
+
 %code requires {
     class node;
 
@@ -67,7 +69,8 @@
 %code {
     #include "ParserDriver.hh"
     #include "parseTreeNodes.h"
-
+    #include "Environment.h"
+    #include <iostream>
 }
 
 //prefix tokens with TOK to avoid name clashes in generated files
@@ -231,6 +234,7 @@ class:
                            };
        $$->lineNo = @$.begin.line;
        $$->TYPE->lineNo = @2.begin.line;
+
     }
 ;
 
@@ -648,6 +652,7 @@ method:
                             new terminalNode{"semi"}};
         $$->IDENTIFIER->lineNo = @1.begin.line;
         $$->TYPE->lineNo = @6.begin.line;
+
     }
 ;
 

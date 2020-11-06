@@ -28,6 +28,7 @@ void _classNoInh::print(ostream &os) const {
     os << typeIdentifier;
     os << "no_inherits" << endl;
     os << featureList.size() << endl;
+    top = top->links.at(make_pair(typeIdentifier.identifier, typeIdentifier.kind));
     for(auto feature : featureList) {
         if((_attributeNoInit*) feature) {
             os << *(_attributeNoInit*)feature;
@@ -39,6 +40,7 @@ void _classNoInh::print(ostream &os) const {
             os << *(_method*)feature;
         }
     }
+    top = top->previous;
 }
 
 void _classInh::print(ostream &os) const {
@@ -46,27 +48,20 @@ void _classInh::print(ostream &os) const {
     os << "inherits" << endl;
     os << superClassIdentifier;
     os << featureList.size() << endl;
+    top = top->links.at(make_pair(typeIdentifier.identifier, typeIdentifier.kind));
     for(auto feature : featureList) {
         if((_attributeNoInit*) feature) {
             os << *(_attributeNoInit*)feature;
         }
+        else if((_attributeInit*) feature) {
+            os << *(_attributeInit*)feature;
+        }
+        else if((_method*) feature) {
+            os << *(_method*)feature;
+        }
     }
+    top = top->previous;
 }
-
-//ostream &operator<<(ostream &os, const _classNode &c) {
-//    os << c.typeIdentifier;
-//    os << "no_inherits" << endl;
-//    os << c.featureList.size() << endl;
-//    for(auto feature : c.featureList) {
-//        if((_attributeNoInit*) feature) {
-//            os << *(_attributeNoInit*)feature;
-//        }
-//
-//    }
-//    return os;
-//    c.print(os);
-//    return os;
-//}
 
 
 
@@ -76,32 +71,15 @@ _classInh::_classInh(_idMeta id, _idMeta sId) :
 
 }
 
-
-//ostream& operator<<(ostream& os, const _identifier& i) {
-//    os << i.lineNo << endl;
-//    os << i.identifier << endl;
-//    return os;
-//}
-
 void _idMeta::print(ostream &os) const {
-    os << lineNo << endl;
+    //os << lineNo << endl;
+    if(kind != "") {
+        os << top->get(make_pair(identifier, kind)).lineNo << endl;
+    }else {
+        os << lineNo << endl;
+    }
     os << identifier << endl;
 }
-
-//ostream &operator<<(ostream &os, const _programNode &p) {
-//    os << p.classList.size() << endl;
-//    for(auto klass : p.classList) {
-//        os << *klass;
-//    }
-//    return os;
-//}
-
-//ostream &operator<<(ostream &os, const _attributeNoInit& a) {
-//    os << "attribute_no_init" << endl;
-//    os << a.identifier;
-//    os << a.typeIdentifier;
-//    return os;
-//}
 
 _feature::_feature(int l, _idMeta id, _idMeta typeId) :
     _node{l}, identifier{id}, typeIdentifier{typeId}
@@ -154,11 +132,13 @@ _method::_method(_idMeta id, _idMeta typeId, _expr *e) :
 
 void _method::print(ostream &os) const {
     os << "method" << endl;
+    top = top->links.at(make_pair(identifier.identifier, identifier.kind));
     os << identifier;
     os << formalList.size() << endl;
     for(_formal* formal : formalList) {
         os << *formal;
     }
+    top = top->previous;
     os << typeIdentifier;
     os << *body;
 }

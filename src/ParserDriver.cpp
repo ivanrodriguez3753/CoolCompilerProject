@@ -85,43 +85,58 @@ _program *ParserDriver::buildSyntaxTree(programNode *root) {
     return ast;
 }
 
+/**
+ * Builds abstract syntax tree and starts populating symbol table
+ * @param current
+ * @return
+ */
 _node *ParserDriver::buildSyntaxNode(node* current) {
     string syntaxNodeType = current->productionBody;
     if(syntaxNodeType == "program") {
         programNode* castedCurrent = (programNode*) current;
         _program* result = new _program{castedCurrent->lineNo};
         for(classNode* klass : castedCurrent->clNode->classList) {
+            top->install(make_pair(klass->TYPE->value,"class"), Record{klass->TYPE->value, klass->TYPE->lineNo, "class"});
+            top->links.insert(make_pair(make_pair(klass->TYPE->value, "class"), new Environment{top}));
+            top = top->links.at(make_pair(klass->TYPE->value, "class"));
             result->classList.push_back((_class*)buildSyntaxNode(klass));
+            top = top->previous;
         }
         return result;
     }
     else if(syntaxNodeType == "no_inherits") {
         classNode* castedCurrent = (classNode*) current;
-        _classNoInh* result = new _classNoInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
+        _classNoInh* result = new _classNoInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value, "class"}};
+        //top = top->links.at(make_pair(result->typeIdentifier.identifier, result->typeIdentifier.kind));
         for(featureNode* feature : castedCurrent->featureList->featureList) {
             result->featureList.push_back((_feature*)buildSyntaxNode(feature));
         }
+        //top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "inherits") {
         classNode* castedCurrent = (classNode*) current;
-        _classInh* result = new _classInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
+        _classInh* result = new _classInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value, "class"},
                                           _idMeta{castedCurrent->optionalInh->TYPE->lineNo, castedCurrent->optionalInh->TYPE->value}};
+        //top = top->links.at(make_pair(result->typeIdentifier.identifier, result->typeIdentifier.kind));
         for(featureNode* feature : castedCurrent->featureList->featureList) {
             result->featureList.push_back((_feature*)buildSyntaxNode(feature));
         }
+        //top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "attribute_no_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
-        _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value}, _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute"});
+        _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "attribute"}, _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
         return result;
     }
     else if(syntaxNodeType == "attribute_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute"});
         _attributeInit* result = new _attributeInit{
                 castedCurrent->lineNo,
-                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "attribute"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->init->expr)
         };
@@ -130,19 +145,24 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     else if(syntaxNodeType == "method") {
         methodNode* castedCurrent = (methodNode*) current;
         _method* result = new _method{
-                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "method"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
+        top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top}));
+        top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method"});
         for(formalNode* formal : castedCurrent->formalsList->formalsList) {
+            top->install(make_pair(formal->IDENTIFIER->value, "local"), Record{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local"});
             result->formalList.push_back((_formal*)buildSyntaxNode(formal));
         }
+        top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "formal") {
         formalNode* castedCurrent = (formalNode*) current;
         _formal* result = new _formal{
-                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+                _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "local"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}
         };
         return result;
@@ -306,9 +326,12 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
             castedCurrent->lineNo,
             (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
+        //top->install(make_pair(make_pair("", "let")))
         for(bindingNode* binding : castedCurrent->blNode->bindingList) {
+//            top->install(binding->IDENTIFIER->value, Record{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local"});
             result->bindings.push_back((_letBinding*)buildSyntaxNode(binding));
         }
+        //top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "let_binding_no_init") {
@@ -335,7 +358,11 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
             (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
         for(caseNode* caseElement : castedCurrent->clNode->caseList) {
+            //top = new Environment{top};
+//            top->install
+//            top->install(caseElement->IDENTIFIER->value, Record{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local"});
             result->cases.push_back((_caseElement*)buildSyntaxNode(caseElement));
+            //top = top->previous;
         }
         return result;
     }

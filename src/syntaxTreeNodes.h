@@ -4,6 +4,7 @@
 #include <list>
 #include <string>
 #include "parseTreeNodes.h"
+#include "Environment.h"
 
 using namespace std;
 
@@ -33,8 +34,9 @@ public:
 class _idMeta : public _node{
 public:
     string identifier;
+    string kind;
 
-    _idMeta(int l, string id) : _node{l}, identifier{id} {}
+    _idMeta(int l, string id, string k = "") : _node{l}, identifier{id}, kind{k} {}
 
     //friend ostream& operator<<(ostream& os, const _identifier& i);
     void print(ostream &os) const override;

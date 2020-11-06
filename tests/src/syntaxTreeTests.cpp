@@ -35,6 +35,7 @@ TEST(Fragments, syntaxTreeMinimal) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, classInherits) {
@@ -49,6 +50,7 @@ TEST(Fragments, classInherits) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, singleFieldInitSyntaxTree) {
@@ -63,6 +65,7 @@ TEST(Fragments, singleFieldInitSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 
@@ -78,6 +81,7 @@ TEST(Fragments, singleMethodNoFormalsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 
@@ -93,6 +97,7 @@ TEST(Fragments, singleMethodOneFormalsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, singleMethodTwoFormalsSyntaxTree) {
@@ -107,6 +112,7 @@ TEST(Fragments, singleMethodTwoFormalsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, singleMethodFiveFormalsSyntaxTree) {
@@ -121,6 +127,7 @@ TEST(Fragments, singleMethodFiveFormalsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, allDispatchesNoArgumentsSyntaxTree) {
@@ -135,6 +142,7 @@ TEST(Fragments, allDispatchesNoArgumentsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, allDispatchesOneArgumentsSyntaxTree) {
@@ -149,6 +157,7 @@ TEST(Fragments, allDispatchesOneArgumentsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, allDispatchesTwoArgumentsSyntaxTree) {
@@ -163,6 +172,7 @@ TEST(Fragments, allDispatchesTwoArgumentsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, allDispatchesFiveArgumentsSyntaxTree) {
@@ -177,6 +187,7 @@ TEST(Fragments, allDispatchesFiveArgumentsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, ifWhileExpressionsSyntaxTree) {
@@ -191,6 +202,7 @@ TEST(Fragments, ifWhileExpressionsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, assignExprSyntaxTree) {
@@ -205,6 +217,7 @@ TEST(Fragments, assignExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, blockExprOneExpressionsSyntaxTree) {
@@ -219,6 +232,7 @@ TEST(Fragments, blockExprOneExpressionsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, blockExprTwoExpressionsSyntaxTree) {
@@ -233,6 +247,7 @@ TEST(Fragments, blockExprTwoExpressionsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, blockExprFiveExpressionsSyntaxTree) {
@@ -247,6 +262,7 @@ TEST(Fragments, blockExprFiveExpressionsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, newExprSyntaxTree) {
@@ -261,6 +277,7 @@ TEST(Fragments, newExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, isvoidExprSyntaxTree) {
@@ -275,6 +292,7 @@ TEST(Fragments, isvoidExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, integerPlusMinusTimesDivideExpressionsSyntaxTree) {
@@ -289,6 +307,7 @@ TEST(Fragments, integerPlusMinusTimesDivideExpressionsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, relationalExprSyntaxTree) {
@@ -303,6 +322,7 @@ TEST(Fragments, relationalExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, notNegateExprSyntaxTree) {
@@ -317,6 +337,7 @@ TEST(Fragments, notNegateExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, parenthesizedExprSyntaxTree) {
@@ -331,6 +352,7 @@ TEST(Fragments, parenthesizedExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, stringExprSyntaxTree) {
@@ -345,6 +367,7 @@ TEST(Fragments, stringExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, identifierExprSyntaxTree) {
@@ -359,6 +382,7 @@ TEST(Fragments, identifierExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, booleanExprSyntaxTree) {
@@ -373,6 +397,7 @@ TEST(Fragments, booleanExprSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, letExprOneBindingNoInitSyntaxTree) {
@@ -387,6 +412,7 @@ TEST(Fragments, letExprOneBindingNoInitSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, letExprOneBindingYesInitSyntaxTree) {
@@ -401,6 +427,7 @@ TEST(Fragments, letExprOneBindingYesInitSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, letExprMultipleBindingMixedInitSyntaxTree) {
@@ -415,6 +442,7 @@ TEST(Fragments, letExprMultipleBindingMixedInitSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, caseExprOneCaseSyntaxTree) {
@@ -429,6 +457,7 @@ TEST(Fragments, caseExprOneCaseSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(Fragments, caseExprManyCaseSyntaxTree) {
@@ -443,6 +472,7 @@ TEST(Fragments, caseExprManyCaseSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, arithSyntaxTree) {
@@ -457,6 +487,7 @@ TEST(AbstractParseFull, arithSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, atoiSyntaxTree) {
@@ -471,6 +502,7 @@ TEST(AbstractParseFull, atoiSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, cellsSyntaxTree) {
@@ -485,6 +517,7 @@ TEST(AbstractParseFull, cellsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, helloworldSyntaxTree) {
@@ -499,6 +532,7 @@ TEST(AbstractParseFull, helloworldSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, hsSyntaxTree) {
@@ -513,6 +547,7 @@ TEST(AbstractParseFull, hsSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, listSyntaxTree) {
@@ -527,6 +562,7 @@ TEST(AbstractParseFull, listSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, newcomplexSyntaxTree) {
@@ -541,6 +577,7 @@ TEST(AbstractParseFull, newcomplexSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, primesSyntaxTree) {
@@ -555,6 +592,7 @@ TEST(AbstractParseFull, primesSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, printcoolSyntaxTree) {
@@ -569,6 +607,7 @@ TEST(AbstractParseFull, printcoolSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }
 
 TEST(AbstractParseFull, sortlistSyntaxTree) {
@@ -583,4 +622,5 @@ TEST(AbstractParseFull, sortlistSyntaxTree) {
 
     stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
     ASSERT_EQ(reference.str(), parserOutput.str());
+    globalEnv->reset();
 }

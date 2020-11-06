@@ -36,8 +36,8 @@ endif()
 
 add_flex_bison_dependency(lexer parser)
 
-add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp parseTreeNodes.h parseTreeNodes.cpp syntaxTreeNodes.h syntaxTreeNodes.cpp)
-add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp parseTreeNodes.h parseTreeNodes.cpp syntaxTreeNodes.h syntaxTreeNodes.cpp)
+add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp parseTreeNodes.h parseTreeNodes.cpp syntaxTreeNodes.h syntaxTreeNodes.cpp Environment.h Environment.cpp)
+add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp parseTreeNodes.h parseTreeNodes.cpp syntaxTreeNodes.h syntaxTreeNodes.cpp Environment.cpp Environment.h)
 target_link_libraries(CoolCompilerProject MyLibrary)
 
 target_include_directories(CoolCompilerProject
