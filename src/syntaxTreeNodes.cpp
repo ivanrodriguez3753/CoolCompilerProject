@@ -421,8 +421,9 @@ void _let::print(ostream &os) const {
     os << *body;
 }
 
-_caseElement::_caseElement(_idMeta id, _idMeta typeId, _expr* b) :
-    _expr{0}, identifier{id}, typeIdentifier{typeId}, body{b}
+int _caseElement::caseCounter = 0;
+_caseElement::_caseElement(_idMeta id, _idMeta typeId, _expr* b, _idMeta ck) :
+    _expr{0}, identifier{id}, typeIdentifier{typeId}, body{b}, caseKey{ck}
 {
 
 }
@@ -439,7 +440,9 @@ void _case::print(ostream &os) const {
     os << *expr;
     os << cases.size() << endl;
     for(_caseElement* Case : cases) {
+        top = top->links.at(make_pair(Case->caseKey.identifier, "case"));
         os << *Case;
+        top = top->previous;
     }
 }
 

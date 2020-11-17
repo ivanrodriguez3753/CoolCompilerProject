@@ -38,7 +38,6 @@ public:
 
     _idMeta(int l, string id, string k = "") : _node{l}, identifier{id}, kind{k} {}
 
-    _idMeta();
 
     //friend ostream& operator<<(ostream& os, const _identifier& i);
     void print(ostream &os) const override;
@@ -341,7 +340,10 @@ public:
     _idMeta typeIdentifier;
     _expr* body;
 
-    _caseElement(_idMeta id, _idMeta typeId, _expr* b);
+    _idMeta caseKey;
+    static int caseCounter;
+
+    _caseElement(_idMeta id, _idMeta typeId, _expr* b, _idMeta ck);
 
     void print(ostream& os) const override;
 };

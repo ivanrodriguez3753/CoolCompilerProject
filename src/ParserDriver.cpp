@@ -361,20 +361,22 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
             (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
         for(caseNode* caseElement : castedCurrent->clNode->caseList) {
-            //top = new Environment{top};
-//            top->install
-//            top->install(caseElement->IDENTIFIER->value, Record{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local"});
+            //enumerate cases to guarantee a unique key for symbol table
+            top->links.insert(make_pair(make_pair("case" + to_string(_caseElement::caseCounter), "case"), new Environment{top}));
+            top = top->links.at(make_pair("case" + to_string(_caseElement::caseCounter), "case"));
             result->cases.push_back((_caseElement*)buildSyntaxNode(caseElement));
-            //top = top->previous;
+            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), Record{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local"});
+            top = top->previous;
         }
         return result;
     }
     else if(syntaxNodeType == "caseElement") {
         caseNode* castedCurrent = (caseNode*)current;
         _caseElement* result = new _caseElement {
-            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "local"},
             _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
-            (_expr*)buildSyntaxNode(castedCurrent->expr)
+            (_expr*)buildSyntaxNode(castedCurrent->expr),
+            _idMeta{castedCurrent->IDENTIFIER->lineNo, "case" + to_string(_caseElement::caseCounter++), "case"}//increment caseCounter here because it's the last time we use it
         };
         return result;
     }
