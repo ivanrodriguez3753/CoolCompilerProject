@@ -144,14 +144,15 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     }
     else if(syntaxNodeType == "method") {
         methodNode* castedCurrent = (methodNode*) current;
+        //expression may introduce new scopes (with the let or case expressions)
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method"});
+        top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top}));
+        top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
         _method* result = new _method{
                 _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "method"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
-        top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top}));
-        top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method"});
         for(formalNode* formal : castedCurrent->formalsList->formalsList) {
             top->install(make_pair(formal->IDENTIFIER->value, "local"), Record{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local"});
             result->formalList.push_back((_formal*)buildSyntaxNode(formal));
@@ -189,15 +190,15 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         return result;
     }
     else if(syntaxNodeType == "static_dispatch") {
-        staticDispatchNode* castedCurrent = (staticDispatchNode*) current;
-        _staticDispatch* result = new _staticDispatch{
+        staticDispatchNode *castedCurrent = (staticDispatchNode *) current;
+        _staticDispatch *result = new _staticDispatch{
                 castedCurrent->lineNo,
                 _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value},
-                (_expr*)buildSyntaxNode(castedCurrent->expr),
+                (_expr *) buildSyntaxNode(castedCurrent->expr),
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}
         };
-        for(exprNode* arg : castedCurrent->exprList->exprList) {
-            result->args.push_back((_expr*) buildSyntaxNode(arg));
+        for (exprNode *arg : castedCurrent->exprList->exprList) {
+            result->args.push_back((_expr *) buildSyntaxNode(arg));
         }
         return result;
     }
@@ -324,14 +325,16 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         letExprNode* castedCurrent = (letExprNode*)current;
         _let* result = new _let{
             castedCurrent->lineNo,
+            _idMeta{castedCurrent->LET->lineNo, "let" + to_string(_let::letCounter++), "let"},
             (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
-        //top->install(make_pair(make_pair("", "let")))
+        top->links.insert(make_pair(make_pair(result->letKey.identifier, "let"), new Environment{top}));
+        top = top->links.at(make_pair(result->letKey.identifier, "let"));
         for(bindingNode* binding : castedCurrent->blNode->bindingList) {
-//            top->install(binding->IDENTIFIER->value, Record{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local"});
+            top->install(make_pair(binding->IDENTIFIER->value, "local"), Record{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local"});
             result->bindings.push_back((_letBinding*)buildSyntaxNode(binding));
         }
-        //top = top->previous;
+        top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "let_binding_no_init") {

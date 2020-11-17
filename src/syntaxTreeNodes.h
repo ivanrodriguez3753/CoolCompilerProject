@@ -38,6 +38,8 @@ public:
 
     _idMeta(int l, string id, string k = "") : _node{l}, identifier{id}, kind{k} {}
 
+    _idMeta();
+
     //friend ostream& operator<<(ostream& os, const _identifier& i);
     void print(ostream &os) const override;
 };
@@ -325,7 +327,10 @@ public:
     list<_letBinding*> bindings;
     _expr* body;
 
-    _let(int l, _expr* b);
+    _idMeta letKey;
+    static int letCounter;
+
+    _let(int l, _idMeta lk, _expr* b);
 
     void print(ostream& os) const override;
 };

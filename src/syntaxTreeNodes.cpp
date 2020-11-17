@@ -132,15 +132,18 @@ _method::_method(_idMeta id, _idMeta typeId, _expr *e) :
 
 void _method::print(ostream &os) const {
     os << "method" << endl;
-    top = top->links.at(make_pair(identifier.identifier, identifier.kind));
     os << identifier;
     os << formalList.size() << endl;
+    top = top->links.at(make_pair(identifier.identifier, identifier.kind));
     for(_formal* formal : formalList) {
         os << *formal;
     }
     top = top->previous;
     os << typeIdentifier;
+    top = top->links.at(make_pair(identifier.identifier, identifier.kind));
     os << *body;
+    top = top->previous;
+
 }
 
 _formal::_formal(_idMeta id, _idMeta typeId) :
@@ -399,8 +402,9 @@ void _letBindingInit::print(ostream& os) const {
     os << *init;
 }
 
-_let::_let(int l, _expr* b) :
-    _expr(l), body{b}
+int _let::letCounter = 0;
+_let::_let(int l, _idMeta lk, _expr* b) :
+    _expr(l), letKey{lk}, body{b}
 {
 
 }
@@ -409,9 +413,11 @@ void _let::print(ostream &os) const {
     os << lineNo << endl;
     os << "let" << endl;
     os << bindings.size() << endl;
+    top = top->links.at(make_pair(letKey.identifier, letKey.kind));
     for(_letBinding* binding : bindings) {
         os << *binding;
     }
+    top = top->previous;
     os << *body;
 }
 
