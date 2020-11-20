@@ -13,4 +13,4 @@ After building, Compiler can be run as follows <br />
 cd src <br />
 ./CoolCompilerProject \<fileName\> \<option\> <br />
 
-Currently, there are two options: --lex and --concreteParse. The former will produce give a lexical analysis and the latter will give a concrete parse tree of the input, printed in a human readable format.
+Currently, there are three options: --lex, --concreteParse, and --abstractParse. --lex will produce give a lexical analysis, --concreteParse will give a concrete parse tree of the input printed in a human readable format, and --abstractParse will give an output that matches the reference lexer's AST specification. Working on human readable format similar to --concreteParse.

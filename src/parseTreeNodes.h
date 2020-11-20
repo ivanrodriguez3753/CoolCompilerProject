@@ -29,8 +29,16 @@ class node {
 public:
     bool isTerminal = false;
     string grammarSymbol;
+    int lineNo;
+
+    /**
+     * Need to keep track of which production we chose, because that provides the semantic meaning. If not the
+     * root of a production body, use the empty string.
+     * List of possible productions given by this page: https://dijkstra.eecs.umich.edu/eecs483/pa3.php
+     */
+    string productionBody;
     list<node*> *children;
-    node(string gSym) : grammarSymbol{gSym}, children{new list<node*>()} {}
+    node(string gSym, string pb) : grammarSymbol{gSym}, productionBody{pb}, children{new list<node*>()} {}
 
 
 
@@ -84,7 +92,7 @@ public:
     wordNode* TYPE;
     terminalNode* SEMI;
 
-    featureNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* semi);
+    featureNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* ty, terminalNode* semi);
 
 };
 
@@ -94,7 +102,7 @@ public:
  */
 class exprNode : public node {
 public:
-    exprNode(string gSym);
+    exprNode(string gSym, string pb);
 };
 
 class ifExprNode : public exprNode {
@@ -106,7 +114,7 @@ public:
     terminalNode* ELSE;
     exprNode* elseExpr;
     terminalNode* FI;
-    ifExprNode(string gSym, terminalNode* I, exprNode* pe, terminalNode* TH, exprNode* te, terminalNode* EL, exprNode* ee, terminalNode* F);
+    ifExprNode(string gSym, string pb, terminalNode* I, exprNode* pe, terminalNode* TH, exprNode* te, terminalNode* EL, exprNode* ee, terminalNode* F);
 };
 
 class whileExprNode : public exprNode {
@@ -116,7 +124,7 @@ public:
     terminalNode* LOOP;
     exprNode* loopExpr;
     terminalNode* POOL;
-    whileExprNode(string gSym, terminalNode* W, exprNode* pe, terminalNode* L, exprNode* le, terminalNode* P);
+    whileExprNode(string gSym, string pb, terminalNode* W, exprNode* pe, terminalNode* L, exprNode* le, terminalNode* P);
 };
 
 class blockExprNode : public exprNode {
@@ -125,31 +133,31 @@ public:
     exprListNode* exprList;
     terminalNode* RBRACE;
 
-    blockExprNode(string gSym, terminalNode* LB, exprListNode* el, terminalNode* RB);
+    blockExprNode(string gSym, string pb, terminalNode* LB, exprListNode* el, terminalNode* RB);
 };
 
 class boolExprNode : public exprNode {
 public:
     booleanNode* BOOLEAN;
-    boolExprNode(string gSym, booleanNode* b);
+    boolExprNode(string gSym, string pb, booleanNode* b);
 };
 
 class identifierExprNode : public exprNode {
 public:
     wordNode* IDENTIFIER;
-    identifierExprNode(string gSym, wordNode* ID);
+    identifierExprNode(string gSym, string pb, wordNode* ID);
 };
 
 class intExprNode : public exprNode {
 public:
     integerNode* INTEGER;
-    intExprNode(string gSym, integerNode* INT);
+    intExprNode(string gSym, string pb, integerNode* INT);
 };
 
 class stringExprNode : public exprNode {
 public:
     wordNode* STRING;
-    stringExprNode(string gSym, wordNode* S);
+    stringExprNode(string gSym, string pb, wordNode* S);
 };
 
 class assignExprNode : public exprNode {
@@ -158,7 +166,7 @@ public:
     terminalNode* LARROW;
     exprNode* expr;
 
-    assignExprNode(string gSym, wordNode* ID, terminalNode* L, exprNode* e);
+    assignExprNode(string gSym, string pb, wordNode* ID, terminalNode* L, exprNode* e);
 };
 
 class exprListNode : public node {
@@ -173,19 +181,19 @@ public:
     terminalNode* LPAREN;
     exprListNode* exprList;
     terminalNode* RPAREN;
-    dispatchNode(string gSym, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+    dispatchNode(string gSym, string pb, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
 };
 
 class selfDispatchNode : public dispatchNode {
 public:
-    selfDispatchNode(string gSym, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+    selfDispatchNode(string gSym, string pb, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
 };
 
 class dynamicDispatchNode : public dispatchNode {
 public:
     exprNode* expr;
     terminalNode* DOT;
-    dynamicDispatchNode(string gSym, exprNode* e, terminalNode* D, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+    dynamicDispatchNode(string gSym, string pb, exprNode* e, terminalNode* D, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
 };
 
 class staticDispatchNode : public dispatchNode {
@@ -194,7 +202,7 @@ public:
     terminalNode* AT;
     wordNode* TYPE;
     terminalNode* DOT;
-    staticDispatchNode(string gSym, exprNode* e, terminalNode* A, wordNode* TY, terminalNode* D, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
+    staticDispatchNode(string gSym, string pb, exprNode* e, terminalNode* A, wordNode* TY, terminalNode* D, wordNode* ID, terminalNode* LP, exprListNode* el, terminalNode* RP);
 
 };
 
@@ -208,7 +216,7 @@ public:
 class fieldNode : public featureNode {
 public:
     optionalInitNode* init;
-    fieldNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* ty, optionalInitNode* in, terminalNode* S);
+    fieldNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* ty, optionalInitNode* in, terminalNode* S);
 };
 
 
@@ -217,7 +225,7 @@ public:
     wordNode* IDENTIFIER;
     terminalNode* COLON;
     wordNode* TYPE;
-    formalNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY);
+    formalNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* TY);
 };
 
 class formalsListNode : public node {
@@ -236,7 +244,7 @@ public:
     exprNode* expr;
     terminalNode* RBRACE;
 
-    methodNode(string gSym, wordNode *ID, terminalNode *LP, formalsListNode *flNode, terminalNode *RP,
+    methodNode(string gSym, string pb, wordNode *ID, terminalNode *LP, formalsListNode *flNode, terminalNode *RP,
                terminalNode *COL, wordNode *ty, terminalNode *LB, exprNode *exp, terminalNode *RB, terminalNode* S);
 };
 
@@ -247,7 +255,7 @@ public:
     wordNode* TYPE;
     optionalInitNode* init;
 
-    bindingNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY, optionalInitNode* i);
+    bindingNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* TY, optionalInitNode* i);
 };
 
 class bindingListNode : public node {
@@ -264,7 +272,7 @@ public:
     terminalNode* IN;
     exprNode* expr;
 
-    letExprNode(string gSym, terminalNode* L, bindingListNode* bln, terminalNode* I, exprNode* e);
+    letExprNode(string gSym, string pb, terminalNode* L, bindingListNode* bln, terminalNode* I, exprNode* e);
 };
 
 class caseNode : public node {
@@ -275,7 +283,7 @@ public:
     terminalNode* RARROW;
     exprNode* expr;
     terminalNode* SEMI;
-    caseNode(string gSym, wordNode* ID, terminalNode* COL, wordNode* TY, terminalNode* RA, exprNode* e, terminalNode* S);
+    caseNode(string gSym, string pb, wordNode* ID, terminalNode* COL, wordNode* TY, terminalNode* RA, exprNode* e, terminalNode* S);
 };
 
 class caseListNode : public node {
@@ -291,7 +299,7 @@ public:
     terminalNode* OF;
     caseListNode* clNode;
     terminalNode* ESAC;
-    caseExprNode(string gSym, terminalNode* C, exprNode* e, terminalNode* O, caseListNode* cln, terminalNode* E);
+    caseExprNode(string gSym, string pb, terminalNode* C, exprNode* e, terminalNode* O, caseListNode* cln, terminalNode* E);
 };
 
 class newExprNode : public exprNode {
@@ -299,7 +307,7 @@ public:
     terminalNode* NEW;
     wordNode* TYPE;
 
-    newExprNode(string gSym, terminalNode* N, wordNode* TY);
+    newExprNode(string gSym, string pb, terminalNode* N, wordNode* TY);
 };
 
 class isvoidExprNode : public exprNode {
@@ -307,7 +315,7 @@ public:
     terminalNode* ISVOID;
     exprNode* expr;
 
-    isvoidExprNode(string gSym, terminalNode* IV, exprNode* e);
+    isvoidExprNode(string gSym, string pb, terminalNode* IV, exprNode* e);
 };
 
 class arithExprNode : public exprNode{
@@ -316,7 +324,7 @@ public:
     terminalNode* ARITHOP;
     exprNode* expr2;
 
-    arithExprNode(string gSym, exprNode* e1, terminalNode* OP, exprNode* e2);
+    arithExprNode(string gSym, string pb, exprNode* e1, terminalNode* OP, exprNode* e2);
 };
 
 class relExprNode : public exprNode {
@@ -325,7 +333,7 @@ public:
     terminalNode* RELOP;
     exprNode* expr2;
 
-    relExprNode(string gSym, exprNode* e1, terminalNode* OP, exprNode* e2);
+    relExprNode(string gSym, string pb, exprNode* e1, terminalNode* OP, exprNode* e2);
 };
 
 class unaryExprNode : public exprNode {
@@ -333,7 +341,7 @@ public:
     terminalNode* UNARYOP;
     exprNode* expr;
 
-    unaryExprNode(string gSym, terminalNode* OP, exprNode* e);
+    unaryExprNode(string gSym, string pb, terminalNode* OP, exprNode* e);
 };
 
 class termExprNode : public exprNode {
@@ -342,14 +350,14 @@ public:
     exprNode* expr;
     terminalNode* RPAREN;
 
-    termExprNode(string gSym, terminalNode* LP, exprNode* e, terminalNode* RP);
+    termExprNode(string gSym, string pb, terminalNode* LP, exprNode* e, terminalNode* RP);
 };
 
 class optionalInhNode : public node {
+public:
     terminalNode *INHERITS;
     wordNode *TYPE;
 
-public:
     optionalInhNode(string gSym, terminalNode *INH, wordNode *T);
 };
 
@@ -360,6 +368,7 @@ public:
 };
 
 class classNode : public node {
+public:
     terminalNode *CLASS;
     wordNode *TYPE;
     optionalInhNode *optionalInh;
@@ -367,8 +376,7 @@ class classNode : public node {
     featureListNode *featureList;
     terminalNode *RBRACE;
     terminalNode *SEMI;
-public:
-    classNode(string gSym, terminalNode* tn1, wordNode* wn1, optionalInhNode* optInh, terminalNode* tn2, featureListNode* ftList, terminalNode* tn3, terminalNode* tn4);
+    classNode(string gSym, string pb, terminalNode* tn1, wordNode* wn1, optionalInhNode* optInh, terminalNode* tn2, featureListNode* ftList, terminalNode* tn3, terminalNode* tn4);
 };
 
 
@@ -381,11 +389,9 @@ public:
 
 
 class programNode: public node {
-protected:
-    classListNode *clNode;
-
 public:
-    programNode(string gSym, classListNode* cln);
+    classListNode *clNode;
+    programNode(string gSym, string pb, classListNode* cln);
 };
 
 extern programNode* rootIVAN;

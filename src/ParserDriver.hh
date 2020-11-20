@@ -10,7 +10,8 @@
 #include <map>
 #include <string>
 #include "parser.hh"
-
+#include "syntaxTreeNodes.h"
+#include <Environment.h>
 
 
 //give Flex the prototype of yylex we want...
@@ -45,6 +46,14 @@ public:
     void postorderTraversal(ostream& out);
     void prettyPrintTree(ostream& out);
 
+    _program* buildSyntaxTree(programNode* root);
+    _node* buildSyntaxNode(node* current);
+
+    /**
+     * Keep a pointer to the current env/symtable. Initialize with globalEnv
+     */
+
+    friend class _node;
 private:
     void postorderRecurs(node* current, ostream& out);
     void prettyPrintRecurs(node* current, const string& prefix, ostream& out);

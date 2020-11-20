@@ -1,5 +1,6 @@
 #include <iostream>
 #include "ParserDriver.hh"
+#include "type.h"
 
 using namespace std;
 
@@ -44,5 +45,21 @@ int main(int argc, char** argv) {
         pdrv.parse(file);
         pdrv.prettyPrintTree(cout);
     }
+    else if(option == "--abstractParse") {
+        pdrv.parse(file);
+        _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+        cout << *AST;
+    }
+    else if(option == "--semanticAnalysis") {
+        pdrv.parse(file);
+        _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+        populateClassMap();
+        printClassMap(cout);
+        populateParentMap();
+        printParentMap(cout);
+    }
+
+
+
 
 }
