@@ -520,20 +520,7 @@ TEST(AbstractParseFull, cellsSyntaxTree) {
     globalEnv->reset();
 }
 
-TEST(AbstractParseFull, helloworldSyntaxTree) {
-    ParserDriver pdrv;
-    const string localFile = "hello-world.cl";
-    pdrv.file = COOL_PROGRAMS_DIR + localFile;
 
-    stringstream parserOutput;
-    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
-    _program* AST = pdrv.buildSyntaxTree(rootIVAN);
-    parserOutput << *AST;
-
-    stringstream reference = makeSyntaxTreeStringStreamFromReference(localFile);
-    ASSERT_EQ(reference.str(), parserOutput.str());
-    globalEnv->reset();
-}
 
 TEST(AbstractParseFull, hsSyntaxTree) {
     ParserDriver pdrv;

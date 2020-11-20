@@ -96,7 +96,13 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         programNode* castedCurrent = (programNode*) current;
         _program* result = new _program{castedCurrent->lineNo};
         for(classNode* klass : castedCurrent->clNode->classList) {
-            top->install(make_pair(klass->TYPE->value,"class"), Record{klass->TYPE->value, klass->TYPE->lineNo, "class"});
+            //TODO
+            if(klass->optionalInh == nullptr) {
+                top->install(make_pair(klass->TYPE->value,"class"), new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", "Object"});
+            }
+            else {
+                top->install(make_pair(klass->TYPE->value,"class"), new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", klass->optionalInh->TYPE->value});
+            }
             top->links.insert(make_pair(make_pair(klass->TYPE->value, "class"), new Environment{top}));
             top = top->links.at(make_pair(klass->TYPE->value, "class"));
             result->classList.push_back((_class*)buildSyntaxNode(klass));
@@ -107,11 +113,9 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     else if(syntaxNodeType == "no_inherits") {
         classNode* castedCurrent = (classNode*) current;
         _classNoInh* result = new _classNoInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value, "class"}};
-        //top = top->links.at(make_pair(result->typeIdentifier.identifier, result->typeIdentifier.kind));
         for(featureNode* feature : castedCurrent->featureList->featureList) {
             result->featureList.push_back((_feature*)buildSyntaxNode(feature));
         }
-        //top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "inherits") {
@@ -127,25 +131,25 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     }
     else if(syntaxNodeType == "attribute_no_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute"});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, nullptr});
         _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "attribute"}, _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
         return result;
     }
     else if(syntaxNodeType == "attribute_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute"});
         _attributeInit* result = new _attributeInit{
                 castedCurrent->lineNo,
                 _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "attribute"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->init->expr)
         };
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, result->expr});
         return result;
     }
     else if(syntaxNodeType == "method") {
         methodNode* castedCurrent = (methodNode*) current;
         //expression may introduce new scopes (with the let or case expressions)
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method"});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method"});
         top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top}));
         top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
         _method* result = new _method{
@@ -154,7 +158,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
                 (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
         for(formalNode* formal : castedCurrent->formalsList->formalsList) {
-            top->install(make_pair(formal->IDENTIFIER->value, "local"), Record{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local"});
+            top->install(make_pair(formal->IDENTIFIER->value, "local"), new Record{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local"});
             result->formalList.push_back((_formal*)buildSyntaxNode(formal));
         }
         top = top->previous;
@@ -331,7 +335,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         top->links.insert(make_pair(make_pair(result->letKey.identifier, "let"), new Environment{top}));
         top = top->links.at(make_pair(result->letKey.identifier, "let"));
         for(bindingNode* binding : castedCurrent->blNode->bindingList) {
-            top->install(make_pair(binding->IDENTIFIER->value, "local"), Record{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local"});
+            top->install(make_pair(binding->IDENTIFIER->value, "local"), new Record{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local"});
             result->bindings.push_back((_letBinding*)buildSyntaxNode(binding));
         }
         top = top->previous;
@@ -365,7 +369,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
             top->links.insert(make_pair(make_pair("case" + to_string(_caseElement::caseCounter), "case"), new Environment{top}));
             top = top->links.at(make_pair("case" + to_string(_caseElement::caseCounter), "case"));
             result->cases.push_back((_caseElement*)buildSyntaxNode(caseElement));
-            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), Record{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local"});
+            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), new Record{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local"});
             top = top->previous;
         }
         return result;

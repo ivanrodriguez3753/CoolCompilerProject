@@ -74,7 +74,7 @@ _classInh::_classInh(_idMeta id, _idMeta sId) :
 void _idMeta::print(ostream &os) const {
     //os << lineNo << endl;
     if(kind != "") {
-        os << top->get(make_pair(identifier, kind)).lineNo << endl;
+        os << top->get(make_pair(identifier, kind))->lineNo << endl;
     }else {
         os << lineNo << endl;
     }
@@ -106,7 +106,7 @@ void _program::print(ostream &os) const {
     }
 }
 
-
+bool _expr::printExprType = false;
 _expr::_expr(int l) : _node(l) {
 
 }
@@ -301,6 +301,9 @@ _integer::_integer(int l, int v) :
 
 void _integer::print(ostream& os) const {
     os << lineNo << endl;
+    if(printExprType) {
+        os << exprType << endl;
+    }
     os << "integer" << endl;
     os << value << endl;
 }

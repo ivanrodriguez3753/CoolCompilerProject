@@ -133,6 +133,10 @@ public:
 class _expr : public _node {
 public:
     _expr(int l);
+
+    string exprType = "someType";
+
+    static bool printExprType;
 };
 
 class _assign : public _expr {
