@@ -2,7 +2,6 @@
 #include <iostream>
 using namespace std;
 
-
 _node::_node(int l) : lineNo{l} {
 
 }
@@ -43,6 +42,141 @@ void _classNoInh::print(ostream &os) const {
     top = top->previous;
 }
 
+void _classNoInh::prettyPrint(ostream &os, string prefix) const {
+    os << prefix << "├──";
+    os << "CLASS:" << typeIdentifier.identifier << endl;
+
+    for(auto feature : featureList) {
+        string newPrefix = prefix + "|   ";
+        feature->prettyPrint(os, newPrefix);
+    }
+
+}
+
+void _classInh::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+    os << "CLASS:" << typeIdentifier.identifier << endl;
+
+    os << "|   " <<  "├──INHERITS:" << superClassIdentifier.identifier << endl;
+
+    for(auto feature : featureList) {
+        string newPrefix = prefix + "|   ";
+        feature->prettyPrint(os, newPrefix);
+    }
+}
+
+void _attributeInit::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "ATTRIBUTE:";
+    os << identifier.identifier << endl;
+    string newPrefix = prefix + "|   ";
+    expr->prettyPrint(os, newPrefix);
+}
+
+void _let::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "LET_EXPR:";
+    string newPrefix = prefix + "|   ";
+    body->prettyPrint(os, newPrefix);
+}
+
+void _node::prettyPrint(ostream& os, string prefix) const {
+
+}
+
+void _attributeNoInit::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "ATTRIBUTE:";
+    os << identifier.identifier << endl;
+}
+
+void _method::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "METHOD:";
+    os << identifier.identifier << endl;
+    os << formalList.size() << " FORMALS" << endl;
+    string newPrefix = prefix + "├──";
+    for(auto formal : formalList) {
+        formal->prettyPrint(os, newPrefix);
+    }
+}
+
+void _formal::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "FORMAL:" << identifier.identifier << endl;
+}
+void _assign::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "ASSIGN_EXPR" << endl;
+    string newPrefix = prefix + "|   ";
+    os << prefix << "├──" << identifier.identifier << endl;
+    rhs->prettyPrint(os, newPrefix);
+}
+void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
+        os << prefix << "├──";
+}
+
+void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _selfDispatch::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _if::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+void _while::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+void _block::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _new::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _isvoid::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _arith::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _relational::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _unary::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _integer::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _string::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+void _identifier::prettyPrint(ostream& os, string prefix) const {
+
+}
+
+void _bool::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+void _letBindingNoInit::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+void _letBindingInit::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+void _case::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+void _caseElement::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──";
+}
+
+
 void _classInh::print(ostream &os) const {
     os << typeIdentifier;
     os << "inherits" << endl;
@@ -72,7 +206,6 @@ _classInh::_classInh(_idMeta id, _idMeta sId) :
 }
 
 void _idMeta::print(ostream &os) const {
-    //os << lineNo << endl;
     if(kind != "") {
         os << top->get(make_pair(identifier, kind))->lineNo << endl;
     }else {
@@ -99,10 +232,17 @@ void _attributeNoInit::print(ostream &os) const {
     os << typeIdentifier;
 }
 
+
 void _program::print(ostream &os) const {
     os << classList.size() << endl;
     for(auto klass : classList) {
         os << *klass;
+    }
+}
+
+void _program::prettyPrint(ostream &os, string prefix) const {
+    for(auto klass : classList) {
+        klass->prettyPrint(os, "");
     }
 }
 

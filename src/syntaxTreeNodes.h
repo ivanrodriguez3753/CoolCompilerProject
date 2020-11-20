@@ -27,6 +27,7 @@ public:
     _node(int l);
 
     virtual void print(ostream& os) const = 0;
+    virtual void prettyPrint(ostream& os, string prefix) const;
 
     friend ostream& operator<<(ostream& os, const _node& n);
 };
@@ -36,10 +37,11 @@ public:
     string identifier;
     string kind;
 
+
+
     _idMeta(int l, string id, string k = "") : _node{l}, identifier{id}, kind{k} {}
 
 
-    //friend ostream& operator<<(ostream& os, const _identifier& i);
     void print(ostream &os) const override;
 };
 
@@ -53,7 +55,7 @@ public:
 
 
     void print(ostream &os) const override;
-//    friend ostream& operator<<(ostream& os, const _programNode& p);
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _class : public _node {
@@ -62,7 +64,6 @@ public:
     list<_feature*> featureList;
 
 
-    //friend ostream& operator<<(ostream& os, const _classNode& c);
     _class(_idMeta id);
 };
 
@@ -72,6 +73,7 @@ public:
     _classNoInh(_idMeta id);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _classInh : public _class {
@@ -80,6 +82,7 @@ public:
 
     _classInh(_idMeta id, _idMeta sId);
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _feature : public _node {
@@ -97,6 +100,7 @@ public:
 
     //friend ostream& operator<<(ostream& os, const _attributeNoInit& a);
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 
@@ -108,6 +112,7 @@ public:
     _attributeInit(int l, _idMeta id, _idMeta typeId, _expr* e);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _method : public _feature {
@@ -118,6 +123,7 @@ public:
     _method(_idMeta id, _idMeta typeId, _expr* e);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _formal : public _node {
@@ -126,6 +132,7 @@ public:
     _idMeta typeIdentifier;
 
     void print(ostream &os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 
     _formal(_idMeta id, _idMeta typeId);
 };
@@ -147,6 +154,7 @@ public:
     _assign(int l, _idMeta id, _expr* r);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _dispatch : public _expr {
@@ -164,6 +172,7 @@ public:
     _dynamicDispatch(int l, _idMeta m, _expr* e);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _staticDispatch : public _dispatch {
@@ -174,6 +183,7 @@ public:
     _staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _selfDispatch : public _dispatch {
@@ -181,6 +191,7 @@ public:
     _selfDispatch(int l, _idMeta m);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _if : public _expr {
@@ -192,6 +203,7 @@ public:
     _if(int l, _expr* p, _expr* te, _expr* ee);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _while : public _expr {
@@ -202,6 +214,7 @@ public:
     _while(int l, _expr* p, _expr* b);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _block : public _expr {
@@ -211,6 +224,7 @@ public:
     _block(int l);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _new : public _expr {
@@ -220,6 +234,7 @@ public:
     _new(int l, _idMeta id);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _isvoid : public _expr {
@@ -229,6 +244,7 @@ public:
     _isvoid(int l, _expr* e);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _arith : public _expr {
@@ -240,6 +256,7 @@ public:
     _arith(int l, _expr* le, string o, _expr* r);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _relational : public _expr {
@@ -251,6 +268,7 @@ public:
     _relational(int l, _expr* le, string o, _expr* r);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _unary : public _expr {
@@ -261,6 +279,7 @@ public:
     _unary(int l, string o, _expr* e);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _integer : public _expr {
@@ -270,6 +289,7 @@ public:
     _integer(int l, int v);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _string : public _expr {
@@ -279,6 +299,7 @@ public:
     _string(int l, string v);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _identifier : public _expr {
@@ -288,6 +309,7 @@ public:
     _identifier(int l, _idMeta id);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _bool : public _expr {
@@ -297,6 +319,7 @@ public:
     _bool(int l, bool v);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _letBinding : public _expr {
@@ -314,6 +337,7 @@ public:
     _letBindingNoInit(_idMeta id, _idMeta typeId);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _letBindingInit : public _letBinding {
@@ -323,6 +347,7 @@ public:
     _letBindingInit(_idMeta id, _idMeta typeId, _expr* i);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _let : public _expr {
@@ -336,6 +361,7 @@ public:
     _let(int l, _idMeta lk, _expr* b);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _caseElement : public _expr {
@@ -350,6 +376,7 @@ public:
     _caseElement(_idMeta id, _idMeta typeId, _expr* b, _idMeta ck);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 class _case : public _expr {
@@ -360,6 +387,7 @@ public:
     _case(int l, _expr* e);
 
     void print(ostream& os) const override;
+    void prettyPrint(ostream& os, string prefix) const;
 };
 
 

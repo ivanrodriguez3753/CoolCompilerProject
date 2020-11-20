@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     else if(option == "--abstractParse") {
         pdrv.parse(file);
         _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-        cout << *AST;
+        AST->prettyPrint(cout, "");
     }
     else if(option == "--semanticAnalysis") {
         pdrv.parse(file);
