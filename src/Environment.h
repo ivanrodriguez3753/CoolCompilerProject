@@ -6,6 +6,7 @@
 #include "syntaxTreeNodes.h"
 
 class _expr;
+class _class;
 
 using namespace std;
 
@@ -29,6 +30,7 @@ public:
 class classRecord : public Record {
 public:
     string parent;
+    _class* treeNode;
 
     classRecord(string lex, int l, string k, string p);
 };

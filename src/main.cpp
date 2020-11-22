@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
         printClassMap(cout);
         populateParentMap();
         printParentMap(cout);
+
     }
 
 

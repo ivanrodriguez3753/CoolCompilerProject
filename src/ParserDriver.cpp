@@ -2,6 +2,7 @@
 #include "ParserDriver.hh"
 #include "parser.hh"
 #include "parseTreeNodes.h"
+#include "type.h"
 ParserDriver::ParserDriver() : trace_parsing{false}, trace_scanning{false} {}
 
 int ParserDriver::parse(const std::string& f) {
@@ -98,7 +99,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         for(classNode* klass : castedCurrent->clNode->classList) {
             //TODO
             if(klass->optionalInh == nullptr) {
-                top->install(make_pair(klass->TYPE->value,"class"), new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", "Object"});
+                top->install(make_pair(klass->TYPE->value,"class"),  new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", "Object"});
             }
             else {
                 top->install(make_pair(klass->TYPE->value,"class"), new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", klass->optionalInh->TYPE->value});
@@ -112,7 +113,14 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     }
     else if(syntaxNodeType == "no_inherits") {
         classNode* castedCurrent = (classNode*) current;
-        _classNoInh* result = new _classNoInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value, "class"}};
+
+        Environment* temp = top;
+        top = top->previous;
+        classRecord* rec = (classRecord*)top->symTable.at(make_pair(castedCurrent->TYPE->value, "class"));
+        top = temp;
+
+        _classNoInh* result = new _classNoInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value, "class"}, rec };
+        rec->treeNode = result;
         for(featureNode* feature : castedCurrent->featureList->featureList) {
             result->featureList.push_back((_feature*)buildSyntaxNode(feature));
         }
@@ -120,13 +128,19 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     }
     else if(syntaxNodeType == "inherits") {
         classNode* castedCurrent = (classNode*) current;
+
+        Environment* temp = top;
+        top = top->previous;
+        classRecord* rec = (classRecord*)top->symTable.at(make_pair(castedCurrent->TYPE->value, "class"));
+        top = temp;
+
         _classInh* result = new _classInh{_idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value, "class"},
+                                          rec,
                                           _idMeta{castedCurrent->optionalInh->TYPE->lineNo, castedCurrent->optionalInh->TYPE->value}};
-        //top = top->links.at(make_pair(result->typeIdentifier.identifier, result->typeIdentifier.kind));
+        rec->treeNode = result;
         for(featureNode* feature : castedCurrent->featureList->featureList) {
             result->featureList.push_back((_feature*)buildSyntaxNode(feature));
         }
-        //top = top->previous;
         return result;
     }
     else if(syntaxNodeType == "attribute_no_init") {

@@ -19,7 +19,7 @@ class _attributeInit;
 class _attributeNoInit;
 class _expr;
 class _formal;
-
+class classRecord;
 
 class _node {
 public:
@@ -63,14 +63,15 @@ public:
     _idMeta typeIdentifier;
     list<_feature*> featureList;
 
+    classRecord* rec;
 
-    _class(_idMeta id);
+    _class(_idMeta id, classRecord* r);
 };
 
 class _classNoInh : public _class {
 public:
 
-    _classNoInh(_idMeta id);
+    _classNoInh(_idMeta id, classRecord* r);
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
@@ -80,7 +81,7 @@ class _classInh : public _class {
 public:
     _idMeta superClassIdentifier;
 
-    _classInh(_idMeta id, _idMeta sId);
+    _classInh(_idMeta id, classRecord* r, _idMeta sId);
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 };
@@ -141,7 +142,8 @@ class _expr : public _node {
 public:
     _expr(int l);
 
-    string exprType = "someType";
+    //TODO: don't hardcode type (obviously). Think I'll need a dynamic type as well
+    string exprType = "SomeType";
 
     static bool printExprType;
 };

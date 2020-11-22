@@ -12,15 +12,16 @@ ostream &operator<<(ostream &os, const _node &n) {
 }
 
 
-_class::_class(_idMeta id) :
-    _node{0}, typeIdentifier{id}
+_class::_class(_idMeta id, classRecord* r) :
+    _node{0}, typeIdentifier{id}, rec{r}
 {
 
 }
 
-_classNoInh::_classNoInh(_idMeta id) :
-        _class{id}
+_classNoInh::_classNoInh(_idMeta id, classRecord* r) :
+        _class{id, r}
 {
+
 }
 
 void _classNoInh::print(ostream &os) const {
@@ -45,9 +46,11 @@ void _classNoInh::print(ostream &os) const {
 void _classNoInh::prettyPrint(ostream &os, string prefix) const {
     os << prefix << "├──";
     os << "CLASS:" << typeIdentifier.identifier << endl;
+    string newPrefix = prefix + "|   ";
+    os << newPrefix << "├──FEATURE LIST: SIZE IS " << featureList.size() << endl;
 
+    newPrefix += "|   ";
     for(auto feature : featureList) {
-        string newPrefix = prefix + "|   ";
         feature->prettyPrint(os, newPrefix);
     }
 
@@ -56,11 +59,12 @@ void _classNoInh::prettyPrint(ostream &os, string prefix) const {
 void _classInh::prettyPrint(ostream& os, string prefix) const {
     os << prefix << "├──";
     os << "CLASS:" << typeIdentifier.identifier << endl;
+    string newPrefix = prefix + "|   ";
+    os << newPrefix <<  "├──INHERITS:" << superClassIdentifier.identifier << endl;
+    os << newPrefix << "├──FEATURE LIST: SIZE IS " << featureList.size() << endl;
 
-    os << "|   " <<  "├──INHERITS:" << superClassIdentifier.identifier << endl;
-
+    newPrefix += "|   ";
     for(auto feature : featureList) {
-        string newPrefix = prefix + "|   ";
         feature->prettyPrint(os, newPrefix);
     }
 }
@@ -90,11 +94,13 @@ void _attributeNoInit::prettyPrint(ostream& os, string prefix) const {
 void _method::prettyPrint(ostream& os, string prefix) const {
     os << prefix << "├──" << "METHOD:";
     os << identifier.identifier << endl;
-    os << formalList.size() << " FORMALS" << endl;
-    string newPrefix = prefix + "├──";
+    string newPrefix1 = prefix + "|   ";
+    os << newPrefix1 << "├──" << " FORMALS LIST: SIZE IS " << formalList.size() << endl;
+    string newPrefix2 = newPrefix1 + "|   ";
     for(auto formal : formalList) {
-        formal->prettyPrint(os, newPrefix);
+        formal->prettyPrint(os, newPrefix2);
     }
+    body->prettyPrint(os, newPrefix1);
 }
 
 void _formal::prettyPrint(ostream& os, string prefix) const {
@@ -161,7 +167,10 @@ void _identifier::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _bool::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "BOOL_EXPR: ";
+    if(value) os << "true" << endl;
+    else os << "false" << endl;
+    return;
 }
 void _letBindingNoInit::prettyPrint(ostream& os, string prefix) const {
     os << prefix << "├──";
@@ -199,8 +208,8 @@ void _classInh::print(ostream &os) const {
 
 
 
-_classInh::_classInh(_idMeta id, _idMeta sId) :
-        _class{id}, superClassIdentifier{sId}
+_classInh::_classInh(_idMeta id, classRecord* r, _idMeta sId) :
+        _class{id, r}, superClassIdentifier{sId}
 {
 
 }
