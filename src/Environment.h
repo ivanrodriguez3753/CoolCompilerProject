@@ -4,9 +4,13 @@
 #include <string>
 #include <map>
 #include "syntaxTreeNodes.h"
+#include "Environment.h"
 
 class _expr;
 class _class;
+class _method;
+
+class Environment;
 
 using namespace std;
 
@@ -25,6 +29,18 @@ public:
     static int orderCounter;
 
     Record(string lex, int l, string k);
+};
+
+class methodRecord : public Record {
+public:
+    string returnType;
+
+    _method* treeNode;
+
+    methodRecord(string lex, int l, string k, string rt);
+
+public:
+    static Environment* makeAndInstallMethodsRecordAndEnv(list<string>& lexemes, list<list<pair<string,string>>>& parameters, list<string>& returnTypes, Environment* current);
 };
 
 class classRecord : public Record {

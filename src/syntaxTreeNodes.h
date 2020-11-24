@@ -21,6 +21,15 @@ class _expr;
 class _formal;
 class classRecord;
 
+//don't want basic classes on the AST, but I do want _class nodes for them
+extern _class* Object_class;
+extern _class* IO_class;
+extern _class* Bool_class;
+extern _class* String_class;
+extern _class* Int_class;
+
+extern map<string, _class*> basicClassNodes;
+
 class _node {
 public:
     int lineNo;
@@ -29,9 +38,17 @@ public:
     virtual void print(ostream& os) const = 0;
     virtual void prettyPrint(ostream& os, string prefix) const;
 
+    static bool isAnnotated;
+
+    virtual void traverse() = 0;
+
     friend ostream& operator<<(ostream& os, const _node& n);
 };
 
+/**
+ * this really shouldn't inherit from _node
+ * defining its traverse method as useless
+ */
 class _idMeta : public _node{
 public:
     string identifier;
@@ -41,6 +58,7 @@ public:
 
     _idMeta(int l, string id, string k = "") : _node{l}, identifier{id}, kind{k} {}
 
+    void traverse() {}
 
     void print(ostream &os) const override;
 };
@@ -53,6 +71,7 @@ public:
     list<_class*> classList;
     _program(int l) : _node{l} {}
 
+    void traverse() override;
 
     void print(ostream &os) const override;
     void prettyPrint(ostream& os, string prefix) const;
@@ -65,6 +84,8 @@ public:
 
     classRecord* rec;
 
+    void traverse() override;
+
     _class(_idMeta id, classRecord* r);
 };
 
@@ -75,6 +96,7 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
 };
 
 class _classInh : public _class {
@@ -84,12 +106,15 @@ public:
     _classInh(_idMeta id, classRecord* r, _idMeta sId);
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
 };
 
 class _feature : public _node {
 public:
     _idMeta identifier;
     _idMeta typeIdentifier;
+
+    virtual void traverse() = 0;
 
     _feature(int l, _idMeta id, _idMeta typeId);
 
@@ -99,9 +124,12 @@ class _attributeNoInit : public _feature {
 public:
     _attributeNoInit(int l, _idMeta id, _idMeta typeId);
 
+
     //friend ostream& operator<<(ostream& os, const _attributeNoInit& a);
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 
@@ -114,6 +142,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _method : public _feature {
@@ -125,6 +155,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override;
 };
 
 class _formal : public _node {
@@ -135,6 +167,8 @@ public:
     void print(ostream &os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
+    void traverse() override{}
+
     _formal(_idMeta id, _idMeta typeId);
 };
 
@@ -142,8 +176,9 @@ class _expr : public _node {
 public:
     _expr(int l);
 
-    //TODO: don't hardcode type (obviously). Think I'll need a dynamic type as well
-    string exprType = "SomeType";
+    string exprType;
+
+    virtual void traverse() = 0;
 
     static bool printExprType;
 };
@@ -155,6 +190,8 @@ public:
 
     _assign(int l, _idMeta id, _expr* r);
 
+    void traverse() override{}
+
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 };
@@ -165,6 +202,8 @@ public:
     list<_expr*> args;
 
     _dispatch(int l, _idMeta m);
+
+    virtual void traverse() = 0;
 };
 
 class _dynamicDispatch : public _dispatch {
@@ -175,6 +214,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _staticDispatch : public _dispatch {
@@ -186,6 +227,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _selfDispatch : public _dispatch {
@@ -194,6 +237,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _if : public _expr {
@@ -206,6 +251,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _while : public _expr {
@@ -217,6 +264,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _block : public _expr {
@@ -227,6 +276,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _new : public _expr {
@@ -237,6 +288,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override;
 };
 
 class _isvoid : public _expr {
@@ -247,6 +300,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _arith : public _expr {
@@ -259,6 +314,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _relational : public _expr {
@@ -271,6 +328,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _unary : public _expr {
@@ -282,6 +341,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _integer : public _expr {
@@ -292,6 +353,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _string : public _expr {
@@ -302,6 +365,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _identifier : public _expr {
@@ -312,6 +377,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _bool : public _expr {
@@ -322,6 +389,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _letBinding : public _expr {
@@ -332,6 +401,8 @@ public:
     _expr* body;
 
     _letBinding(_idMeta id, _idMeta typeId);
+
+    virtual void traverse() = 0;
 };
 
 class _letBindingNoInit : public _letBinding {
@@ -340,6 +411,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _letBindingInit : public _letBinding {
@@ -350,6 +423,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _let : public _expr {
@@ -364,6 +439,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 class _caseElement : public _expr {
@@ -379,6 +456,23 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
+};
+
+/**
+ * new internal type used for annotating built in methods
+ */
+class _internal : public _expr {
+public:
+    string klass;
+    string method;
+
+    _internal(string c, string m);
+
+    void print(ostream& os) const override;
+
+    void traverse() override{}
 };
 
 class _case : public _expr {
@@ -390,6 +484,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void traverse() override{}
 };
 
 

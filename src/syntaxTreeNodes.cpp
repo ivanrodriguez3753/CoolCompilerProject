@@ -2,6 +2,21 @@
 #include <iostream>
 using namespace std;
 
+_class* Object_class{nullptr};
+_class* IO_class{nullptr};
+_class* Bool_class{nullptr};
+_class* String_class{nullptr};
+_class* Int_class{nullptr};
+
+map<string, _class*> basicClassNodes{{"Object", Object_class},
+                                     {"IO", IO_class},
+                                     {"Bool", Bool_class},
+                                     {"String", String_class},
+                                     {"Int", Int_class}};
+
+
+
+bool _node::isAnnotated = false;
 _node::_node(int l) : lineNo{l} {
 
 }
@@ -17,6 +32,13 @@ _class::_class(_idMeta id, classRecord* r) :
 {
 
 }
+
+void _class::traverse() {
+    for(auto feature : featureList) {
+        feature->traverse();
+    }
+}
+
 
 _classNoInh::_classNoInh(_idMeta id, classRecord* r) :
         _class{id, r}
@@ -223,6 +245,8 @@ void _idMeta::print(ostream &os) const {
     os << identifier << endl;
 }
 
+
+
 _feature::_feature(int l, _idMeta id, _idMeta typeId) :
     _node{l}, identifier{id}, typeIdentifier{typeId}
 {
@@ -255,6 +279,13 @@ void _program::prettyPrint(ostream &os, string prefix) const {
     }
 }
 
+void _program::traverse() {
+    for(auto klass : classList) {
+        klass->traverse();
+    }
+    _node::isAnnotated = true;
+}
+
 bool _expr::printExprType = false;
 _expr::_expr(int l) : _node(l) {
 
@@ -272,6 +303,7 @@ void _attributeInit::print(ostream &os) const {
     os << typeIdentifier;
     os << *expr;
 }
+
 
 _method::_method(_idMeta id, _idMeta typeId, _expr *e) :
         _feature{0, id, typeId}, body{e}
@@ -293,6 +325,14 @@ void _method::print(ostream &os) const {
     os << *body;
     top = top->previous;
 
+}
+
+void _method::traverse() {
+    //TODO Account for attributes. Doing only methods for now
+    for(auto formal : formalList) {
+        formal->traverse();
+    }
+    body->traverse();
 }
 
 _formal::_formal(_idMeta id, _idMeta typeId) :
@@ -413,8 +453,16 @@ _new::_new(int l, _idMeta id) :
 
 void _new::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
+
     os << "new" << endl;
     os << identifier;
+}
+
+void _new::traverse() {
+    exprType = identifier.identifier;
 }
 
 _isvoid::_isvoid(int l, _expr *e) :
@@ -617,4 +665,14 @@ void _assign::print(ostream& os) const {
     os << "assign" << endl;
     os << identifier;
     os << *rhs;
+}
+
+_internal::_internal(string c, string m) :
+    _expr{0}, klass{c}, method{m}
+{
+
+}
+
+void _internal::print(ostream &os) const {
+    os << 0 << endl << exprType << endl << "internal" << endl << klass << "." << method << endl;
 }

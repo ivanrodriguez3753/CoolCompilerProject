@@ -4,6 +4,6 @@ class Main inherits IO {
     attribute3 : Bool;
 
     main() : Object {
-        false
+        new Object
     };
 };

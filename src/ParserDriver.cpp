@@ -83,6 +83,7 @@ void ParserDriver::prettyPrintRecurs(node* current, const string& prefix, ostrea
  */
 _program *ParserDriver::buildSyntaxTree(programNode *root) {
     _program* ast = (_program*) buildSyntaxNode(root);
+    buildBasicClassNodes();
     return ast;
 }
 
@@ -163,7 +164,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     else if(syntaxNodeType == "method") {
         methodNode* castedCurrent = (methodNode*) current;
         //expression may introduce new scopes (with the let or case expressions)
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Record{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method"});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new methodRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method", castedCurrent->TYPE->value});
         top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top}));
         top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
         _method* result = new _method{
@@ -171,6 +172,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->expr)
         };
+        ((methodRecord*)top->previous->symTable.at(make_pair(castedCurrent->IDENTIFIER->value, "method")))->treeNode = result;
         for(formalNode* formal : castedCurrent->formalsList->formalsList) {
             top->install(make_pair(formal->IDENTIFIER->value, "local"), new Record{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local"});
             result->formalList.push_back((_formal*)buildSyntaxNode(formal));
