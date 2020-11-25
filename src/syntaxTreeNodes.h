@@ -129,7 +129,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override{} //dont need to do anything
 };
 
 
@@ -143,7 +143,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _method : public _feature {

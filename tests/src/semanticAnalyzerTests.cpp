@@ -230,19 +230,35 @@ TEST(implementationMap, noInitializations) {
 
 
 
-    ofstream outResult(COOL_PROGRAMS_DIR + "tempResult.txt");
-    ofstream outRef(COOL_PROGRAMS_DIR + "tempRef.txt");
-    outRef << reference.str();
-    outResult << semanticAnalyzerOutput.str();
-    outResult.close();
-    outRef.close();
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
 }
 
-TEST(TypeFull, helloworld) {
+TEST(AnnotatedAST, noInitializations) {
     ParserDriver pdrv;
-    const string localFile = "PA4example.cl";
+    const string localFile = "classMapNoInitializations.cl";
+    pdrv.file = COOL_PROGRAMS_DIR + localFile;
+
+    _expr::printExprType = true;
+
+    stringstream semanticAnalyzerOutput;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+    _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+    AST->traverse();//implementationMap requires having already traversed the tree and decorating nodes, like giving expressions a type and type checking
+    semanticAnalyzerOutput << *AST;
+
+
+    stringstream reference = makeSingleSectionFromReference(localFile, ANNOTATED_AST_OPTION);
+
+
+
+    ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
+    globalEnv->reset();
+}
+
+TEST(TypeFull, noInitializations) {
+    ParserDriver pdrv;
+    const string localFile = "classMapNoInitializations.cl";
     pdrv.file = COOL_PROGRAMS_DIR + localFile;
 
     _expr::printExprType = true;
@@ -252,19 +268,24 @@ TEST(TypeFull, helloworld) {
     _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
     populateClassMap();
     printClassMap(semanticAnalyzerOutput);
-    //printImplementationMap();
-    semanticAnalyzerOutput << "implementation_map\n";
+    populateImplementationMap();
+    printImplementationMap(semanticAnalyzerOutput);
     populateParentMap();
     printParentMap(semanticAnalyzerOutput);
     //printAnnotatedAST();
 
 
-    //TODO: DELETE WHEN DONE GENERATING TEST FILE
-    ofstream out(COOL_PROGRAMS_DIR + "PA4example.cl-type2");
-    out << semanticAnalyzerOutput.str();
-    out.close();
+
 
     stringstream reference = makeTypeStringStreamFromReference(localFile);
+
+    ofstream outResult(COOL_PROGRAMS_DIR + "tempResult.txt");
+    ofstream outRef(COOL_PROGRAMS_DIR + "tempRef.txt");
+    outRef << reference.str();
+    outResult << semanticAnalyzerOutput.str();
+    outResult.close();
+    outRef.close();
+
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
 }

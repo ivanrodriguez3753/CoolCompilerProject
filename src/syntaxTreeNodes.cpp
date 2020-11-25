@@ -99,8 +99,13 @@ void _attributeInit::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _let::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "LET_EXPR:";
+    os << prefix << "├──" << "LET_EXPR" << endl;
     string newPrefix = prefix + "|   ";
+    os << newPrefix << "├──" << "BINDING_LIST: SIZE IS " << bindings.size() << endl;
+    string newPrefix2 = newPrefix + "|   ";
+    for(auto binding : bindings) {
+        binding->prettyPrint(os, newPrefix2);
+    }
     body->prettyPrint(os, newPrefix);
 }
 
@@ -117,7 +122,7 @@ void _method::prettyPrint(ostream& os, string prefix) const {
     os << prefix << "├──" << "METHOD:";
     os << identifier.identifier << endl;
     string newPrefix1 = prefix + "|   ";
-    os << newPrefix1 << "├──" << " FORMALS LIST: SIZE IS " << formalList.size() << endl;
+    os << newPrefix1 << "├──" << "FORMALS LIST: SIZE IS " << formalList.size() << endl;
     string newPrefix2 = newPrefix1 + "|   ";
     for(auto formal : formalList) {
         formal->prettyPrint(os, newPrefix2);
@@ -135,45 +140,95 @@ void _assign::prettyPrint(ostream& os, string prefix) const {
     rhs->prettyPrint(os, newPrefix);
 }
 void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
-        os << prefix << "├──";
+    os << prefix << "├──" << "DYNAMIC_DISPATCH_EXPR" << endl;
+    string newPrefix = prefix + "|   ";
+    os << newPrefix << "├──" << method.identifier << endl;
+    os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
+    string newPrefix2 = newPrefix + "|   ";
+    for(auto arg : args) {
+        arg->prettyPrint(os, newPrefix2);
+    }
+    expr->prettyPrint(os, newPrefix);
 }
 
 void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "STATIC_DISPATCH_EXPR" << endl;
+    string newPrefix = prefix + "|   ";
+    os << newPrefix << "├──" << method.identifier << endl;
+    os << newPrefix << "├──" << "@" << typeIdentifier.identifier << endl;
+    os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
+    string newPrefix2 = newPrefix + "|   ";
+    for(auto arg : args) {
+        arg->prettyPrint(os, newPrefix2);
+    }
+    expr->prettyPrint(os, newPrefix);
+
 }
 
 void _selfDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "SELF_DISPATCH_EXPR" << endl;
+    string newPrefix = prefix + "|   ";
+    os << newPrefix << "├──" << method.identifier << endl;
+    os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
+    string newPrefix2 = newPrefix + "|   ";
+    for(auto arg : args) {
+        arg->prettyPrint(os, newPrefix2);
+    }
 }
 
 void _if::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "IF_EXPRESSION" << endl;
+    string newPrefix = prefix + "|   ";
+    predicate->prettyPrint(os, newPrefix);
+    thenExpr->prettyPrint(os, newPrefix);
+    elseExpr->prettyPrint(os, newPrefix);
 }
 void _while::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "WHILE_EXPRESSION" << endl;
+    string newPrefix = prefix + "|   ";
+    predicate->prettyPrint(os, newPrefix);
+    body->prettyPrint(os, newPrefix);
+
 }
 void _block::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "BLOCK_EXPRESSION" << endl;
+    string newPrefix = prefix + "|   ";
+    os << newPrefix << "├──" << "EXPRESSION LIST: SIZE IS " << body.size() << endl;
+    string newPrefix2 = newPrefix + "|   ";
+    for(auto expr : body) {
+        expr->prettyPrint(os, newPrefix2);
+    }
+
 }
 
 void _new::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "NEW_EXPRESSION: " << identifier.identifier << endl;
 }
 
 void _isvoid::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "IS_VOID_EXPRESSION" << endl;
+    string newPrefix = prefix + "|   ";
+    expr->prettyPrint(os, newPrefix);
 }
 
 void _arith::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "ARITH_EXPRESSION: " << op << endl;
+    string newPrefix = prefix + "|   ";
+    left->prettyPrint(os, newPrefix);
+    right->prettyPrint(os, newPrefix);
 }
 
 void _relational::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "RELATIONAL_EXPRESSION: " << op << endl;
+    string newPrefix = prefix + "|   ";
+    left->prettyPrint(os, newPrefix);
+    right->prettyPrint(os, newPrefix);
 }
 
 void _unary::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "UNARY_EXPRESSION: " << op << endl;
+    string newPrefix = prefix + "|   ";
+    expr->prettyPrint(os, newPrefix);
 }
 
 void _integer::prettyPrint(ostream& os, string prefix) const {
@@ -181,30 +236,40 @@ void _integer::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _string::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "STRING_EXPR" << endl;
 }
 
 void _identifier::prettyPrint(ostream& os, string prefix) const {
+    os << prefix << "├──" << "IDENTIFIER_EXPR: " << identifier.identifier << endl;
 
 }
 
 void _bool::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "BOOL_EXPR: ";
-    if(value) os << "true" << endl;
-    else os << "false" << endl;
+    os << prefix << "├──" << "BOOL_EXPR" << endl;
     return;
 }
 void _letBindingNoInit::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "LET_BINDING_NO_INIT: " << identifier.identifier << endl;
 }
 void _letBindingInit::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "LET_BINDING_INIT: " << identifier.identifier << endl;
+    string newPrefix = prefix + "|   ";
+    init->prettyPrint(os, newPrefix);
 }
 void _case::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "CASE_EXPRESSION" << endl;
+    string newPrefix = prefix + "|   ";
+    expr->prettyPrint(os, newPrefix);
+    os << newPrefix << "CASE LIST: SIZE IS " << cases.size() << endl;
+    string newPrefix2 = newPrefix + "|   ";
+    for(auto kase : cases) {
+        kase->prettyPrint(os, newPrefix2);
+    }
 }
 void _caseElement::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "CASE ELEMENT: " << identifier.identifier << endl;
+    string newPrefix = prefix + "|   ";
+    body->prettyPrint(os, newPrefix);
 }
 
 
@@ -302,6 +367,10 @@ void _attributeInit::print(ostream &os) const {
     os << identifier;
     os << typeIdentifier;
     os << *expr;
+}
+
+void _attributeInit::traverse() {
+    expr->traverse();
 }
 
 
