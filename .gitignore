@@ -4,4 +4,5 @@
 .DS_Store
 *.cl-lex
 *.cl-ast
+*.cl-type
 bison.pdf

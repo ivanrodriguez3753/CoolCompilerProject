@@ -102,6 +102,7 @@ Record* Environment::get(pair<string, string> key) {
         }
         current = current->previous; //didn't find key, go to surrounding scope and search again
     }
+    return nullptr;
 }
 
 void Environment::reset() {

@@ -1,4 +1,5 @@
 #include "syntaxTreeNodes.h"
+#include "Environment.h"
 #include <iostream>
 using namespace std;
 
@@ -8,6 +9,8 @@ _class* Bool_class{nullptr};
 _class* String_class{nullptr};
 _class* Int_class{nullptr};
 
+
+
 map<string, _class*> basicClassNodes{{"Object", Object_class},
                                      {"IO", IO_class},
                                      {"Bool", Bool_class},
@@ -16,7 +19,7 @@ map<string, _class*> basicClassNodes{{"Object", Object_class},
 
 
 
-bool _node::isAnnotated = false;
+bool _node::isAnnotated; //= false;
 _node::_node(int l) : lineNo{l} {
 
 }
@@ -34,9 +37,11 @@ _class::_class(_idMeta id, classRecord* r) :
 }
 
 void _class::traverse() {
+    top = top->links[{rec->lexeme,rec->kind}];
     for(auto feature : featureList) {
         feature->traverse();
     }
+    top = top->previous;
 }
 
 
@@ -344,7 +349,14 @@ void _program::prettyPrint(ostream &os, string prefix) const {
     }
 }
 
+/**
+ * traverse in a postorder fashion to annotate expression nodes with a type.
+ * parents depend on children types. obvious nodes have already been annotated, and we
+ * also need base cases for leaves if parents depend on children
+ */
 void _program::traverse() {
+    //top is currently globalEnv
+    //have the caller change environments, and follow that convention unless noted otherwise
     for(auto klass : classList) {
         klass->traverse();
     }
@@ -370,6 +382,8 @@ void _attributeInit::print(ostream &os) const {
 }
 
 void _attributeInit::traverse() {
+    //dont need to traver symTable unless it is an expression that introduces scope (_let or _case I think)
+    //so leave it to caller as usual
     expr->traverse();
 }
 
@@ -397,11 +411,12 @@ void _method::print(ostream &os) const {
 }
 
 void _method::traverse() {
-    //TODO Account for attributes. Doing only methods for now
+    top = top->links[{identifier.identifier, "method"}];
     for(auto formal : formalList) {
         formal->traverse();
     }
     body->traverse();
+    top = top->previous;
 }
 
 _formal::_formal(_idMeta id, _idMeta typeId) :
@@ -507,6 +522,9 @@ _block::_block(int l) :
 
 void _block::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "block" << endl;
     os << body.size() << endl;
     for(_expr* expr : body) {
@@ -514,18 +532,25 @@ void _block::print(ostream& os) const {
     }
 }
 
+void _block::traverse() {
+    for(auto expr : body) {
+        expr->traverse();
+    }
+    exprType = body.back()->exprType; //exprType of a _block expression is defined by the exprType of the last expression in its body
+}
+
 _new::_new(int l, _idMeta id) :
     _expr{l}, identifier{id}
 {
-
+    exprType = id.identifier;
 }
 
 void _new::print(ostream &os) const {
     os << lineNo << endl;
+    //TODO: see why isAnnotated is false and not printing out exprType
     if(isAnnotated) {
         os << exprType << endl;
     }
-
     os << "new" << endl;
     os << identifier;
 }
@@ -537,7 +562,7 @@ void _new::traverse() {
 _isvoid::_isvoid(int l, _expr *e) :
     _expr{l}, expr{e}
 {
-
+    exprType = "Bool";
 }
 
 void _isvoid::print(ostream &os) const {
@@ -549,20 +574,28 @@ void _isvoid::print(ostream &os) const {
 _arith::_arith(int l, _expr *le, string o, _expr *r) :
     _expr{l}, left{le}, op{o}, right{r}
 {
-
+    exprType = "Int";
 }
 
 void _arith::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << op << endl;
     os << *left;
     os << *right;
 }
 
+void _arith::traverse() {
+    left->traverse();
+    right->traverse();
+}
+
 _integer::_integer(int l, int v) :
     _expr(l), value{v}
 {
-
+    exprType = "Int";
 }
 
 void _integer::print(ostream& os) const {
@@ -577,36 +610,65 @@ void _integer::print(ostream& os) const {
 _relational::_relational(int l, _expr *le, string o, _expr *r) :
     _expr{l}, left{le}, op{o}, right{r}
 {
-
+    exprType = "Bool";
 }
 
 void _relational::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << op << endl;
     os << *left;
     os << *right;
 }
 
+void _relational::traverse() {
+    left->traverse();
+    right->traverse();
+}
+
+/**
+ * The expression ∼ <expr> is the integer complement of <expr>. The subexpression <expr> must have
+ * static type Int and the entire expression has static type Int.
+ *  The expression not<expr> is the boolean complement of <expr>. The subexpression <expr> must have
+ *  static type Bool and the entire expression has static type Bool.
+ */
 _unary::_unary(int l, string o, _expr* e) :
     _expr{l}, op{o}, expr{e}
 {
-
+    if(o == "not") {
+        exprType = "Bool";
+    }
+    else if(o == "negate") {
+        exprType = "Int";
+    }
 }
 
 void _unary::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << op << endl;
     os << *expr;
+}
+
+void _unary::traverse() {
+    expr->traverse();
 }
 
 _string::_string(int l, string v) :
     _expr{l}, value{v}
 {
-
+    exprType = "String";
 }
 
 void _string::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "string" << endl;
     os << value << endl;
 }
@@ -619,19 +681,37 @@ _identifier::_identifier(int l, _idMeta id) :
 
 void _identifier::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "identifier" << endl;
     os << identifier;
 
 }
 
+/**
+ * can only be an attribute or local variable (which includes formal parameters, or something introduced in a let)
+ */
+void _identifier::traverse() {
+    if(((objectRecord*)top->get(make_pair(identifier.identifier,"attribute")))) {
+        exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"attribute")))->type;
+    }
+    else if(((objectRecord*)top->get(make_pair(identifier.identifier,"local")))) {
+        exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"local")))->type;
+    }
+}
+
 _bool::_bool(int l, bool v) :
     _expr{l}, value{v}
 {
-
+    exprType = "Bool";
 }
 
 void _bool::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     if(value) {
         os << "true" << endl;
     }
@@ -731,15 +811,23 @@ _assign::_assign(int l, _idMeta id, _expr* r) :
 
 void _assign::print(ostream& os) const {
     os << lineNo << endl;
+    if(_node::isAnnotated) {
+        os << exprType << endl;
+    }
     os << "assign" << endl;
     os << identifier;
     os << *rhs;
 }
 
+void _assign::traverse() {
+    rhs->traverse();
+    exprType = rhs->exprType;
+}
+
 _internal::_internal(string c, string m) :
     _expr{0}, klass{c}, method{m}
 {
-
+    exprType = "internal";
 }
 
 void _internal::print(ostream &os) const {

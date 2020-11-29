@@ -277,3 +277,15 @@ void printImplementationMap(ostream& out) {
         }
     }
 }
+
+bool conforms(string T1, string T2) {
+    if(T1 == T2) {
+        return true;
+    }
+    while(T2 != "") { //Object's parent is ""
+        if(parentMap[T1]->lexeme == T2) {
+            return true;
+        }
+        T1 = parentMap[T1]->parent;
+    }
+}

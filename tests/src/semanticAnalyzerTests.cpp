@@ -131,7 +131,9 @@ TEST(classMap, noInitializations) {
     stringstream reference = makeSingleSectionFromReference(localFile, CLASS_MAP_OPTION);
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 TEST(classMap, noInitializationsWith1Inheritance) {
     ParserDriver pdrv;
@@ -150,7 +152,9 @@ TEST(classMap, noInitializationsWith1Inheritance) {
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 TEST(classMap, noInitializationsWith2Inheritance) {
     ParserDriver pdrv;
@@ -169,7 +173,9 @@ TEST(classMap, noInitializationsWith2Inheritance) {
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 TEST(classMap, noInitializationsWithMoreInheritance) {
     ParserDriver pdrv;
@@ -188,7 +194,9 @@ TEST(classMap, noInitializationsWithMoreInheritance) {
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 
 TEST(classMap, playground) {
@@ -208,7 +216,9 @@ TEST(classMap, playground) {
     stringstream reference = makeSingleSectionFromReference(localFile, CLASS_MAP_OPTION);
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 TEST(implementationMap, noInitializations) {
     ParserDriver pdrv;
@@ -222,17 +232,16 @@ TEST(implementationMap, noInitializations) {
     _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
     AST->traverse();//implementationMap requires having already traversed the tree and decorating nodes, like giving expressions a type and type checking
 
-
     populateImplementationMap();
     printImplementationMap(semanticAnalyzerOutput);
 
     stringstream reference = makeSingleSectionFromReference(localFile, IMPLEMENTATION_MAP_OPTION);
 
-
-
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 TEST(AnnotatedAST, noInitializations) {
     ParserDriver pdrv;
@@ -250,11 +259,33 @@ TEST(AnnotatedAST, noInitializations) {
 
     stringstream reference = makeSingleSectionFromReference(localFile, ANNOTATED_AST_OPTION);
 
+    ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
+    globalEnv->reset();
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
+TEST(AnnotatedAST, identifierExpr) {
+    ParserDriver pdrv;
+    const string localFile = "identifierExpr.cl";
+    pdrv.file = COOL_PROGRAMS_DIR + localFile;
+
+    _expr::printExprType = true;
+
+    stringstream semanticAnalyzerOutput;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+    _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+    AST->traverse();//implementationMap requires having already traversed the tree and decorating nodes, like giving expressions a type and type checking
+    semanticAnalyzerOutput << *AST;
+
+
+    stringstream reference = makeSingleSectionFromReference(localFile, ANNOTATED_AST_OPTION);
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
-}
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();}
 
 TEST(TypeFull, noInitializations) {
     ParserDriver pdrv;
@@ -266,26 +297,47 @@ TEST(TypeFull, noInitializations) {
     stringstream semanticAnalyzerOutput;
     pdrv.parse(COOL_PROGRAMS_DIR + localFile);
     _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+    AST->traverse();
     populateClassMap();
     printClassMap(semanticAnalyzerOutput);
     populateImplementationMap();
     printImplementationMap(semanticAnalyzerOutput);
     populateParentMap();
     printParentMap(semanticAnalyzerOutput);
-    //printAnnotatedAST();
-
-
-
+    semanticAnalyzerOutput << *AST;
 
     stringstream reference = makeTypeStringStreamFromReference(localFile);
 
-    ofstream outResult(COOL_PROGRAMS_DIR + "tempResult.txt");
-    ofstream outRef(COOL_PROGRAMS_DIR + "tempRef.txt");
-    outRef << reference.str();
-    outResult << semanticAnalyzerOutput.str();
-    outResult.close();
-    outRef.close();
+    ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
+    globalEnv->reset();
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();
+}
+TEST(TypeFull, assignExpr) {
+    ParserDriver pdrv;
+    const string localFile = "assignExpr.cl";
+    pdrv.file = COOL_PROGRAMS_DIR + localFile;
+
+    _expr::printExprType = true;
+
+    stringstream semanticAnalyzerOutput;
+    pdrv.parse(COOL_PROGRAMS_DIR + localFile);
+    _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+    populateClassMap();
+    printClassMap(semanticAnalyzerOutput);
+    populateImplementationMap();
+    AST->traverse();
+    printImplementationMap(semanticAnalyzerOutput);
+    populateParentMap();
+    printParentMap(semanticAnalyzerOutput);
+    semanticAnalyzerOutput << *AST;
+
+    stringstream reference = makeTypeStringStreamFromReference(localFile);
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
     globalEnv->reset();
+    classMap.clear();
+    implementationMap.clear();
+    parentMap.clear();
 }

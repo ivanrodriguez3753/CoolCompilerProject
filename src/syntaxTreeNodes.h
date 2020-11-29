@@ -20,6 +20,7 @@ class _attributeNoInit;
 class _expr;
 class _formal;
 class classRecord;
+class methodRecord;
 
 //don't want basic classes on the AST, but I do want _class nodes for them
 extern _class* Object_class;
@@ -151,6 +152,8 @@ public:
     list<_formal*> formalList;
     _expr* body;
 
+    methodRecord* rec;
+
     _method(_idMeta id, _idMeta typeId, _expr* e);
 
     void print(ostream& os) const override;
@@ -190,7 +193,7 @@ public:
 
     _assign(int l, _idMeta id, _expr* r);
 
-    void traverse() override{}
+    void traverse() override;
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
@@ -277,7 +280,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _new : public _expr {
@@ -315,7 +318,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _relational : public _expr {
@@ -329,7 +332,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _unary : public _expr {
@@ -342,7 +345,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _integer : public _expr {
@@ -366,7 +369,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override{} //don't need to do anything
 };
 
 class _identifier : public _expr {
@@ -378,7 +381,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _bool : public _expr {

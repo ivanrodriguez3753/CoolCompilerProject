@@ -22,6 +22,17 @@ void populateImplementationMap();
 void printImplementationMap(ostream& out);
 void buildBasicClassNodes();
 
-
+/**
+ * Returns true iff T1 <= T2 as described in the Cool reference manual
+ * Definition 4.1 (Conformance) Let 𝙰,𝙲, and 𝙿 be types.
+    𝙰≤𝙰 for all types A
+    if C inherits from P, then 𝙲≤𝙿
+    if 𝙰≤𝙲 and 𝙲≤𝙿 then 𝙰≤𝙿
+    Because Object is the root of the class hierarchy, it follows that 𝙰≤𝙾𝚋𝚓𝚎𝚌𝚝 for all types 𝙰.
+ * @param T1
+ * @param T2
+ * @return
+ */
+bool conforms(string T1, string T2);
 
 #endif //COOLCOMPILERPROJECTALL_TYPE_H

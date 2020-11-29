@@ -1,5 +1,6 @@
 class Main {
-    someMethod() : Sometype {
+    anIdentifier : Bool <- true;
+    main() : Bool {
     {
     		anIdentifier;
     }
