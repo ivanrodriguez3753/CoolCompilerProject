@@ -600,7 +600,7 @@ _integer::_integer(int l, int v) :
 
 void _integer::print(ostream& os) const {
     os << lineNo << endl;
-    if(printExprType) {
+    if(isAnnotated) {
         os << exprType << endl;
     }
     os << "integer" << endl;
@@ -811,7 +811,7 @@ _assign::_assign(int l, _idMeta id, _expr* r) :
 
 void _assign::print(ostream& os) const {
     os << lineNo << endl;
-    if(_node::isAnnotated) {
+    if(isAnnotated) {
         os << exprType << endl;
     }
     os << "assign" << endl;
@@ -831,5 +831,9 @@ _internal::_internal(string c, string m) :
 }
 
 void _internal::print(ostream &os) const {
-    os << 0 << endl << exprType << endl << "internal" << endl << klass << "." << method << endl;
+    os << 0 << endl;
+    if(isAnnotated) {
+        os<< exprType << endl;
+    }
+    os << "internal" << endl << klass << "." << method << endl;
 }

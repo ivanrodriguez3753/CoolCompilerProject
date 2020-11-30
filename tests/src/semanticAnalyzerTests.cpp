@@ -1,6 +1,5 @@
 #include <fstream>
 #include "gtest/gtest.h"
-#include "parser.hh"
 #include "ParserDriver.hh"
 #include "type.h"
 using namespace std;
@@ -18,7 +17,6 @@ const string CD = "cd ";
 
 stringstream makeTypeStringStreamFromReference(string fileName) {
     //generate the reference output
-//    string command = "cd " + RESOURCES_DIR + " && ./cool --type CoolPrograms/" + fileName;
     string commandGenerateReference = CD + tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + " && ./cool --type " + COOL_PROGRAMS_DIR_FROM_RESOURCES + fileName;
     system(commandGenerateReference.c_str());
 
@@ -48,7 +46,6 @@ const int ANNOTATED_AST_OPTION = 4;
 stringstream makeSingleSectionFromReference(string fileName, int section) {
     //generate the reference output
     string commandGenerateReference = CD + tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + " && ./cool --type " + COOL_PROGRAMS_DIR_FROM_RESOURCES + fileName;
-
     system(commandGenerateReference.c_str());
 
     //read reference output into an ifstream
@@ -119,24 +116,27 @@ stringstream makeSingleSectionFromReference(string fileName, int section) {
     return s;
 }
 
-//====================BEGIN CLASSMAPTESTS===================================
 /**
- * Test fixture for classMap tests.
+ * Test fixture for all type tests.
  */
-class classMapTests : public testing::TestWithParam<string> {
+class classMapTypeTests : public testing::TestWithParam<string> {
 protected:
     ParserDriver pdrv;
     stringstream semanticAnalyzerOutput;
     stringstream reference;
 
+    _program* AST;
+
     void SetUp() override {
         //parse the input into global parse tree rootIVAN
         pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
         //build syntax tree out of rootIVAN
-        _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-
+        AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+        AST->traverse();
+        populateClassMap();
+        populateImplementationMap();
+        populateParentMap();
         //generate reference stringstream
-        reference = makeSingleSectionFromReference(GetParam(), CLASS_MAP_OPTION);
     }
 
     void TearDown() override {
@@ -145,19 +145,21 @@ protected:
         implementationMap.clear();
         parentMap.clear();
     }
-};
-TEST_P(classMapTests, matchesReferenceCompiler) {
-    populateClassMap();
-    printClassMap(semanticAnalyzerOutput);
 
+};
+//====================BEGIN CLASSMAPTESTS===================================
+TEST_P(classMapTypeTests, matchesReferenceClassMap) {
+    reference = makeSingleSectionFromReference(GetParam(), CLASS_MAP_OPTION);
+
+    printClassMap(semanticAnalyzerOutput);
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
 }
-INSTANTIATE_TEST_SUITE_P(Parameterized, classMapTests, testing::Values(
-                            "classMapNoInitializations.cl",
-                            "classMapNoInitializationsWith1Inheritance.cl",
-                            "classMapNoInitializationsWith2Inheritance.cl",
-                            "classMapNoInitializationsWithMoreInheritance.cl",
-                            "playground.cl"));
+INSTANTIATE_TEST_SUITE_P(classMap, classMapTypeTests, testing::Values(
+        "classMapNoInitializations.cl",
+        "classMapNoInitializationsWith1Inheritance.cl",
+        "classMapNoInitializationsWith2Inheritance.cl",
+        "classMapNoInitializationsWithMoreInheritance.cl",
+        "playground.cl"));
 //====================END CLASSMAPTESTS===================================
 //====================BEGIN IMPLEMENTATIONMAPTESTS===================================
 //Not using any fixture
@@ -223,9 +225,9 @@ TEST(AnnotatedASTTests, identifierExpr) {
 //====================END ANNOTATEDASTTESTS===================================
 //====================BEGIN TYPEFULLTESTS===================================
 /**
- * Test fixture for TypeFull tests.
+ * Test fixture for all type tests.
  */
-class TypeFullTests : public testing::TestWithParam<string> {
+class typeTests : public testing::TestWithParam<string> {
 protected:
     ParserDriver pdrv;
     stringstream semanticAnalyzerOutput;
@@ -238,9 +240,11 @@ protected:
         pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
         //build syntax tree out of rootIVAN
         AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-
+        AST->traverse();
+        populateClassMap();
+        populateImplementationMap();
+        populateParentMap();
         //generate reference stringstream
-        reference = makeTypeStringStreamFromReference(GetParam());
     }
 
     void TearDown() override {
@@ -251,19 +255,17 @@ protected:
     }
 
 };
-TEST_P(TypeFullTests, matchesReferenceCompiler) {
-    AST->traverse();
-    populateClassMap();
+TEST_P(typeTests, matchesReferenceFull) {
+    reference = makeTypeStringStreamFromReference(GetParam());
+
     printClassMap(semanticAnalyzerOutput);
-    populateImplementationMap();
     printImplementationMap(semanticAnalyzerOutput);
-    populateParentMap();
     printParentMap(semanticAnalyzerOutput);
     semanticAnalyzerOutput << *AST;
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
 }
-INSTANTIATE_TEST_SUITE_P(Parameterized, TypeFullTests, testing::Values(
+INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
                             "classMapNoInitializations.cl",
                             "assignExpr.cl"));
 //====================END TYPEFULLTESTS===================================
