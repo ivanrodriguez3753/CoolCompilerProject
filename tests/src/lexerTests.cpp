@@ -70,7 +70,7 @@ TEST_P(lexerTests, matchesReferenceCompiler) {
     lexInput(pdrv, lexerOutput);
     ASSERT_EQ(reference.str(), lexerOutput.str());
 }
-INSTANTIATE_TEST_SUITE_P(LexerFull, lexerTests, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Parameterized, lexerTests, testing::Values(
                             "arith.cl",
                             "atoi.cl",
                             "cells.cl",
