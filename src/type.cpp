@@ -207,7 +207,6 @@ void populateImplementationMap() {
         map<string, string> methodsMap; //key is method name, value is (most recent)defining class in the hierarchy.
         vector<string> orderInserted; //keep order in which we install these on the map. using map for faster lookup
         for(vector<string>::reverse_iterator klass = inheritancePath.rbegin(); klass != inheritancePath.rend(); klass++) {
-            cout << *klass << "->";
             for(auto iter : (globalEnv->links.at(make_pair(*klass, "class")))->symTable) {
                 if(iter.first.second == "method") {
                     methodsMap[iter.first.first] = *klass;
