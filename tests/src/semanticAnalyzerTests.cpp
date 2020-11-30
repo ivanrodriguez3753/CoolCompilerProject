@@ -1,6 +1,5 @@
 #include <fstream>
 #include "gtest/gtest.h"
-#include "parser.hh"
 #include "ParserDriver.hh"
 #include "type.h"
 using namespace std;
@@ -18,7 +17,6 @@ const string CD = "cd ";
 
 stringstream makeTypeStringStreamFromReference(string fileName) {
     //generate the reference output
-//    string command = "cd " + RESOURCES_DIR + " && ./cool --type CoolPrograms/" + fileName;
     string commandGenerateReference = CD + tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + " && ./cool --type " + COOL_PROGRAMS_DIR_FROM_RESOURCES + fileName;
     system(commandGenerateReference.c_str());
 
@@ -48,7 +46,6 @@ const int ANNOTATED_AST_OPTION = 4;
 stringstream makeSingleSectionFromReference(string fileName, int section) {
     //generate the reference output
     string commandGenerateReference = CD + tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + " && ./cool --type " + COOL_PROGRAMS_DIR_FROM_RESOURCES + fileName;
-
     system(commandGenerateReference.c_str());
 
     //read reference output into an ifstream
