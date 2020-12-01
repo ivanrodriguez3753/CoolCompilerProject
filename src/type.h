@@ -33,6 +33,6 @@ void buildBasicClassNodes();
  * @param T2
  * @return
  */
-bool conforms(string T1, string T2);
+bool conforms(string T1, const string T2);
 
 #endif //COOLCOMPILERPROJECTALL_TYPE_H

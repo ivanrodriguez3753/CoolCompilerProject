@@ -1,5 +1,6 @@
 #include "syntaxTreeNodes.h"
 #include "Environment.h"
+#include "type.h"
 #include <iostream>
 using namespace std;
 
@@ -785,22 +786,53 @@ _case::_case(int l, _expr* e) :
 
 void _case::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "case" << endl;
     os << *expr;
     os << cases.size() << endl;
     for(_caseElement* Case : cases) {
-        top = top->links.at(make_pair(Case->caseKey.identifier, "case"));
+        top = top->links.at(make_pair(Case->caseKey.identifier, Case->caseKey.kind));
         os << *Case;
         top = top->previous;
     }
 }
 
+void _case::traverse() {
+    expr->traverse();
+    vector<string> typeChoices; //I believe all these must conform expr->exprType
+    for(auto kase : cases) {
+        top = top->links.at({kase->caseKey.identifier, "case"});
+        typeChoices.push_back(kase->typeIdentifier.identifier);
+        kase->traverse();
+        top = top->previous;
+    }
+    //go up the hierarchy tree as much as we can
+    int i = 0;
+    string lub = typeChoices[i++]; //there is always at least one case in a case expression
+    ;
+    while(i < typeChoices.size()) {
+        string current = typeChoices[i++];
+        if(conforms(lub, current)) {
+            lub = current;
+        }
+    }
+    //TODO no cases error check?
+    exprType = lub;
+    //TODO FIND LEAST UPPER BOUND ON THE TYPES IN THE CASES AND ASSIGN TO exprType
+}
 
 
 void _caseElement::print(ostream &os) const {
     os << identifier;
     os << typeIdentifier;
     os << *body;
+}
+
+void _caseElement::traverse() {
+    body->traverse();
+    exprType = body->exprType;
 }
 
 _assign::_assign(int l, _idMeta id, _expr* r) :

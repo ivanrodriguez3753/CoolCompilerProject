@@ -253,7 +253,9 @@ void printImplementationMap(ostream& out) {
 
             //print body expression of the method
 //            if(method.second != "Object" && method.second != "Int" && method.second != "Bool" && method.second != "String" && method.second != "IO") {
-                out << *(method.first->treeNode->body);
+            top = top->links.at(make_pair(method.second, "class"))->links.at(make_pair(method.first->lexeme, "method"));
+            out << *(method.first->treeNode->body);
+            top = top->previous->previous;
 //            }
 //            else {
 //                //Bool and Int don't have any methods. Just branches for Object/String/IO
@@ -277,14 +279,15 @@ void printImplementationMap(ostream& out) {
     }
 }
 
-bool conforms(string T1, string T2) {
+bool conforms(string T1, const string T2) {
     if(T1 == T2) {
         return true;
     }
-    while(T2 != "") { //Object's parent is ""
-        if(parentMap[T1]->lexeme == T2) {
+    while(T1 != T2) {
+        string currentParent = parentMap[T1]->parent;
+        if(currentParent == T2) {
             return true;
         }
-        T1 = parentMap[T1]->parent;
+        T1 = currentParent;
     }
 }

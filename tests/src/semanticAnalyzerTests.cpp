@@ -240,11 +240,10 @@ protected:
         pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
         //build syntax tree out of rootIVAN
         AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-        AST->traverse();
-        populateClassMap();
-        populateImplementationMap();
-        populateParentMap();
+
+
         //generate reference stringstream
+        reference = makeTypeStringStreamFromReference(GetParam());
     }
 
     void TearDown() override {
@@ -256,8 +255,10 @@ protected:
 
 };
 TEST_P(typeTests, matchesReferenceFull) {
-    reference = makeTypeStringStreamFromReference(GetParam());
-
+    populateClassMap();
+    populateImplementationMap();
+    populateParentMap();
+    AST->traverse();
     printClassMap(semanticAnalyzerOutput);
     printImplementationMap(semanticAnalyzerOutput);
     printParentMap(semanticAnalyzerOutput);
@@ -265,7 +266,20 @@ TEST_P(typeTests, matchesReferenceFull) {
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
 }
-INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Fragments, typeTests, testing::Values(
                             "classMapNoInitializations.cl",
-                            "assignExpr.cl"));
+                            "assignExpr.cl",
+                            "caseExprOneCase.cl",
+                            "caseExprManyCase.cl"));
+INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
+//                            "arith.cl",
+                            "atoi.cl",
+                            "cells.cl",
+                            "hello-world.cl",
+//                            "hs.cl",
+                            "list.cl",
+                            "new-complex.cl",
+                            "primes.cl",
+                            "print-cool.cl",
+                            "sort-list.cl"));
 //====================END TYPEFULLTESTS===================================

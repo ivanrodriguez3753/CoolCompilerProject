@@ -460,7 +460,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 /**
@@ -488,7 +488,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 
