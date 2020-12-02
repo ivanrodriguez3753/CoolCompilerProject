@@ -240,11 +240,11 @@ void printImplementationMap(ostream& out) {
         for(pair<methodRecord*, string> method : methods) {
             out << method.first->lexeme << endl;
 //            if(method.second != "Object" && method.second != "Int" && method.second != "Bool" && method.second != "String" && method.second != "IO") { //not a basic class
-                _method* treeNode = method.first->treeNode;
-                out << treeNode->formalList.size() << endl;
-                for(_formal* formal : treeNode->formalList) {
-                    out << formal->identifier.identifier << endl;
-                }
+            _method* treeNode = method.first->treeNode;
+            out << treeNode->formalList.size() << endl;
+            for(_formal* formal : treeNode->formalList) {
+                out << formal->identifier.identifier << endl;
+            }
 //            }
 //            else { //cases for basic classes, since they are not in the AST
 //                _method treeNode
@@ -282,6 +282,9 @@ void printImplementationMap(ostream& out) {
 bool conforms(string T1, const string T2) {
     if(T1 == T2) {
         return true;
+    }
+    else if(T1 == "Object") {
+        return T1 == T2;
     }
     while(T1 != T2) {
         string currentParent = parentMap[T1]->parent;

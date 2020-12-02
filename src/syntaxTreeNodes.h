@@ -211,19 +211,19 @@ public:
 
 class _dynamicDispatch : public _dispatch {
 public:
-    _expr* expr;
+    _expr* caller;
 
     _dynamicDispatch(int l, _idMeta m, _expr* e);
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _staticDispatch : public _dispatch {
 public:
-    _expr* expr;
+    _expr* caller;
     _idMeta typeIdentifier;
 
     _staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty);
@@ -231,7 +231,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _selfDispatch : public _dispatch {
@@ -241,7 +241,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _if : public _expr {
@@ -255,7 +255,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _while : public _expr {
@@ -268,7 +268,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _block : public _expr {
@@ -304,7 +304,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _arith : public _expr {
@@ -415,7 +415,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override{} //Don't need to do anything
 };
 
 class _letBindingInit : public _letBinding {
@@ -427,7 +427,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _let : public _expr {
@@ -443,7 +443,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _caseElement : public _expr {

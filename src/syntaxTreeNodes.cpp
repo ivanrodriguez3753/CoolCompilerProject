@@ -154,7 +154,7 @@ void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
     for(auto arg : args) {
         arg->prettyPrint(os, newPrefix2);
     }
-    expr->prettyPrint(os, newPrefix);
+    caller->prettyPrint(os, newPrefix);
 }
 
 void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
@@ -167,7 +167,7 @@ void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
     for(auto arg : args) {
         arg->prettyPrint(os, newPrefix2);
     }
-    expr->prettyPrint(os, newPrefix);
+    caller->prettyPrint(os, newPrefix);
 
 }
 
@@ -438,15 +438,18 @@ _dispatch::_dispatch(int l, _idMeta m) :
 }
 
 _dynamicDispatch::_dynamicDispatch(int l, _idMeta m, _expr *e) :
-    _dispatch{l, m}, expr{e}
+        _dispatch{l, m}, caller{e}
 {
 
 }
 
 void _dynamicDispatch::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "dynamic_dispatch" << endl;
-    os << *expr;
+    os << *caller;
     os << method;
     os << args.size() << endl;
     for(_expr* arg : args) {
@@ -454,22 +457,48 @@ void _dynamicDispatch::print(ostream& os) const {
     }
 }
 
+void _dynamicDispatch::traverse() {
+
+}
+
 _staticDispatch::_staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty) :
-    _dispatch(l, m), expr{e}, typeIdentifier{ty}
+        _dispatch(l, m), caller{e}, typeIdentifier{ty}
 {
 
 }
 
 void _staticDispatch::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "static_dispatch" << endl;
-    os << *expr;
+    os << *caller;
     os << typeIdentifier;
     os << method;
     os << args.size() << endl;
     for(_expr* arg : args) {
         os << *arg;
     }
+}
+
+void _staticDispatch::traverse() {
+    for(_expr* arg : args) {
+        arg->traverse();
+    }
+    caller->traverse();
+    //lookup method method.identifier in the implementation map for caller->exprType
+    //To be clear, you are calling what WOULD be called if the caller was type @RHSType
+    //So it doesn't have to be originally defined by RHSType, and caller's
+    // static type just has to conform to RHSType
+    //TODO: use a map for implementationMap value instead of list. Will need to figure out how to order by
+    //TODO original declaration (starting with base classes) while still maintaining constant time lookup
+    for(pair<methodRecord*, string> methodPair : implementationMap.at(typeIdentifier.identifier)) {
+        if(methodPair.first->lexeme == method.identifier) { //implementation map includes inherited, nonredefined methods
+            exprType = methodPair.first->returnType;
+        }
+    }
+    exprType = ((methodRecord*)globalEnv->links.at({typeIdentifier.identifier, "class"})->symTable.at({method.identifier, "method"}))->returnType;
 }
 
 _selfDispatch::_selfDispatch(int l, _idMeta m) :
@@ -480,12 +509,22 @@ _selfDispatch::_selfDispatch(int l, _idMeta m) :
 
 void _selfDispatch::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "self_dispatch" << endl;
     os << method;
     os << args.size() << endl;
     for(_expr* arg : args) {
         os << *arg;
     }
+}
+
+void _selfDispatch::traverse() {
+    for(_expr* arg : args) {
+        arg->traverse();
+    }
+//    exprType = ((methodRecord*)top->previous->symTable.at({method.identifier, "method"}))->returnType;
 }
 
 _if::_if(int l, _expr* p, _expr* te, _expr* ee) :
@@ -496,23 +535,49 @@ _if::_if(int l, _expr* p, _expr* te, _expr* ee) :
 
 void _if::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "if" << endl;
     os << *predicate;
     os << *thenExpr;
     os << *elseExpr;
 }
 
+void _if::traverse() {
+    predicate->traverse();
+    thenExpr->traverse();
+    elseExpr->traverse();
+
+    //
+    if(conforms(thenExpr->exprType, elseExpr->exprType)) {
+        exprType = elseExpr->exprType;
+    }
+    else {
+        exprType = thenExpr->exprType;
+    }
+}
+
 _while::_while(int l, _expr* p, _expr* b) :
     _expr{l}, predicate{p}, body{b}
 {
-
+    //"The static type of a loop expression is Object"
+    exprType = "Object";
 }
 
 void _while::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "while" << endl;
     os << *predicate;
     os << *body;
+}
+
+void _while::traverse() {
+    predicate->traverse();
+    body->traverse();
 }
 
 _block::_block(int l) :
@@ -568,8 +633,15 @@ _isvoid::_isvoid(int l, _expr *e) :
 
 void _isvoid::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "isvoid" << endl;
     os << *expr;
+}
+
+void _isvoid::traverse() {
+    expr->traverse();
 }
 
 _arith::_arith(int l, _expr *le, string o, _expr *r) :
@@ -752,6 +824,10 @@ void _letBindingInit::print(ostream& os) const {
     os << *init;
 }
 
+void _letBindingInit::traverse() {
+    init->traverse();
+}
+
 int _let::letCounter = 0;
 _let::_let(int l, _idMeta lk, _expr* b) :
     _expr(l), letKey{lk}, body{b}
@@ -761,6 +837,9 @@ _let::_let(int l, _idMeta lk, _expr* b) :
 
 void _let::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "let" << endl;
     os << bindings.size() << endl;
     top = top->links.at(make_pair(letKey.identifier, letKey.kind));
@@ -769,6 +848,17 @@ void _let::print(ostream &os) const {
     }
     top = top->previous;
     os << *body;
+}
+
+void _let::traverse() {
+    for(auto binding : bindings) {
+        //Don't need to change scope for a binding w/o initialization but will do it anyway
+        top = top->links.at({letKey.identifier, letKey.kind});
+        binding->traverse();
+        top = top->previous;
+    }
+    body->traverse();
+    exprType = body->exprType;
 }
 
 int _caseElement::caseCounter = 0;

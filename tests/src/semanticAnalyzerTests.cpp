@@ -247,6 +247,7 @@ protected:
     }
 
     void TearDown() override {
+//        ofstream ref()
         globalEnv->reset();
         classMap.clear();
         implementationMap.clear();
@@ -270,16 +271,24 @@ INSTANTIATE_TEST_SUITE_P(Fragments, typeTests, testing::Values(
                             "classMapNoInitializations.cl",
                             "assignExpr.cl",
                             "caseExprOneCase.cl",
-                            "caseExprManyCase.cl"));
-INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
-//                            "arith.cl",
-                            "atoi.cl",
-                            "cells.cl",
-                            "hello-world.cl",
-//                            "hs.cl",
-                            "list.cl",
-                            "new-complex.cl",
-                            "primes.cl",
-                            "print-cool.cl",
-                            "sort-list.cl"));
+                            "caseExprManyCase.cl",
+                            "ifExpression.cl",
+                            "ifWhileExpressions.cl",
+                            "letExprOneBindingNoInit.cl",
+                            "letExprOneBindingYesInit.cl",
+                            "letExprMultipleBindingMixedInit.cl",
+                            "isvoidExpr.cl",
+                            "staticDispatchExpr.cl",
+                            "selfDispatchExpr.cl"));
+//INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
+////                            "arith.cl",
+//                            "atoi.cl",
+//                            "cells.cl",
+//                            "hello-world.cl",
+////                            "hs.cl",
+//                            "list.cl",
+//                            "new-complex.cl",
+//                            "primes.cl",
+//                            "print-cool.cl",
+//                            "sort-list.cl"));
 //====================END TYPEFULLTESTS===================================
