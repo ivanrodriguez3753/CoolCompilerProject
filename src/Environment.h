@@ -22,6 +22,9 @@ public:
     string kind;
     int encountered;
 
+    //A reference to the containing environment
+    const Environment* containerEnv;
+
     /**
      * to keep track of order of appearance. A map has a different internal ordering than we want (but maps
      * in general do not have an ordering property. The implementation does though)
@@ -40,7 +43,7 @@ public:
     methodRecord(string lex, int l, string k, string rt);
 
 public:
-    static Environment* makeAndInstallMethodsRecordAndEnv(list<string>& lexemes, list<list<pair<string,string>>>& parameters, list<string>& returnTypes, Environment* current);
+    static Environment* makeAndInstallMethodsRecordAndEnv(list<string> lexemes, list<list<pair<string,string>>> parameters, list<string> returnTypes, Environment* current);
 };
 
 class classRecord : public Record {
@@ -59,8 +62,18 @@ public:
     objectRecord(string lex, int l, string k, string type, _expr* init);
 };
 
+class expressionRecord : public Record {
+
+};
+
 class Environment {
 public:
+    struct envMetaInfo {
+        string identifier, kind;
+
+        envMetaInfo(string id, string k) : identifier{id}, kind{k} {}
+    }metaInfo;
+
     /**
      * methods and attributes can have the same identifier, so use a pair as key <identifier, kind>
      * For example, <"someName", "attribute"> is different from <"someName", "method">
@@ -70,12 +83,18 @@ public:
     Environment* previous;
     map<pair<string, string>, Environment*> links;
 
-    Environment(Environment* prev);
+    Environment(Environment* prev, envMetaInfo info);
 
     void install(pair<string, string>key, Record* rec);
     Record* get(pair<string, string> key);
 
     void reset();
+
+    /**
+     * returns a vector containing a vector of "methods" in the symTable
+     * @return
+     */
+    vector<methodRecord*> getMethods();
 };
 
 extern Environment* globalEnv;

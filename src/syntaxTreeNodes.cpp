@@ -105,7 +105,7 @@ void _attributeInit::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _let::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "LET_EXPR" << endl;
+    os << prefix << "├──" << "LET_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << "BINDING_LIST: SIZE IS " << bindings.size() << endl;
     string newPrefix2 = newPrefix + "|   ";
@@ -140,13 +140,13 @@ void _formal::prettyPrint(ostream& os, string prefix) const {
     os << prefix << "├──" << "FORMAL:" << identifier.identifier << endl;
 }
 void _assign::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "ASSIGN_EXPR" << endl;
+    os << prefix << "├──" << "ASSIGN_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
-    os << prefix << "├──" << identifier.identifier << endl;
+    os << newPrefix << "├──" << identifier.identifier << endl;
     rhs->prettyPrint(os, newPrefix);
 }
 void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "DYNAMIC_DISPATCH_EXPR" << endl;
+    os << prefix << "├──" << "DYNAMIC_DISPATCH_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << method.identifier << endl;
     os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
@@ -158,7 +158,7 @@ void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "STATIC_DISPATCH_EXPR" << endl;
+    os << prefix << "├──" << "STATIC_DISPATCH_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << method.identifier << endl;
     os << newPrefix << "├──" << "@" << typeIdentifier.identifier << endl;
@@ -172,7 +172,7 @@ void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _selfDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "SELF_DISPATCH_EXPR" << endl;
+    os << prefix << "├──" << "SELF_DISPATCH_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << method.identifier << endl;
     os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
@@ -183,21 +183,21 @@ void _selfDispatch::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _if::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "IF_EXPRESSION" << endl;
+    os << prefix << "├──" << "IF_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     predicate->prettyPrint(os, newPrefix);
     thenExpr->prettyPrint(os, newPrefix);
     elseExpr->prettyPrint(os, newPrefix);
 }
 void _while::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "WHILE_EXPRESSION" << endl;
+    os << prefix << "├──" << "WHILE_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     predicate->prettyPrint(os, newPrefix);
     body->prettyPrint(os, newPrefix);
 
 }
 void _block::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "BLOCK_EXPRESSION" << endl;
+    os << prefix << "├──" << "BLOCK_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << "EXPRESSION LIST: SIZE IS " << body.size() << endl;
     string newPrefix2 = newPrefix + "|   ";
@@ -208,31 +208,31 @@ void _block::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _new::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "NEW_EXPRESSION: " << identifier.identifier << endl;
+    os << prefix << "├──" << "NEW_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << identifier.identifier << endl;
 }
 
 void _isvoid::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "IS_VOID_EXPRESSION" << endl;
+    os << prefix << "├──" << "IS_VOID_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     expr->prettyPrint(os, newPrefix);
 }
 
 void _arith::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "ARITH_EXPRESSION: " << op << endl;
+    os << prefix << "├──" << "ARITH_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << op << endl;
     string newPrefix = prefix + "|   ";
     left->prettyPrint(os, newPrefix);
     right->prettyPrint(os, newPrefix);
 }
 
 void _relational::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "RELATIONAL_EXPRESSION: " << op << endl;
+    os << prefix << "├──" << "RELATIONAL_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << op << endl;
     string newPrefix = prefix + "|   ";
     left->prettyPrint(os, newPrefix);
     right->prettyPrint(os, newPrefix);
 }
 
 void _unary::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "UNARY_EXPRESSION: " << op << endl;
+    os << prefix << "├──" << "UNARY_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << op << endl;
     string newPrefix = prefix + "|   ";
     expr->prettyPrint(os, newPrefix);
 }
@@ -242,16 +242,16 @@ void _integer::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _string::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "STRING_EXPR" << endl;
+    os << prefix << "├──" << "STRING_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
 }
 
 void _identifier::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "IDENTIFIER_EXPR: " << identifier.identifier << endl;
+    os << prefix << "├──" << "IDENTIFIER_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << identifier.identifier << endl;
 
 }
 
 void _bool::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "BOOL_EXPR" << endl;
+    os << prefix << "├──" << "BOOL_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     return;
 }
 void _letBindingNoInit::prettyPrint(ostream& os, string prefix) const {
@@ -263,7 +263,7 @@ void _letBindingInit::prettyPrint(ostream& os, string prefix) const {
     init->prettyPrint(os, newPrefix);
 }
 void _case::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "CASE_EXPRESSION" << endl;
+    os << prefix << "├──" << "CASE_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     expr->prettyPrint(os, newPrefix);
     os << newPrefix << "CASE LIST: SIZE IS " << cases.size() << endl;
@@ -389,8 +389,8 @@ void _attributeInit::traverse() {
 }
 
 
-_method::_method(_idMeta id, _idMeta typeId, _expr *e) :
-        _feature{0, id, typeId}, body{e}
+_method::_method(_idMeta id, _idMeta typeId, _expr *b) :
+        _feature{0, id, typeId}, body{b}
 {
 
 }
@@ -410,12 +410,18 @@ void _method::print(ostream &os) const {
     top = top->previous;
 
 }
-
+string lookUpSelfType(Environment* current) {
+    while(current->metaInfo.kind != "class") {
+        current = current->previous;
+    }
+    return current->metaInfo.identifier;
+}
 void _method::traverse() {
     top = top->links[{identifier.identifier, "method"}];
     for(auto formal : formalList) {
         formal->traverse();
     }
+    top->install({"self", "local"}, new objectRecord{"self", 0, "local", "SELF_TYPE", nullptr}); //todo fix this nullptr
     body->traverse();
     top = top->previous;
 }
@@ -458,7 +464,30 @@ void _dynamicDispatch::print(ostream& os) const {
 }
 
 void _dynamicDispatch::traverse() {
+    for(_expr* arg : args) {
+        arg->traverse();
+    }
+    caller->traverse();
 
+    /**
+     * If f has return type B and B is a class name, then the static type of the dispatch is B. Otherwise, if f has
+     * return type SELF_TYPE, then the static type of the dispatch is A. To see why this is sound, note that the self
+     * parameter of the method f conforms to type A. Therefore, because f returns SELF_TYPE, we can infer that the
+     * result must also conform to A. Inferring accurate static types for dispatch expressions is what justifies
+     * including SELF_TYPE in the Cool type system.
+     */
+    if(caller->exprType == "SELF_TYPE") { //TODO this branch is a bandaid?
+        exprType = "SELF_TYPE";
+    }
+    else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType != "SELF_TYPE") { //static type of dispatch is B, since it is a class name
+        exprType = implementationMap.at(caller->exprType).at(method.identifier).first->returnType;
+    }
+    else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType == "SELF_TYPE") {//static type of dispatch is A,
+        exprType = caller->exprType;
+    }
+
+
+//    exprType = "FIX THIS";
 }
 
 _staticDispatch::_staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty) :
@@ -489,16 +518,13 @@ void _staticDispatch::traverse() {
     caller->traverse();
     //lookup method method.identifier in the implementation map for caller->exprType
     //To be clear, you are calling what WOULD be called if the caller was type @RHSType
-    //So it doesn't have to be originally defined by RHSType, and caller's
+    //So it doesn't have to have an original (re)definition by RHSType, and caller's
     // static type just has to conform to RHSType
-    //TODO: use a map for implementationMap value instead of list. Will need to figure out how to order by
-    //TODO original declaration (starting with base classes) while still maintaining constant time lookup
-    for(pair<methodRecord*, string> methodPair : implementationMap.at(typeIdentifier.identifier)) {
-        if(methodPair.first->lexeme == method.identifier) { //implementation map includes inherited, nonredefined methods
-            exprType = methodPair.first->returnType;
-        }
-    }
-    exprType = ((methodRecord*)globalEnv->links.at({typeIdentifier.identifier, "class"})->symTable.at({method.identifier, "method"}))->returnType;
+    //value of _staticDispatch is value returned by the method selected (most recent method in hierarchy with that name)
+        //but i guess it wouldn't matter which one we choose if all we're assigning is type, since overridden methods
+        //have to keep the same return type, same number of arguments and their types
+    exprType = implementationMap.at(typeIdentifier.identifier).at(method.identifier).first->returnType;
+
 }
 
 _selfDispatch::_selfDispatch(int l, _idMeta m) :
@@ -524,7 +550,12 @@ void _selfDispatch::traverse() {
     for(_expr* arg : args) {
         arg->traverse();
     }
-//    exprType = ((methodRecord*)top->previous->symTable.at({method.identifier, "method"}))->returnType;
+
+    //TODO improve this but for now go up the chains until you get to a "class" environment, then check its entry in implementationMap
+    Environment* current = top;
+    while(current->metaInfo.kind != "class") current = current->previous;
+    //current is the classEnv
+    exprType = implementationMap.at(current->metaInfo.identifier).at(method.identifier).first->returnType;
 }
 
 _if::_if(int l, _expr* p, _expr* te, _expr* ee) :
@@ -549,13 +580,7 @@ void _if::traverse() {
     thenExpr->traverse();
     elseExpr->traverse();
 
-    //
-    if(conforms(thenExpr->exprType, elseExpr->exprType)) {
-        exprType = elseExpr->exprType;
-    }
-    else {
-        exprType = thenExpr->exprType;
-    }
+    exprType = getLub(vector<string>{thenExpr->exprType, elseExpr->exprType});
 }
 
 _while::_while(int l, _expr* p, _expr* b) :
@@ -766,12 +791,23 @@ void _identifier::print(ostream& os) const {
  * can only be an attribute or local variable (which includes formal parameters, or something introduced in a let)
  */
 void _identifier::traverse() {
-    if(((objectRecord*)top->get(make_pair(identifier.identifier,"attribute")))) {
-        exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"attribute")))->type;
+    //need to account for identifiers from an earlier class in the hierarchy, so find the class we're in
+    Environment* current = top;
+    while(current->metaInfo.kind != "class") current = current->previous;
+    vector<string>inhPath = getInheritancePath(current->metaInfo.identifier);
+    for(string klass : inhPath) {
+        Environment* classEnv = globalEnv->links.at({klass, "class"});
+        if(((objectRecord*)top->get(make_pair(identifier.identifier,"local")))) {
+            exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"local")))->type;
+            return;
+        }
+        else if((classEnv->symTable.find(make_pair(identifier.identifier,"attribute"))) != classEnv->symTable.end()) {
+            exprType = ((objectRecord*)classEnv->symTable.at(make_pair(identifier.identifier,"attribute")))->type;
+            return;
+        }
     }
-    else if(((objectRecord*)top->get(make_pair(identifier.identifier,"local")))) {
-        exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"local")))->type;
-    }
+    cout << "DIDN'T MATCH A BRANCH IN _IDENTIFIER_EXPR\n";
+    exit(1);
 }
 
 _bool::_bool(int l, bool v) :
@@ -846,8 +882,8 @@ void _let::print(ostream &os) const {
     for(_letBinding* binding : bindings) {
         os << *binding;
     }
-    top = top->previous;
     os << *body;
+    top = top->previous;
 }
 
 void _let::traverse() {
@@ -857,7 +893,10 @@ void _let::traverse() {
         binding->traverse();
         top = top->previous;
     }
+    top = top->links.at({letKey.identifier, letKey.kind});
     body->traverse();
+    top = top->previous;
+
     exprType = body->exprType;
 }
 
@@ -894,22 +933,13 @@ void _case::traverse() {
     vector<string> typeChoices; //I believe all these must conform expr->exprType
     for(auto kase : cases) {
         top = top->links.at({kase->caseKey.identifier, "case"});
-        typeChoices.push_back(kase->typeIdentifier.identifier);
         kase->traverse();
+        typeChoices.push_back(kase->exprType);
         top = top->previous;
     }
     //go up the hierarchy tree as much as we can
-    int i = 0;
-    string lub = typeChoices[i++]; //there is always at least one case in a case expression
-    ;
-    while(i < typeChoices.size()) {
-        string current = typeChoices[i++];
-        if(conforms(lub, current)) {
-            lub = current;
-        }
-    }
-    //TODO no cases error check?
-    exprType = lub;
+    exprType = getLub(typeChoices);
+
     //TODO FIND LEAST UPPER BOUND ON THE TYPES IN THE CASES AND ASSIGN TO exprType
 }
 

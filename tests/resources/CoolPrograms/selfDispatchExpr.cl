@@ -2,12 +2,10 @@ class Main {
     selfDispatch() : Bool {
         false
     };
-    main() : Int {
+    main() : Bool {
     {
         selfDispatch();
-        123;
+        false;
     }
-
     };
-
 };

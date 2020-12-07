@@ -132,10 +132,9 @@ protected:
         pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
         //build syntax tree out of rootIVAN
         AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-        AST->traverse();
         populateClassMap();
-        populateImplementationMap();
         populateParentMap();
+        populateImplementationMap();
         //generate reference stringstream
     }
 
@@ -161,68 +160,14 @@ INSTANTIATE_TEST_SUITE_P(classMap, classMapTypeTests, testing::Values(
         "classMapNoInitializationsWithMoreInheritance.cl",
         "playground.cl"));
 //====================END CLASSMAPTESTS===================================
-//====================BEGIN IMPLEMENTATIONMAPTESTS===================================
-//Not using any fixture
-TEST(implementationMapTests, noInitializations) {
-    ParserDriver pdrv;
-    const string localFile = "classMapNoInitializations.cl";
 
-    stringstream semanticAnalyzerOutput;
-    pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + localFile);
-    _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-    AST->traverse();//implementationMap requires having already traversed the tree and decorating nodes, like giving expressions a type and type checking
-
-    populateImplementationMap();
-    printImplementationMap(semanticAnalyzerOutput);
-
-    stringstream reference = makeSingleSectionFromReference(localFile, IMPLEMENTATION_MAP_OPTION);
-
-    ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
-    globalEnv->reset();
-    classMap.clear();
-    implementationMap.clear();
-    parentMap.clear();
+//TODO delete when not longer using
+void makeTempsForDiff(string ref, string actual) {
+    ofstream refOS{tests_EXE_TO_COOL_PROGRAMS + "tempRef.txt"};
+    ofstream actualOS{tests_EXE_TO_COOL_PROGRAMS + "tempActual.txt"};
+    refOS << ref;       refOS.close();
+    actualOS << actual; actualOS.close();
 }
-//====================END IMPLEMENTATIONMAPTESTS===================================
-//====================BEGIN ANNOTATEDASTTESTS===================================
-//Not using any fixture
-TEST(AnnotatedASTTests, noInitializations) {
-    ParserDriver pdrv;
-    const string localFile = "classMapNoInitializations.cl";
-
-    stringstream semanticAnalyzerOutput;
-    pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + localFile);
-    _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-    AST->traverse();
-    semanticAnalyzerOutput << *AST;
-
-    stringstream reference = makeSingleSectionFromReference(localFile, ANNOTATED_AST_OPTION);
-
-    ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
-    globalEnv->reset();
-    classMap.clear();
-    implementationMap.clear();
-    parentMap.clear();
-}
-TEST(AnnotatedASTTests, identifierExpr) {
-    ParserDriver pdrv;
-    const string localFile = "identifierExpr.cl";
-
-    stringstream semanticAnalyzerOutput;
-    pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + localFile);
-    _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-    AST->traverse();
-    semanticAnalyzerOutput << *AST;
-
-    stringstream reference = makeSingleSectionFromReference(localFile, ANNOTATED_AST_OPTION);
-
-    ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
-    globalEnv->reset();
-    classMap.clear();
-    implementationMap.clear();
-    parentMap.clear();
-}
-//====================END ANNOTATEDASTTESTS===================================
 //====================BEGIN TYPEFULLTESTS===================================
 /**
  * Test fixture for all type tests.
@@ -248,10 +193,11 @@ protected:
 
     void TearDown() override {
 //        ofstream ref()
-        globalEnv->reset();
         classMap.clear();
         implementationMap.clear();
         parentMap.clear();
+        globalEnv->reset();
+
     }
 
 };
@@ -264,6 +210,9 @@ TEST_P(typeTests, matchesReferenceFull) {
     printImplementationMap(semanticAnalyzerOutput);
     printParentMap(semanticAnalyzerOutput);
     semanticAnalyzerOutput << *AST;
+    AST->prettyPrint(cout, "");
+
+    makeTempsForDiff(reference.str(), semanticAnalyzerOutput.str());
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
 }
@@ -279,16 +228,21 @@ INSTANTIATE_TEST_SUITE_P(Fragments, typeTests, testing::Values(
                             "letExprMultipleBindingMixedInit.cl",
                             "isvoidExpr.cl",
                             "staticDispatchExpr.cl",
-                            "selfDispatchExpr.cl"));
-//INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
-////                            "arith.cl",
-//                            "atoi.cl",
-//                            "cells.cl",
-//                            "hello-world.cl",
-////                            "hs.cl",
-//                            "list.cl",
-//                            "new-complex.cl",
-//                            "primes.cl",
-//                            "print-cool.cl",
-//                            "sort-list.cl"));
+                            "staticDispatchExpr2.cl",
+                            "selfDispatchExpr.cl",
+                            "dynamicDispatchExpr.cl",
+                            "SELF_TYPE.cl",
+                            "identifierExpr.cl",
+                            "classMapNoInitializations.cl"));
+INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
+                            "arith.cl",
+                            "atoi.cl",
+                            "cells.cl",
+                            "hello-world.cl",
+                            "hs.cl",
+                            "list.cl",
+                            "new-complex.cl",
+                            "primes.cl",
+                            "print-cool.cl",
+                            "sort-list.cl"));
 //====================END TYPEFULLTESTS===================================

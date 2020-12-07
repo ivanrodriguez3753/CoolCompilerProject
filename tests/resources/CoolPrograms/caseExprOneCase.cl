@@ -3,3 +3,4 @@ class Main {
         case false of id1 : Bool => false; esac
     };
 };
+

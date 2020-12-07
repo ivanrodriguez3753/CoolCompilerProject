@@ -1,5 +1,5 @@
 class Main {
-    main() : Int {
-        false.dispatch()
+    main() : String {
+        false.type_name()
     };
 };

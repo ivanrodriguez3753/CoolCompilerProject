@@ -8,6 +8,8 @@
 
 using namespace std;
 
+class Environment;
+
 class _node;
 class _program;
 class _class;
@@ -30,6 +32,8 @@ extern _class* String_class;
 extern _class* Int_class;
 
 extern map<string, _class*> basicClassNodes;
+
+string lookUpSelfType(Environment* current);
 
 class _node {
 public:
@@ -154,7 +158,7 @@ public:
 
     methodRecord* rec;
 
-    _method(_idMeta id, _idMeta typeId, _expr* e);
+    _method(_idMeta id, _idMeta typeId, _expr* b);
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;

@@ -5,26 +5,22 @@
 #include "Environment.h"
 #include "type.h"
 
+Environment* globalEnv = new Environment{nullptr, Environment::envMetaInfo{"", ""}};
+Environment* top = globalEnv;
 
 
-int Record::orderCounter = 0;
-Record::Record(string lex, int l, string k) :
-    lexeme{lex}, lineNo{l}, kind{k}, encountered{orderCounter++}
-{
-
-}
 
 
-Environment::Environment(Environment* prev) :
-    previous{prev}
+Environment::Environment(Environment* prev, envMetaInfo info) :
+    previous{prev}, metaInfo{info}
 {
     /**
      * global environment constructor.
      * everything on this symbol table should be a class
      */
     if(previous == nullptr) { //global symtable comes predefined with basic classes, and some of those have predefined/system calls
-        Environment* current;
-
+        //global is represented by the root node, which is a _program type. That doesn't have an _idMeta, so we'll make the identifier "global" and the kind "global"
+        metaInfo.identifier = metaInfo.kind = "global";
         //NOTE: methods are generally printed in the order they are encountered in the code. Internal methods, however,
         //are defined to be "encountered" in the same order as if they were sorted alphabetically. So the list order
         //will be different then the block comment order, so that the records are constructed with the approriate "encountered" counter value
@@ -37,7 +33,7 @@ Environment::Environment(Environment* prev) :
          * type_name() : String
          * copy() : SELF_TYPE   */
         install(make_pair("Object", "class"), new classRecord{"Object", 0, "class", ""});
-        links.insert(make_pair(make_pair("Object", "class"), new Environment{this}));
+        links.insert(make_pair(make_pair("Object", "class"), new Environment{this,envMetaInfo{"Object", "class"} }));
         methodRecord::makeAndInstallMethodsRecordAndEnv(lexemes, parameters, returnTypes, links.at(make_pair("Object", "class")));
 
         //==============IO===================
@@ -52,7 +48,7 @@ Environment::Environment(Environment* prev) :
             * in_string() : String
             * in_int() : Int                  */
         install(make_pair("IO", "class"), new classRecord{"IO", 0, "class", "Object"});
-        links.insert(make_pair(make_pair("IO", "class"), new Environment{this}));
+        links.insert(make_pair(make_pair("IO", "class"), new Environment{this, envMetaInfo{"IO", "class"}}));
         methodRecord::makeAndInstallMethodsRecordAndEnv(lexemes, parameters, returnTypes, links.at(make_pair("IO", "class")));
 
         //=============STRING===================
@@ -66,27 +62,24 @@ Environment::Environment(Environment* prev) :
          * concat(s : String) : String
          * substr(i : Int, l : Int) : String*/
         install(make_pair("String", "class"), new classRecord{"String", 0, "class", "Object"});
-        links.insert(make_pair(make_pair("String", "class"), new Environment{this}));
+        links.insert(make_pair(make_pair("String", "class"), new Environment{this, envMetaInfo{"String", "class"}}));
         methodRecord::makeAndInstallMethodsRecordAndEnv(lexemes, parameters, returnTypes, links.at(make_pair("String", "class")));
 
         //==============INT====================
         //Int has no methods (except those from Object)
         install(make_pair("Int", "class"), new classRecord{"Int", 0, "class", "Object"});
-        links.insert(make_pair(make_pair("Int", "class"), new Environment{this}));
+        links.insert(make_pair(make_pair("Int", "class"), new Environment{this, envMetaInfo{"Int", "class"}}));
 
 
         //==============BOOL====================
         //Bool has no methods (except those from Object)
         install(make_pair("Bool", "class"), new classRecord{"Bool", 0, "class", "Object"});
-        links.insert(make_pair(make_pair("Bool", "class"), new Environment{this}));
-
-
-
+        links.insert(make_pair(make_pair("Bool", "class"), new Environment{this, envMetaInfo{"Bool", "class"}}));
+    }
+    if(metaInfo.kind == "class") {
+        install({"self", "attribute"}, new objectRecord{"self", 0, "attribute", "SELF_TYPE", nullptr}); //todo fix this nullptr
 
     }
-
-
-
 }
 
 void Environment::install(pair<string, string> key, Record* rec) {
@@ -106,14 +99,29 @@ Record* Environment::get(pair<string, string> key) {
 }
 
 void Environment::reset() {
-    globalEnv = new Environment{nullptr};
+    globalEnv = new Environment{nullptr, Environment::envMetaInfo{"",""}};
     top = globalEnv;
 
-    classMap.clear(); parentMap.clear();
 }
 
-Environment* globalEnv = new Environment{nullptr};
-Environment* top = globalEnv;
+vector<methodRecord *> Environment::getMethods() {
+    vector<methodRecord*> returnThis;
+    for(auto sym : symTable) {
+        if(sym.first.second == "method") {
+            returnThis.push_back((methodRecord*)sym.second);
+        }
+    }
+    return returnThis;
+}
+
+
+
+int Record::orderCounter = 0;
+Record::Record(string lex, int l, string k) :
+        lexeme{lex}, lineNo{l}, kind{k}, encountered{orderCounter++}
+{
+
+}
 
 classRecord::classRecord(string lex, int l, string k, string p) :
     Record{lex, l, k}, parent{p}
@@ -128,11 +136,11 @@ objectRecord::objectRecord(string lex, int l, string k, string t, _expr* init) :
 }
 
 //parallel lists of method identifiers, formal parameter list (identifier, type) and return types
-Environment * methodRecord::makeAndInstallMethodsRecordAndEnv(list<string>& lexemes, list<list<pair<string, string>>>& parameters, list<string>& returnTypes, Environment *classEnv) {
+Environment * methodRecord::makeAndInstallMethodsRecordAndEnv(list<string> lexemes, list<list<pair<string, string>>> parameters, list<string>returnTypes, Environment *classEnv) {
     while(!lexemes.empty()) {
         classEnv->install(make_pair(lexemes.front(), "method"),
                           new methodRecord{lexemes.front(), 0, "method", returnTypes.front()});
-        classEnv->links.emplace(make_pair(lexemes.front(), "method"), new Environment{classEnv});
+        classEnv->links.emplace(make_pair(lexemes.front(), "method"), new Environment{classEnv, Environment::envMetaInfo{lexemes.front(), "method"}});
         Environment *methodEnvironment = (classEnv->links.at(make_pair(lexemes.front(), "method")));
         for (list<pair<string, string>> parameter : parameters) {
             methodEnvironment->install(make_pair(parameter.front().first, "local"),
