@@ -1,0 +1,12 @@
+Type Checking rules implemented
+
+CLASS:
+	1. Didn't define a Main class
+	2. Inherited from Int/Bool/String (report line number of Int/Bool/String)
+
+METHOD:
+	1. Didn't define a main method inside Main that had 0 parameters
+
+EXPRESSIONS:
+	1. if/then predicate must be bool
+	2. while predicate must be bool
