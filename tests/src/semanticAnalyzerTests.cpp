@@ -170,7 +170,7 @@ void makeTempsForDiff(string ref, string actual) {
 }
 //====================BEGIN TYPEFULLTESTS===================================
 /**
- * Test fixture for all type tests.
+ * Test fixture for all positive type tests.
  */
 class typeTests : public testing::TestWithParam<string> {
 protected:
@@ -246,3 +246,86 @@ INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
                             "print-cool.cl",
                             "sort-list.cl"));
 //====================END TYPEFULLTESTS===================================
+//====================BEGIN NEGATIVETYPETESTS===================================
+pair<int, string> makeErrorPairFromReference(string fileName) {
+    //generate the reference pair
+    string commandGenerateReference = CD + tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + " && ./cool --type " + COOL_PROGRAMS_DIR_FROM_RESOURCES + fileName;
+    string appendStdoutRedirect = " > temp.txt";
+    system((commandGenerateReference + appendStdoutRedirect).c_str());
+
+    ifstream cmdLineRedirectResult(tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + "temp.txt");
+    //Example output:
+    //ERROR: 0: Type-Check: class Main method main with 0 parameters not found
+    pair<int, string>returnThis;
+
+    string temp;
+    getline(cmdLineRedirectResult, temp, ':');
+    cmdLineRedirectResult.ignore(); //go forward one character, the space betwween ERROR: and 0
+    getline(cmdLineRedirectResult, temp, ':');
+    returnThis.first = stoi(temp);
+    getline(cmdLineRedirectResult, temp, ':');
+    getline(cmdLineRedirectResult, temp);
+    returnThis.second = temp;
+
+    cmdLineRedirectResult.close();
+    string command = (CD + tests_EXE_TO_ROOT + RESOURCES_DIR_FROM_ROOT + " && rm temp.txt"); //delete the temp
+    system(command.c_str());
+    return returnThis;
+}
+class negativeTypeTests : public testing::TestWithParam<string> {
+protected:
+    ParserDriver pdrv;
+
+    /**
+     * To report an error, write the string
+       ERROR: line_number: Type-Check: message
+       to standard output and terminate the program. You may write whatever you want in the message, but it should be fairly indicative.
+     */
+    pair<int, string> refError;
+
+    _program* AST;
+
+    void SetUp() override {
+        //parse the input into global parse tree rootIVAN
+        pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
+        //build syntax tree out of rootIVAN
+        AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+        populateClassMap();
+        populateImplementationMap();
+        populateParentMap();
+        //generate reference error
+        refError = makeErrorPairFromReference(GetParam());
+    }
+
+    void TearDown() override {
+        classMap.clear();
+        implementationMap.clear();
+        parentMap.clear();
+        globalEnv->reset();
+        errorLog.clear();
+    }
+};
+
+/**
+ * The reference compiler reports only the first error it finds, so test cases must be restricted to a single error.
+ * Providing error messages, but only checking line numbers for "correctness" of the test case.
+ */
+TEST_P(negativeTypeTests, matchesReferenceError) {
+    cout << refError.first << ", " << refError.second << endl;
+    AST->traverse();
+    ASSERT_EQ(errorLog[0].first, refError.first);
+}
+INSTANTIATE_TEST_SUITE_P(Class, negativeTypeTests, testing::Values(
+                            "semanticAnalyzerNegative/class/noMainClass.cl",
+                            "semanticAnalyzerNegative/class/inheritString.cl",
+                            "semanticAnalyzerNegative/class/inheritBool.cl",
+                            "semanticAnalyzerNegative/class/inheritInt.cl"));
+INSTANTIATE_TEST_SUITE_P(Method, negativeTypeTests, testing::Values(
+                            "semanticAnalyzerNegative/method/parameter-less_main_Main.cl"));
+INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTests, testing::Values(
+                            "semanticAnalyzerNegative/expression/nonBooleanIfThenPredicate.cl",
+                            "semanticAnalyzerNegative/expression/nonBooleanWhilePredicate.cl",
+                            "semanticAnalyzerNegative/expression/plusInvalidOperands.cl",
+                            "semanticAnalyzerNegative/expression/minusInvalidOperands.cl",
+                            "semanticAnalyzerNegative/expression/timesInvalidOperands.cl",
+                            "semanticAnalyzerNegative/expression/divideInvalidOperands.cl"));

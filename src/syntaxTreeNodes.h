@@ -31,6 +31,8 @@ extern _class* Bool_class;
 extern _class* String_class;
 extern _class* Int_class;
 
+extern vector<pair<int,string>> errorLog;
+
 extern map<string, _class*> basicClassNodes;
 
 string lookUpSelfType(Environment* current);
@@ -80,6 +82,8 @@ public:
 
     void print(ostream &os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+private:
+    void typeCheck();
 };
 
 class _class : public _node {
@@ -111,7 +115,8 @@ public:
     _classInh(_idMeta id, classRecord* r, _idMeta sId);
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
-
+private:
+    void typeCheck();
 };
 
 class _feature : public _node {
@@ -258,6 +263,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _while : public _expr {
@@ -271,6 +278,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _block : public _expr {
@@ -321,6 +330,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _relational : public _expr {

@@ -46,4 +46,14 @@ bool conforms(string T1, const string T2);
 string getLub(vector<string> typeChoices);
 vector<string> getInheritancePath(string klass);
 
+
+class typeError_exception : public exception {
+public:
+    int lineNo;
+    string error;
+    typeError_exception(pair<int, string> e) : lineNo{e.first}, error{e.second} {
+        cerr << "ERROR: " + to_string(lineNo) + ", " + error << endl;
+    }
+};
+
 #endif //COOLCOMPILERPROJECTALL_TYPE_H

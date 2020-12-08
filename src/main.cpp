@@ -57,12 +57,9 @@ int main(int argc, char** argv) {
         populateClassMap();
         populateImplementationMap();
         populateParentMap();
+
         AST->traverse();
 
         AST->prettyPrint(cout, "");
     }
-
-
-
-
 }

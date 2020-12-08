@@ -10,7 +10,7 @@ _class* Bool_class{nullptr};
 _class* String_class{nullptr};
 _class* Int_class{nullptr};
 
-
+vector<pair<int,string>> errorLog{};
 
 map<string, _class*> basicClassNodes{{"Object", Object_class},
                                      {"IO", IO_class},
@@ -300,11 +300,22 @@ void _classInh::print(ostream &os) const {
 }
 
 
-
+void _classInh::typeCheck() {
+    //CLASS-2
+    try {
+        if(superClassIdentifier.identifier == "String" || superClassIdentifier.identifier == "Int" || superClassIdentifier.identifier == "Bool") {
+            throw pair<int, string>{superClassIdentifier.lineNo, "class " + typeIdentifier.identifier + " inherits from " + superClassIdentifier.identifier};
+        }
+    }
+    catch (pair<int, string> error){
+        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+        errorLog.push_back(error);
+    }
+}
 _classInh::_classInh(_idMeta id, classRecord* r, _idMeta sId) :
         _class{id, r}, superClassIdentifier{sId}
 {
-
+    typeCheck();
 }
 
 void _idMeta::print(ostream &os) const {
@@ -350,6 +361,28 @@ void _program::prettyPrint(ostream &os, string prefix) const {
     }
 }
 
+void _program::typeCheck() {
+    //CLASS-1
+    try {
+        globalEnv->links.at({"Main", "class"});
+        //METHOD-1
+        try {
+            int numFormals_main = ((methodRecord*)globalEnv->links.at({"Main", "class"})->symTable.at({"main", "method"}))->treeNode->formalList.size();
+            if(numFormals_main) {
+                throw exception();
+            }
+        }
+        catch(...) {
+            pair<int, string> error{0, "Didn't define a 0-param main method inside Main class\n"};
+            cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+            errorLog.push_back(error);
+        }
+    } catch (...){
+        pair<int, string> error{0, "Didn't define a Main class!\n"};
+        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+        errorLog.push_back(error);
+    }
+}
 /**
  * traverse in a postorder fashion to annotate expression nodes with a type.
  * parents depend on children types. obvious nodes have already been annotated, and we
@@ -360,6 +393,8 @@ void _program::traverse() {
         klass->traverse();
     }
     _node::isAnnotated = true;
+
+    typeCheck();
 }
 
 _expr::_expr(int l) : _node(l) {
@@ -380,7 +415,7 @@ void _attributeInit::print(ostream &os) const {
 }
 
 void _attributeInit::traverse() {
-    //dont need to traver symTable unless it is an expression that introduces scope (_let or _case I think)
+    //dont need to traverse symTable unless it is an expression that introduces scope (_let or _case I think)
     //so leave it to caller as usual
     expr->traverse();
 }
@@ -568,12 +603,27 @@ void _if::print(ostream& os) const {
     os << *elseExpr;
 }
 
+void _if::typeCheck() {
+    //EXPRESSION-1
+    try {
+        if(predicate->exprType != "Bool") {
+            throw pair<int, string>{lineNo, "conditional has type " + predicate->exprType + " instead of Bool"};
+        }
+    }
+    catch(pair<int, string> error) {
+        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+        errorLog.push_back(error);
+    }
+}
+
 void _if::traverse() {
     predicate->traverse();
     thenExpr->traverse();
     elseExpr->traverse();
 
     exprType = getLub(vector<string>{thenExpr->exprType, elseExpr->exprType});
+
+    typeCheck();
 }
 
 _while::_while(int l, _expr* p, _expr* b) :
@@ -593,9 +643,24 @@ void _while::print(ostream& os) const {
     os << *body;
 }
 
+void _while::typeCheck() {
+    //EXPRESSION-2
+    try {
+        if(predicate->exprType != "Bool") {
+            throw pair<int, string>{lineNo, "conditional has type " + predicate->exprType + " instead of Bool"};
+        }
+    }
+    catch(pair<int, string> error) {
+        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+        errorLog.push_back(error);
+    }
+}
+
 void _while::traverse() {
     predicate->traverse();
     body->traverse();
+
+    typeCheck();
 }
 
 _block::_block(int l) :
@@ -676,10 +741,22 @@ void _arith::print(ostream &os) const {
     os << *left;
     os << *right;
 }
-
+void _arith::typeCheck() {
+    try {
+        if(left->exprType != "Int" || right->exprType != "Int") {
+            throw pair<int,string>{lineNo, "Cannot do arithmetic operation " + op + " on " + left->exprType + " and " + right->exprType + ", only on two Int's\n"};
+        }
+    }
+    catch (pair<int, string> error){
+        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+        errorLog.push_back(error);
+    }
+}
 void _arith::traverse() {
     left->traverse();
     right->traverse();
+
+    typeCheck();
 }
 
 _integer::_integer(int l, int v) :
