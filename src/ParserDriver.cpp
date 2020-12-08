@@ -98,14 +98,13 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         programNode* castedCurrent = (programNode*) current;
         _program* result = new _program{castedCurrent->lineNo};
         for(classNode* klass : castedCurrent->clNode->classList) {
-            //TODO
             if(klass->optionalInh == nullptr) {
                 top->install(make_pair(klass->TYPE->value,"class"),  new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", "Object"});
             }
             else {
                 top->install(make_pair(klass->TYPE->value,"class"), new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", klass->optionalInh->TYPE->value});
             }
-            top->links.insert(make_pair(make_pair(klass->TYPE->value, "class"), new Environment{top}));
+            top->links.insert(make_pair(make_pair(klass->TYPE->value, "class"), new Environment{top, Environment::envMetaInfo{klass->TYPE->value, "class"}}));
             top = top->links.at(make_pair(klass->TYPE->value, "class"));
             result->classList.push_back((_class*)buildSyntaxNode(klass));
             top = top->previous;
@@ -146,7 +145,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     }
     else if(syntaxNodeType == "attribute_no_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, nullptr});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{top, castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, nullptr});
         _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "attribute"}, _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
         return result;
     }
@@ -158,25 +157,27 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->init->expr)
         };
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, result->expr});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{top, castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, result->expr});
         return result;
     }
     else if(syntaxNodeType == "method") {
         methodNode* castedCurrent = (methodNode*) current;
         //expression may introduce new scopes (with the let or case expressions)
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new methodRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method", castedCurrent->TYPE->value});
-        top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top}));
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new methodRecord{top, castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method", castedCurrent->TYPE->value});
+        top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top, Environment::envMetaInfo{castedCurrent->IDENTIFIER->value, "method"}}));
         top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
         _method* result = new _method{
                 _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "method"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
-                (_expr*)buildSyntaxNode(castedCurrent->expr)
+                nullptr
         };
         ((methodRecord*)top->previous->symTable.at(make_pair(castedCurrent->IDENTIFIER->value, "method")))->treeNode = result;
+
         for(formalNode* formal : castedCurrent->formalsList->formalsList) {
-            top->install(make_pair(formal->IDENTIFIER->value, "local"), new Record{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local"});
+            top->install(make_pair(formal->IDENTIFIER->value, "local"), new objectRecord{top, formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local", formal->TYPE->value, nullptr}); //TODO is that supposed to be nullptr?
             result->formalList.push_back((_formal*)buildSyntaxNode(formal));
         }
+        result->body = (_expr*)buildSyntaxNode(castedCurrent->expr);
         top = top->previous;
         return result;
     }
@@ -331,6 +332,21 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
             castedCurrent->lineNo,
             _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value}
         };
+        /**
+         * Identifiers
+The names of local variables, formal parameters of methods, self, and class attributes are all expressions. The
+identifier self may be referenced, but it is an error to assign to self or to bind self in a let, a case, or as
+a formal parameter. It is also illegal to have attributes named self.
+
+Local variables and formal parameters have lexical scope. Attributes are visible throughout a class in which
+they are declared or inherited, although they may be hidden by local declarations within expressions. The
+binding of an identifier reference is the innermost scope that contains a declaration for that identifier, or
+to the attribute of the same name if there is no other declaration. The exception to this rule is the identifier
+self, which is implicitly bound in every class.
+
+         Can only be a "local" or an "attribute"
+         */
+//
         return result;
     }
     else if(syntaxNodeType == "true" || syntaxNodeType == "false") {
@@ -346,14 +362,15 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         _let* result = new _let{
             castedCurrent->lineNo,
             _idMeta{castedCurrent->LET->lineNo, "let" + to_string(_let::letCounter++), "let"},
-            (_expr*)buildSyntaxNode(castedCurrent->expr)
+            nullptr
         };
-        top->links.insert(make_pair(make_pair(result->letKey.identifier, "let"), new Environment{top}));
+        top->links.insert(make_pair(make_pair(result->letKey.identifier, "let"), new Environment{top, Environment::envMetaInfo{result->letKey.identifier, result->letKey.kind}}));
         top = top->links.at(make_pair(result->letKey.identifier, "let"));
         for(bindingNode* binding : castedCurrent->blNode->bindingList) {
-            top->install(make_pair(binding->IDENTIFIER->value, "local"), new Record{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local"});
+            top->install(make_pair(binding->IDENTIFIER->value, "local"), new objectRecord{top, binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local", binding->TYPE->value, (_expr*)binding->init});
             result->bindings.push_back((_letBinding*)buildSyntaxNode(binding));
         }
+        result->body = (_expr*)buildSyntaxNode(castedCurrent->expr);
         top = top->previous;
         return result;
     }
@@ -382,10 +399,12 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         };
         for(caseNode* caseElement : castedCurrent->clNode->caseList) {
             //enumerate cases to guarantee a unique key for symbol table
-            top->links.insert(make_pair(make_pair("case" + to_string(_caseElement::caseCounter), "case"), new Environment{top}));
+            top->links.insert(make_pair(make_pair("case" + to_string(_caseElement::caseCounter), "case"), new Environment{top, Environment::envMetaInfo{"case" + to_string(_caseElement::caseCounter), "case"}} ));
             top = top->links.at(make_pair("case" + to_string(_caseElement::caseCounter), "case"));
+
+            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), new objectRecord{top, caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local", caseElement->TYPE->value, nullptr});
             result->cases.push_back((_caseElement*)buildSyntaxNode(caseElement));
-            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), new Record{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local"});
+
             top = top->previous;
         }
         return result;
@@ -398,6 +417,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
             (_expr*)buildSyntaxNode(castedCurrent->expr),
             _idMeta{castedCurrent->IDENTIFIER->lineNo, "case" + to_string(_caseElement::caseCounter++), "case"}//increment caseCounter here because it's the last time we use it
         };
+        ((objectRecord*)top->get({result->identifier.identifier, "local"}))->initExpr = result;
         return result;
     }
 

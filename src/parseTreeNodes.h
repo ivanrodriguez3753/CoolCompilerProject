@@ -17,8 +17,6 @@
 #include "parser.hh"
 
 
-
-
 using namespace std;
 //base class, more of a marker
 class node {
@@ -84,7 +82,6 @@ public:
     wordNode(string type, string v);
 };
 
-//for now let's try without possible initialization, and only fields
 class featureNode : public node {
 public:
     wordNode* IDENTIFIER;
@@ -96,10 +93,6 @@ public:
 
 };
 
-/**
- * For now, just implement the last rule for expr which is
- * expr -> false so we can finish other rules that use an expression
- */
 class exprNode : public node {
 public:
     exprNode(string gSym, string pb);

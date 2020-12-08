@@ -8,6 +8,8 @@
 
 using namespace std;
 
+class Environment;
+
 class _node;
 class _program;
 class _class;
@@ -30,6 +32,8 @@ extern _class* String_class;
 extern _class* Int_class;
 
 extern map<string, _class*> basicClassNodes;
+
+string lookUpSelfType(Environment* current);
 
 class _node {
 public:
@@ -154,7 +158,7 @@ public:
 
     methodRecord* rec;
 
-    _method(_idMeta id, _idMeta typeId, _expr* e);
+    _method(_idMeta id, _idMeta typeId, _expr* b);
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
@@ -182,8 +186,6 @@ public:
     string exprType;
 
     virtual void traverse() = 0;
-
-    static bool printExprType;
 };
 
 class _assign : public _expr {
@@ -211,19 +213,19 @@ public:
 
 class _dynamicDispatch : public _dispatch {
 public:
-    _expr* expr;
+    _expr* caller;
 
     _dynamicDispatch(int l, _idMeta m, _expr* e);
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _staticDispatch : public _dispatch {
 public:
-    _expr* expr;
+    _expr* caller;
     _idMeta typeIdentifier;
 
     _staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty);
@@ -231,7 +233,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _selfDispatch : public _dispatch {
@@ -241,7 +243,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _if : public _expr {
@@ -255,7 +257,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _while : public _expr {
@@ -268,7 +270,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _block : public _expr {
@@ -304,7 +306,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _arith : public _expr {
@@ -415,7 +417,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override{} //Don't need to do anything
 };
 
 class _letBindingInit : public _letBinding {
@@ -427,7 +429,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _let : public _expr {
@@ -443,7 +445,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 class _caseElement : public _expr {
@@ -460,7 +462,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 /**
@@ -488,7 +490,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
-    void traverse() override{}
+    void traverse() override;
 };
 
 

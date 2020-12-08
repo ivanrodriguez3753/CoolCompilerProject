@@ -10,7 +10,10 @@ using namespace std;
 //https://dijkstra.eecs.umich.edu/eecs483/pa4.php and in the manual at https://dijkstra.eecs.umich.edu/eecs483/crm/Class%20definitions.html
 extern map<string, classRecord*> classMap; //key points to class Record
 extern map<string, classRecord*> parentMap;
-extern map<string, list<pair<methodRecord*, string>>> implementationMap;
+
+
+//<className, <methodName, <methodRecord*, mostRecentDefiningClass>>>
+extern map<string, map<string, pair<methodRecord*, string>>> implementationMap;
 
 
 
@@ -33,6 +36,14 @@ void buildBasicClassNodes();
  * @param T2
  * @return
  */
-bool conforms(string T1, string T2);
+bool conforms(string T1, const string T2);
+
+/**
+ * Get least upper bound for the set of classes.
+ * @param typeChoices
+ * @return
+ */
+string getLub(vector<string> typeChoices);
+vector<string> getInheritancePath(string klass);
 
 #endif //COOLCOMPILERPROJECTALL_TYPE_H

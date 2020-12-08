@@ -71,8 +71,26 @@ void buildBasicClassNodes() {
 
     Int_class = new _classInh{_idMeta(0, "Int", "class"), (classRecord*)globalEnv->symTable.at(make_pair("Int", "class")), _idMeta{0, "Object", "class"}};
     ((classRecord*)globalEnv->symTable.at(make_pair("Int", "class")))->treeNode = Int_class;
+}
 
+/**
+ * Return a vector containing the class hierarchy starting at klass
+ * @param klass
+ * @return
+ */
+vector<string> getInheritancePath(string klass) {
+    vector<string> inheritancePath{};
 
+    if(klass == "SELF_TYPE") {
+        return vector<string>{"SELF_TYPE", "Object"};
+    }
+    classRecord* currentRec = classMap.at(klass);
+    while(currentRec->parent != "") { //Object's parent is the empty string
+        inheritancePath.push_back(currentRec->lexeme);
+        currentRec = (classRecord*)globalEnv->symTable.at(make_pair(currentRec->parent, "class"));
+    }
+    inheritancePath.push_back(currentRec->lexeme);
+    return inheritancePath;
 }
 
 void populateClassMap() {
@@ -96,10 +114,13 @@ void printClassMap(ostream& out) {
 
     out << "class_map\n" << recordRefs.size() << endl;
     for(auto rec : recordRefs) {
+        top = top->links.at({rec->lexeme,"class"});
+
+
         string klass = rec->lexeme;
         out << klass << endl;
-        list<vector<objectRecord*>> attributesByClassInHierarchy{};
-        vector<objectRecord*> attributes;
+        list<vector<pair<objectRecord*, string>>> attributesByClassInHierarchy{};
+        vector<pair<objectRecord*, string>> attributes; //objectRecord and definingClass
         vector<string> hierarchyTraversalKeys; //need info about path we took to get back
         if(klass != "Object" && klass != "Int" && klass != "IO" && klass != "Bool" && klass != "String") {
             //top = top->links.at(make_pair(rec->lexeme, "class"));
@@ -118,13 +139,13 @@ void printClassMap(ostream& out) {
             //traverse the hierarchy (starting one before Object) back to where we started, pushing back attributes as we encounter them
             for(int i = hierarchyTraversalKeys.size() - 2; i >= 0; --i) {
                 currentClassRec = classMap.at(hierarchyTraversalKeys[i]);
-                for(auto klasssIt : top->links.at(make_pair(currentClassRec->lexeme, "class"))->symTable) { //get all attributes for this class
+                for(auto klasssIt : globalEnv->links.at(make_pair(currentClassRec->lexeme, "class"))->symTable) { //get all attributes for this class
                     if(klasssIt.second->kind == "attribute") {
-                        attributes.push_back((objectRecord*)klasssIt.second);
+                        attributes.push_back({(objectRecord*)klasssIt.second, currentClassRec->lexeme});
                     }
                 }
-                sort(attributes.begin(), attributes.end(), [](const objectRecord* lhs, const objectRecord* rhs) { //sort attributes in this class by encountered counter
-                    return lhs->encountered < rhs->encountered;
+                sort(attributes.begin(), attributes.end(), [](const pair<objectRecord*, string> lhs, const pair<objectRecord*, string> rhs) { //sort attributes in this class by encountered counter
+                    return lhs.first->encountered < rhs.first->encountered;
                 });
                 attributesByClassInHierarchy.push_back(attributes);
                 attributes.clear();
@@ -141,19 +162,33 @@ void printClassMap(ostream& out) {
             }
         }
 
-        out << attributes.size() << endl;
+        //remove all selfs because we don't want to print them as attributes
+        vector<pair<objectRecord*, string>> attributes2;
         for(auto attribute : attributes) {
-            if(attribute->initExpr) {
+            if(attribute.first->lexeme != "self") {
+                attributes2.push_back(attribute);
+            }
+        }
+        attributes = attributes2;
+        out << attributes.size() << endl;
+
+        for(auto attribute : attributes) {
+            if(attribute.first->lexeme == "self") continue; //i don't think self needs to be printed, or else it'd be printed once per class in hierarchy
+            //make sure we're on the right symbol table for each attribute
+            top = globalEnv->links.at({attribute.second ,"class"});
+            if(attribute.first->initExpr) {
                 out << "initializer\n";
-                out << attribute->lexeme << endl << attribute->type << endl;
-                out << *(attribute->initExpr);
+                out << attribute.first->lexeme << endl << attribute.first->type << endl;
+                out << *(attribute.first->initExpr);
             }
             else {
                 out << "no_initializer\n";
-                out << attribute->lexeme << endl << attribute->type << endl;
+                out << attribute.first->lexeme << endl << attribute.first->type << endl;
             }
+
         }
 
+        top = top->previous;
     }
 
 }
@@ -180,7 +215,7 @@ void printParentMap(ostream& out) {
     }
 }
 
-map<string, list<pair<methodRecord*, string>>> implementationMap;
+map<string, map<string, pair<methodRecord*, string>>> implementationMap;
 void populateImplementationMap() {
     vector<classRecord*> classRecs{};
     for(map<pair<string, string>, Record*>::iterator classRec = globalEnv->symTable.begin(); classRec != globalEnv->symTable.end(); classRec++) {
@@ -196,30 +231,21 @@ void populateImplementationMap() {
     for(classRecord* rec : classRecs) {
         //we print the inherited/overriden methods first, so we definitely need to start from top of hierarchy tree
         //also keep track of path so we can go back down the inheritance relations
-        vector<string> inheritancePath{};
-        classRecord* currentRec = rec;
-        while(currentRec->parent != "") { //Object's parent is the empty string
-            inheritancePath.push_back(currentRec->lexeme);
-            currentRec = (classRecord*)globalEnv->symTable.at(make_pair(currentRec->parent, "class"));
-        }
-        inheritancePath.push_back(currentRec->lexeme);
+        vector<string> inheritancePath = getInheritancePath(rec->lexeme);
 
         map<string, string> methodsMap; //key is method name, value is (most recent)defining class in the hierarchy.
-        vector<string> orderInserted; //keep order in which we install these on the map. using map for faster lookup
         for(vector<string>::reverse_iterator klass = inheritancePath.rbegin(); klass != inheritancePath.rend(); klass++) {
             for(auto iter : (globalEnv->links.at(make_pair(*klass, "class")))->symTable) {
                 if(iter.first.second == "method") {
                     methodsMap[iter.first.first] = *klass;
-                    orderInserted.push_back(iter.first.first);
                 }
             }
         }
 
-        //put them in the map in the order they get printed
-        list<pair<methodRecord*, string>> finalizedMethods{};
-        for(vector<string>::iterator methodNameIt = orderInserted.begin(); methodNameIt != orderInserted.end(); methodNameIt++){
-            //go to the env for the defining class, then search that for method with name pointed at by iterator
-            finalizedMethods.push_back(make_pair((methodRecord*)globalEnv->links.at(make_pair(methodsMap.at(*methodNameIt), "class"))->symTable.at(make_pair(*methodNameIt, "method")), methodsMap.at(*methodNameIt)));
+        //<methodName, <mRecord*, definingClass>>
+        map<string, pair<methodRecord*, string>> finalizedMethods;
+        for(auto methodsIt : methodsMap) {
+           finalizedMethods.insert(make_pair(methodsIt.first, make_pair((methodRecord*)globalEnv->links[{methodsIt.second,"class"}]->symTable[{methodsIt.first, "method"}], methodsIt.second)));
         }
         implementationMap.insert(make_pair(rec->lexeme, finalizedMethods));
     }
@@ -235,56 +261,117 @@ void printImplementationMap(ostream& out) {
 
     out << "implementation_map\n" << implementationMap.size() << endl;
     for(string klass : classes) {
-        list<pair<methodRecord*, string>> methods = implementationMap.at(klass);
-        out << klass << endl << methods.size() << endl;
-        for(pair<methodRecord*, string> method : methods) {
-            out << method.first->lexeme << endl;
-//            if(method.second != "Object" && method.second != "Int" && method.second != "Bool" && method.second != "String" && method.second != "IO") { //not a basic class
-                _method* treeNode = method.first->treeNode;
-                out << treeNode->formalList.size() << endl;
-                for(_formal* formal : treeNode->formalList) {
-                    out << formal->identifier.identifier << endl;
+        //Go up the hierarchy... last entry is most recent class (so last will always be Object)
+        vector<string> inheritancePath = getInheritancePath(klass);
+        //this is the output vector, in the required order
+        vector<methodRecord*> methodsToPrint;
+        map<string, int> methodNameToMethodRecByVectorPos; //need this for redefinitions/overriding. In order to maintain order,
+        //it more or less keeps track of AN existence of <string> key but knows which position in vector<methodRecord*>methods
+        //to overwrite (and keeps the same <int>
+        for(int i = inheritancePath.size() - 1; i >= 0; --i) {
+            int sizeBeginningOfIter = methodsToPrint.size(); //for incrementing an iterator later
+            Environment* classEnv = globalEnv->links.at({inheritancePath[i], "class"});
+            vector<methodRecord*> curClassMethodsToFilter = classEnv->getMethods();
+            for(vector<methodRecord*>::iterator it = curClassMethodsToFilter.begin(); it != curClassMethodsToFilter.end(); it++){
+                if(methodNameToMethodRecByVectorPos.find((*it)->lexeme) != methodNameToMethodRecByVectorPos.end()) { //it is in the map already
+                    methodsToPrint[methodNameToMethodRecByVectorPos[(*it)->lexeme]] = *it; //replace it in the vector b/c we know its position in the vector
                 }
-//            }
-//            else { //cases for basic classes, since they are not in the AST
-//                _method treeNode
-//            }
-            out << method.second << endl;
+                else {//not in the map, so it is new and not in the vector, so push_back
+                    methodsToPrint.push_back(*it); //the first push_back gets put into methodsToPrint[sizeBeginningOfIter]
+                }
+            }
+            sort(methodsToPrint.begin() + sizeBeginningOfIter, methodsToPrint.begin() + methodsToPrint.size(), [](const methodRecord* lhs, const methodRecord* rhs) {
+                return lhs->encountered < rhs->encountered;
+            });
+            for(int j = sizeBeginningOfIter; j < methodsToPrint.size(); ++j) {
+                methodNameToMethodRecByVectorPos[methodsToPrint[j]->lexeme] = j;
+            }
+        }
+
+        out << klass << endl << methodsToPrint.size() << endl;
+        for(methodRecord* method : methodsToPrint) {
+            out << method->lexeme << endl;
+            _method* treeNode = method->treeNode;
+            out << treeNode->formalList.size() << endl;
+            for(_formal* formal : treeNode->formalList) {
+                out << formal->identifier.identifier << endl;
+            }
+            string mostRecentDefiningClass = implementationMap.at(klass).at(method->lexeme).second;
+            out << mostRecentDefiningClass << endl;
 
             //print body expression of the method
-//            if(method.second != "Object" && method.second != "Int" && method.second != "Bool" && method.second != "String" && method.second != "IO") {
-                out << *(method.first->treeNode->body);
-//            }
-//            else {
-//                //Bool and Int don't have any methods. Just branches for Object/String/IO
-//                //They are also gonna come in order so no worries about ordering
-//                if(method.second == "Object"){
-//                    out << ((_method*)Object_class->featureList.front())->body;
-//                    //this is bad but just take off the list and append at the end
-//                    _method* temp = (_method*)Object_class->featureList.front();
-//                    Object_class->featureList.pop_front();
-//                    Object_class->featureList.push_back(temp);
-//
-//                }
-//                else if(method.second == "String") {
-//
-//                }
-//
-//            }
-
-
+            top = top->links.at({mostRecentDefiningClass, "class"})->links.at({method->lexeme, method->kind});
+            out << *(method->treeNode->body);
+            top = top->previous->previous;
         }
     }
 }
 
 bool conforms(string T1, string T2) {
+    string prefix = "|------";
+
+    //TODO figure out a better way to do implement SELF_TYPE
+    if(T1 == "SELF_TYPE") T1 = lookUpSelfType(top);
+    if(T2 == "SELF_TYPE") T2 = lookUpSelfType(top);
+
+
     if(T1 == T2) {
         return true;
     }
-    while(T2 != "") { //Object's parent is ""
-        if(parentMap[T1]->lexeme == T2) {
+    else if(T1 == "Object") {
+        return T1 == T2;
+    }
+    while(T1 != T2) {
+        if(T1 == "") { //TODO this is a bandaid. return false if it never got to a common parent
+            return false;
+        }
+        if(classMap[T1]->parent == T2) {
             return true;
         }
-        T1 = parentMap[T1]->parent;
+        T1 = classMap[T1]->parent;
     }
 }
+
+/**
+ * should be a set<string> but whatever, just need to iterate over all of them
+ * @param typeChoices
+ * @return
+ */
+string getLub(vector<string> typeChoices) {
+    if (!typeChoices.size()) {
+        cerr << "need to have at least 1 type choice to get least type of a set\n";
+    }
+    else if(typeChoices.size() == 1) return typeChoices[0];
+
+    map<string, vector<string>> inheritancePaths{{typeChoices[0],getInheritancePath(typeChoices[0])}};
+    int minVecSize = inheritancePaths[typeChoices[0]].size();
+    for (int i = 1; i < typeChoices.size(); ++i) {
+        string current = typeChoices[i];
+        inheritancePaths[current] = getInheritancePath(current);
+        if(inheritancePaths[current].size() < minVecSize) {
+            minVecSize = inheritancePaths[current].size();
+        }
+    }
+    for(map<string, vector<string>>::iterator it = inheritancePaths.begin(); it != inheritancePaths.end(); it++){
+        reverse(it->second.begin(), it->second.end());
+    } //since getInheritancePath returns with Object at the end of the list
+
+    int i = 0;
+    string lub; //lub should always start off getting Object in the first iteration
+    while(i < minVecSize) {
+        string matchThis = inheritancePaths.begin()->second[i];
+        //start on one past begin
+        for(map<string, vector<string>>::iterator it = ++(inheritancePaths.begin()); it != inheritancePaths.end(); it++){
+            if(it->second[i] != matchThis) {
+                return lub;
+            }
+        }
+        i++;
+        lub = matchThis;
+    }
+
+    return lub;
+}
+
+
+

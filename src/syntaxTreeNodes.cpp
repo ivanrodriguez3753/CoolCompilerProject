@@ -1,5 +1,6 @@
 #include "syntaxTreeNodes.h"
 #include "Environment.h"
+#include "type.h"
 #include <iostream>
 using namespace std;
 
@@ -104,7 +105,7 @@ void _attributeInit::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _let::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "LET_EXPR" << endl;
+    os << prefix << "├──" << "LET_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << "BINDING_LIST: SIZE IS " << bindings.size() << endl;
     string newPrefix2 = newPrefix + "|   ";
@@ -139,13 +140,13 @@ void _formal::prettyPrint(ostream& os, string prefix) const {
     os << prefix << "├──" << "FORMAL:" << identifier.identifier << endl;
 }
 void _assign::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "ASSIGN_EXPR" << endl;
+    os << prefix << "├──" << "ASSIGN_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
-    os << prefix << "├──" << identifier.identifier << endl;
+    os << newPrefix << "├──" << identifier.identifier << endl;
     rhs->prettyPrint(os, newPrefix);
 }
 void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "DYNAMIC_DISPATCH_EXPR" << endl;
+    os << prefix << "├──" << "DYNAMIC_DISPATCH_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << method.identifier << endl;
     os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
@@ -153,11 +154,11 @@ void _dynamicDispatch::prettyPrint(ostream& os, string prefix) const {
     for(auto arg : args) {
         arg->prettyPrint(os, newPrefix2);
     }
-    expr->prettyPrint(os, newPrefix);
+    caller->prettyPrint(os, newPrefix);
 }
 
 void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "STATIC_DISPATCH_EXPR" << endl;
+    os << prefix << "├──" << "STATIC_DISPATCH_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << method.identifier << endl;
     os << newPrefix << "├──" << "@" << typeIdentifier.identifier << endl;
@@ -166,12 +167,12 @@ void _staticDispatch::prettyPrint(ostream& os, string prefix) const {
     for(auto arg : args) {
         arg->prettyPrint(os, newPrefix2);
     }
-    expr->prettyPrint(os, newPrefix);
+    caller->prettyPrint(os, newPrefix);
 
 }
 
 void _selfDispatch::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "SELF_DISPATCH_EXPR" << endl;
+    os << prefix << "├──" << "SELF_DISPATCH_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << method.identifier << endl;
     os << newPrefix << "├──" << "ARGUMENT LIST: SIZE IS " << args.size() << endl;
@@ -182,21 +183,21 @@ void _selfDispatch::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _if::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "IF_EXPRESSION" << endl;
+    os << prefix << "├──" << "IF_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     predicate->prettyPrint(os, newPrefix);
     thenExpr->prettyPrint(os, newPrefix);
     elseExpr->prettyPrint(os, newPrefix);
 }
 void _while::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "WHILE_EXPRESSION" << endl;
+    os << prefix << "├──" << "WHILE_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     predicate->prettyPrint(os, newPrefix);
     body->prettyPrint(os, newPrefix);
 
 }
 void _block::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "BLOCK_EXPRESSION" << endl;
+    os << prefix << "├──" << "BLOCK_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     os << newPrefix << "├──" << "EXPRESSION LIST: SIZE IS " << body.size() << endl;
     string newPrefix2 = newPrefix + "|   ";
@@ -207,31 +208,31 @@ void _block::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _new::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "NEW_EXPRESSION: " << identifier.identifier << endl;
+    os << prefix << "├──" << "NEW_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << identifier.identifier << endl;
 }
 
 void _isvoid::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "IS_VOID_EXPRESSION" << endl;
+    os << prefix << "├──" << "IS_VOID_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     expr->prettyPrint(os, newPrefix);
 }
 
 void _arith::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "ARITH_EXPRESSION: " << op << endl;
+    os << prefix << "├──" << "ARITH_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << op << endl;
     string newPrefix = prefix + "|   ";
     left->prettyPrint(os, newPrefix);
     right->prettyPrint(os, newPrefix);
 }
 
 void _relational::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "RELATIONAL_EXPRESSION: " << op << endl;
+    os << prefix << "├──" << "RELATIONAL_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << op << endl;
     string newPrefix = prefix + "|   ";
     left->prettyPrint(os, newPrefix);
     right->prettyPrint(os, newPrefix);
 }
 
 void _unary::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "UNARY_EXPRESSION: " << op << endl;
+    os << prefix << "├──" << "UNARY_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << op << endl;
     string newPrefix = prefix + "|   ";
     expr->prettyPrint(os, newPrefix);
 }
@@ -241,16 +242,16 @@ void _integer::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _string::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "STRING_EXPR" << endl;
+    os << prefix << "├──" << "STRING_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
 }
 
 void _identifier::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "IDENTIFIER_EXPR: " << identifier.identifier << endl;
+    os << prefix << "├──" << "IDENTIFIER_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << identifier.identifier << endl;
 
 }
 
 void _bool::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "BOOL_EXPR" << endl;
+    os << prefix << "├──" << "BOOL_EXPR<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     return;
 }
 void _letBindingNoInit::prettyPrint(ostream& os, string prefix) const {
@@ -262,7 +263,7 @@ void _letBindingInit::prettyPrint(ostream& os, string prefix) const {
     init->prettyPrint(os, newPrefix);
 }
 void _case::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──" << "CASE_EXPRESSION" << endl;
+    os << prefix << "├──" << "CASE_EXPRESSION<$type=" << exprType << ", $lineNo=" << lineNo << ">" << endl;
     string newPrefix = prefix + "|   ";
     expr->prettyPrint(os, newPrefix);
     os << newPrefix << "CASE LIST: SIZE IS " << cases.size() << endl;
@@ -355,15 +356,12 @@ void _program::prettyPrint(ostream &os, string prefix) const {
  * also need base cases for leaves if parents depend on children
  */
 void _program::traverse() {
-    //top is currently globalEnv
-    //have the caller change environments, and follow that convention unless noted otherwise
     for(auto klass : classList) {
         klass->traverse();
     }
     _node::isAnnotated = true;
 }
 
-bool _expr::printExprType = false;
 _expr::_expr(int l) : _node(l) {
 
 }
@@ -388,8 +386,8 @@ void _attributeInit::traverse() {
 }
 
 
-_method::_method(_idMeta id, _idMeta typeId, _expr *e) :
-        _feature{0, id, typeId}, body{e}
+_method::_method(_idMeta id, _idMeta typeId, _expr *b) :
+        _feature{0, id, typeId}, body{b}
 {
 
 }
@@ -409,7 +407,12 @@ void _method::print(ostream &os) const {
     top = top->previous;
 
 }
-
+string lookUpSelfType(Environment* current) {
+    while(current->metaInfo.kind != "class") {
+        current = current->previous;
+    }
+    return current->metaInfo.identifier;
+}
 void _method::traverse() {
     top = top->links[{identifier.identifier, "method"}];
     for(auto formal : formalList) {
@@ -437,15 +440,18 @@ _dispatch::_dispatch(int l, _idMeta m) :
 }
 
 _dynamicDispatch::_dynamicDispatch(int l, _idMeta m, _expr *e) :
-    _dispatch{l, m}, expr{e}
+        _dispatch{l, m}, caller{e}
 {
 
 }
 
 void _dynamicDispatch::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "dynamic_dispatch" << endl;
-    os << *expr;
+    os << *caller;
     os << method;
     os << args.size() << endl;
     for(_expr* arg : args) {
@@ -453,22 +459,65 @@ void _dynamicDispatch::print(ostream& os) const {
     }
 }
 
+void _dynamicDispatch::traverse() {
+    for(_expr* arg : args) {
+        arg->traverse();
+    }
+    caller->traverse();
+
+    /**
+     * If f has return type B and B is a class name, then the static type of the dispatch is B. Otherwise, if f has
+     * return type SELF_TYPE, then the static type of the dispatch is A. To see why this is sound, note that the self
+     * parameter of the method f conforms to type A. Therefore, because f returns SELF_TYPE, we can infer that the
+     * result must also conform to A. Inferring accurate static types for dispatch expressions is what justifies
+     * including SELF_TYPE in the Cool type system.
+     */
+    if(caller->exprType == "SELF_TYPE") { //TODO this branch is a bandaid?
+        exprType = "SELF_TYPE";
+    }
+    else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType != "SELF_TYPE") { //static type of dispatch is B, since it is a class name
+        exprType = implementationMap.at(caller->exprType).at(method.identifier).first->returnType;
+    }
+    else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType == "SELF_TYPE") {//static type of dispatch is A,
+        exprType = caller->exprType;
+    }
+}
+
 _staticDispatch::_staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty) :
-    _dispatch(l, m), expr{e}, typeIdentifier{ty}
+        _dispatch(l, m), caller{e}, typeIdentifier{ty}
 {
 
 }
 
 void _staticDispatch::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "static_dispatch" << endl;
-    os << *expr;
+    os << *caller;
     os << typeIdentifier;
     os << method;
     os << args.size() << endl;
     for(_expr* arg : args) {
         os << *arg;
     }
+}
+
+void _staticDispatch::traverse() {
+    for(_expr* arg : args) {
+        arg->traverse();
+    }
+    caller->traverse();
+    //lookup method method.identifier in the implementation map for caller->exprType
+    //To be clear, you are calling what WOULD be called if the caller was type @RHSType
+    //So it doesn't have to have an original (re)definition by RHSType, and caller's
+    // static type just has to conform to RHSType
+    //value of _staticDispatch is value returned by the method selected (most recent method in hierarchy with that name)
+        //but i guess it wouldn't matter which one we choose if all we're assigning is type, since overridden methods
+        //have to keep the same return type, same number of arguments and their types
+    exprType = implementationMap.at(typeIdentifier.identifier).at(method.identifier).first->returnType;
+
 }
 
 _selfDispatch::_selfDispatch(int l, _idMeta m) :
@@ -479,12 +528,27 @@ _selfDispatch::_selfDispatch(int l, _idMeta m) :
 
 void _selfDispatch::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "self_dispatch" << endl;
     os << method;
     os << args.size() << endl;
     for(_expr* arg : args) {
         os << *arg;
     }
+}
+
+void _selfDispatch::traverse() {
+    for(_expr* arg : args) {
+        arg->traverse();
+    }
+
+    //TODO improve this but for now go up the chains until you get to a "class" environment, then check its entry in implementationMap
+    Environment* current = top;
+    while(current->metaInfo.kind != "class") current = current->previous;
+    //current is the classEnv
+    exprType = implementationMap.at(current->metaInfo.identifier).at(method.identifier).first->returnType;
 }
 
 _if::_if(int l, _expr* p, _expr* te, _expr* ee) :
@@ -495,23 +559,43 @@ _if::_if(int l, _expr* p, _expr* te, _expr* ee) :
 
 void _if::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "if" << endl;
     os << *predicate;
     os << *thenExpr;
     os << *elseExpr;
 }
 
+void _if::traverse() {
+    predicate->traverse();
+    thenExpr->traverse();
+    elseExpr->traverse();
+
+    exprType = getLub(vector<string>{thenExpr->exprType, elseExpr->exprType});
+}
+
 _while::_while(int l, _expr* p, _expr* b) :
     _expr{l}, predicate{p}, body{b}
 {
-
+    //"The static type of a loop expression is Object"
+    exprType = "Object";
 }
 
 void _while::print(ostream& os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "while" << endl;
     os << *predicate;
     os << *body;
+}
+
+void _while::traverse() {
+    predicate->traverse();
+    body->traverse();
 }
 
 _block::_block(int l) :
@@ -547,7 +631,6 @@ _new::_new(int l, _idMeta id) :
 
 void _new::print(ostream &os) const {
     os << lineNo << endl;
-    //TODO: see why isAnnotated is false and not printing out exprType
     if(isAnnotated) {
         os << exprType << endl;
     }
@@ -567,8 +650,15 @@ _isvoid::_isvoid(int l, _expr *e) :
 
 void _isvoid::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "isvoid" << endl;
     os << *expr;
+}
+
+void _isvoid::traverse() {
+    expr->traverse();
 }
 
 _arith::_arith(int l, _expr *le, string o, _expr *r) :
@@ -693,12 +783,23 @@ void _identifier::print(ostream& os) const {
  * can only be an attribute or local variable (which includes formal parameters, or something introduced in a let)
  */
 void _identifier::traverse() {
-    if(((objectRecord*)top->get(make_pair(identifier.identifier,"attribute")))) {
-        exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"attribute")))->type;
+    //need to account for identifiers from an earlier class in the hierarchy, so find the class we're in
+    Environment* current = top;
+    while(current->metaInfo.kind != "class") current = current->previous;
+    vector<string>inhPath = getInheritancePath(current->metaInfo.identifier);
+    for(string klass : inhPath) {
+        Environment* classEnv = globalEnv->links.at({klass, "class"});
+        if(((objectRecord*)top->get(make_pair(identifier.identifier,"local")))) {
+            exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"local")))->type;
+            return;
+        }
+        else if((classEnv->symTable.find(make_pair(identifier.identifier,"attribute"))) != classEnv->symTable.end()) {
+            exprType = ((objectRecord*)classEnv->symTable.at(make_pair(identifier.identifier,"attribute")))->type;
+            return;
+        }
     }
-    else if(((objectRecord*)top->get(make_pair(identifier.identifier,"local")))) {
-        exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"local")))->type;
-    }
+    cout << "DIDN'T MATCH A BRANCH IN _IDENTIFIER_EXPR\n";
+    exit(1);
 }
 
 _bool::_bool(int l, bool v) :
@@ -751,6 +852,10 @@ void _letBindingInit::print(ostream& os) const {
     os << *init;
 }
 
+void _letBindingInit::traverse() {
+    init->traverse();
+}
+
 int _let::letCounter = 0;
 _let::_let(int l, _idMeta lk, _expr* b) :
     _expr(l), letKey{lk}, body{b}
@@ -760,14 +865,31 @@ _let::_let(int l, _idMeta lk, _expr* b) :
 
 void _let::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "let" << endl;
     os << bindings.size() << endl;
     top = top->links.at(make_pair(letKey.identifier, letKey.kind));
     for(_letBinding* binding : bindings) {
         os << *binding;
     }
-    top = top->previous;
     os << *body;
+    top = top->previous;
+}
+
+void _let::traverse() {
+    for(auto binding : bindings) {
+        //Don't need to change scope for a binding w/o initialization but will do it anyway
+        top = top->links.at({letKey.identifier, letKey.kind});
+        binding->traverse();
+        top = top->previous;
+    }
+    top = top->links.at({letKey.identifier, letKey.kind});
+    body->traverse();
+    top = top->previous;
+
+    exprType = body->exprType;
 }
 
 int _caseElement::caseCounter = 0;
@@ -785,22 +907,43 @@ _case::_case(int l, _expr* e) :
 
 void _case::print(ostream &os) const {
     os << lineNo << endl;
+    if(isAnnotated) {
+        os << exprType << endl;
+    }
     os << "case" << endl;
     os << *expr;
     os << cases.size() << endl;
     for(_caseElement* Case : cases) {
-        top = top->links.at(make_pair(Case->caseKey.identifier, "case"));
+        top = top->links.at(make_pair(Case->caseKey.identifier, Case->caseKey.kind));
         os << *Case;
         top = top->previous;
     }
 }
 
+void _case::traverse() {
+    expr->traverse();
+    vector<string> typeChoices; //I believe all these must conform expr->exprType
+    for(auto kase : cases) {
+        top = top->links.at({kase->caseKey.identifier, "case"});
+        kase->traverse();
+        typeChoices.push_back(kase->exprType);
+        top = top->previous;
+    }
+    //go up the hierarchy tree as much as we can
+    exprType = getLub(typeChoices);
+
+}
 
 
 void _caseElement::print(ostream &os) const {
     os << identifier;
     os << typeIdentifier;
     os << *body;
+}
+
+void _caseElement::traverse() {
+    body->traverse();
+    exprType = body->exprType;
 }
 
 _assign::_assign(int l, _idMeta id, _expr* r) :

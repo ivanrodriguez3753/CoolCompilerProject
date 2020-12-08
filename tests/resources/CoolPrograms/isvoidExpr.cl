@@ -1,5 +1,5 @@
 class Main {
-    method() : ReturnType {
+    main() : Bool {
         isvoid false
     };
 };

@@ -1,8 +1,8 @@
 class Main {
-    someMethod() : SomeType {
+    main() : Object {
         if false then false else false fi
     };
-    anotherMethod() : Sometype {
-        while false loop false pool
+    anotherMethod() : Object {
+            while false loop false pool
     };
 };

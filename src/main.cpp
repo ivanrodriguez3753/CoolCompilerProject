@@ -53,8 +53,13 @@ int main(int argc, char** argv) {
     else if(option == "--semanticAnalysis") {
         pdrv.parse(file);
         _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+
+        populateClassMap();
+        populateImplementationMap();
+        populateParentMap();
         AST->traverse();
 
+        AST->prettyPrint(cout, "");
     }
 
 

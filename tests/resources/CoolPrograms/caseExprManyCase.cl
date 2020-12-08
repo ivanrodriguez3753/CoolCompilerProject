@@ -1,15 +1,13 @@
 class Main {
-    method() : Type {
+    main() : Object {
         case false of
-            id1 : Type1 =>
-            false;
-            id2 : Type2 =>
+            id2 : Bool =>
             {
                 false;
                 false;
             };
-            id3 : Type3 =>
-            false;
+            id3 : Object =>
+            new Object;
         esac
     };
 };

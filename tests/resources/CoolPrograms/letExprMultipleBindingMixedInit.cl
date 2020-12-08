@@ -1,5 +1,5 @@
 class Main {
-    someId() : SomeType {
-        let id1 : Type1 <- false, id2 : Type2, id3 : Type3, id4 : Type4 <- false in false
+    main() : Bool {
+        let id1 : Bool <- false, id2 : Int, id3 : Bool, id4 : Int <- 456 in false
     };
 };
