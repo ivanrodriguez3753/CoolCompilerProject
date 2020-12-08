@@ -80,13 +80,8 @@ void buildBasicClassNodes() {
  */
 vector<string> getInheritancePath(string klass) {
     vector<string> inheritancePath{};
-    //TODO bandaid fix
-//    if(klass == "SELF_TYPE") {
-//        Environment* current = top;
-//        while(current->metaInfo.kind != "class") current = current->previous;
-//        klass = current->metaInfo.identifier; //get the translation for SELF_TYPE given the 'top' context
-//    }
-    if(klass == "SELF_TYPE") { //TODO i am pretty sure that the inheritance path of an arbitrary self path is SELF_TYPE, OBJECT
+
+    if(klass == "SELF_TYPE") {
         return vector<string>{"SELF_TYPE", "Object"};
     }
     classRecord* currentRec = classMap.at(klass);
@@ -296,43 +291,18 @@ void printImplementationMap(ostream& out) {
         out << klass << endl << methodsToPrint.size() << endl;
         for(methodRecord* method : methodsToPrint) {
             out << method->lexeme << endl;
-//            if(method.second != "Object" && method.second != "Int" && method.second != "Bool" && method.second != "String" && method.second != "IO") { //not a basic class
             _method* treeNode = method->treeNode;
             out << treeNode->formalList.size() << endl;
             for(_formal* formal : treeNode->formalList) {
                 out << formal->identifier.identifier << endl;
             }
-//            }
-//            else { //cases for basic classes, since they are not in the AST
-//                _method treeNode
-//            }
             string mostRecentDefiningClass = implementationMap.at(klass).at(method->lexeme).second;
             out << mostRecentDefiningClass << endl;
 
             //print body expression of the method
-//            if(method.second != "Object" && method.second != "Int" && method.second != "Bool" && method.second != "String" && method.second != "IO") {
             top = top->links.at({mostRecentDefiningClass, "class"})->links.at({method->lexeme, method->kind});
             out << *(method->treeNode->body);
             top = top->previous->previous;
-//            }
-//            else {
-//                //Bool and Int don't have any methods. Just branches for Object/String/IO
-//                //They are also gonna come in order so no worries about ordering
-//                if(method.second == "Object"){
-//                    out << ((_method*)Object_class->featureList.front())->body;
-//                    //this is bad but just take off the list and append at the end
-//                    _method* temp = (_method*)Object_class->featureList.front();
-//                    Object_class->featureList.pop_front();
-//                    Object_class->featureList.push_back(temp);
-//
-//                }
-//                else if(method.second == "String") {
-//
-//                }
-//
-//            }
-
-
         }
     }
 }
@@ -345,27 +315,17 @@ bool conforms(string T1, string T2) {
     if(T2 == "SELF_TYPE") T2 = lookUpSelfType(top);
 
 
-    printf("Entered call to (%s, %s)\n", T1.c_str(), T2.c_str());
     if(T1 == T2) {
-        cout << prefix+"Finna return TRUE\n";
         return true;
     }
     else if(T1 == "Object") {
-        bool returnThis = T1 == T2;
-        if(returnThis) {
-            cout <<prefix+ "Finna return TRUE\n";
-        }else cout << prefix+"Finna return FALSE\n";
-        return returnThis;
-//        return T1 == T2;
+        return T1 == T2;
     }
     while(T1 != T2) {
         if(T1 == "") { //TODO this is a bandaid. return false if it never got to a common parent
-            cout << prefix+"Finna return FALSE\n";
             return false;
         }
-        cout <<prefix + "About to access parentMap[" << T1  << "]"<< endl;
         if(classMap[T1]->parent == T2) {
-            cout <<prefix+ "Finna return TRUE\n";
             return true;
         }
         T1 = classMap[T1]->parent;
@@ -396,15 +356,13 @@ string getLub(vector<string> typeChoices) {
         reverse(it->second.begin(), it->second.end());
     } //since getInheritancePath returns with Object at the end of the list
 
-    bool allMatch = true;
     int i = 0;
     string lub; //lub should always start off getting Object in the first iteration
-    while(allMatch && i < minVecSize) {
+    while(i < minVecSize) {
         string matchThis = inheritancePaths.begin()->second[i];
         //start on one past begin
         for(map<string, vector<string>>::iterator it = ++(inheritancePaths.begin()); it != inheritancePaths.end(); it++){
             if(it->second[i] != matchThis) {
-                allMatch = false;
                 return lub;
             }
         }

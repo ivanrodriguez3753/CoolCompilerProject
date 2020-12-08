@@ -31,7 +31,7 @@ public:
      */
     static int orderCounter;
 
-    Record(string lex, int l, string k);
+    Record(Environment* container, string lex, int l, string k);
 };
 
 class methodRecord : public Record {
@@ -40,10 +40,10 @@ public:
 
     _method* treeNode;
 
-    methodRecord(string lex, int l, string k, string rt);
+    methodRecord(Environment* container, string lex, int l, string k, string rt);
 
 public:
-    static Environment* makeAndInstallMethodsRecordAndEnv(list<string> lexemes, list<list<pair<string,string>>> parameters, list<string> returnTypes, Environment* current);
+    static void makeAndInstallMethodsRecordAndEnv(list<string> lexemes, list<list<pair<string,string>>> parameters, list<string> returnTypes, Environment* current);
 };
 
 class classRecord : public Record {
@@ -59,19 +59,17 @@ public:
     string type;
     _expr* initExpr;
 
-    objectRecord(string lex, int l, string k, string type, _expr* init);
-};
-
-class expressionRecord : public Record {
-
+    objectRecord(Environment* container, string lex, int l, string k, string type, _expr* init);
 };
 
 class Environment {
 public:
     struct envMetaInfo {
         string identifier, kind;
+        int depth; //global env is depth 0
 
-        envMetaInfo(string id, string k) : identifier{id}, kind{k} {}
+        envMetaInfo(string id, string k) : identifier{id}, kind{k} {
+        }
     }metaInfo;
 
     /**
@@ -79,9 +77,8 @@ public:
      * For example, <"someName", "attribute"> is different from <"someName", "method">
      */
     map<pair<string, string>, Record*> symTable;
-
-    Environment* previous;
     map<pair<string, string>, Environment*> links;
+    Environment* previous;
 
     Environment(Environment* prev, envMetaInfo info);
 

@@ -356,15 +356,12 @@ void _program::prettyPrint(ostream &os, string prefix) const {
  * also need base cases for leaves if parents depend on children
  */
 void _program::traverse() {
-    //top is currently globalEnv
-    //have the caller change environments, and follow that convention unless noted otherwise
     for(auto klass : classList) {
         klass->traverse();
     }
     _node::isAnnotated = true;
 }
 
-bool _expr::printExprType = false;
 _expr::_expr(int l) : _node(l) {
 
 }
@@ -421,7 +418,6 @@ void _method::traverse() {
     for(auto formal : formalList) {
         formal->traverse();
     }
-    top->install({"self", "local"}, new objectRecord{"self", 0, "local", "SELF_TYPE", nullptr}); //todo fix this nullptr
     body->traverse();
     top = top->previous;
 }
@@ -485,9 +481,6 @@ void _dynamicDispatch::traverse() {
     else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType == "SELF_TYPE") {//static type of dispatch is A,
         exprType = caller->exprType;
     }
-
-
-//    exprType = "FIX THIS";
 }
 
 _staticDispatch::_staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty) :
@@ -638,7 +631,6 @@ _new::_new(int l, _idMeta id) :
 
 void _new::print(ostream &os) const {
     os << lineNo << endl;
-    //TODO: see why isAnnotated is false and not printing out exprType
     if(isAnnotated) {
         os << exprType << endl;
     }
@@ -940,7 +932,6 @@ void _case::traverse() {
     //go up the hierarchy tree as much as we can
     exprType = getLub(typeChoices);
 
-    //TODO FIND LEAST UPPER BOUND ON THE TYPES IN THE CASES AND ASSIGN TO exprType
 }
 
 

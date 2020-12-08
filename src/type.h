@@ -37,6 +37,12 @@ void buildBasicClassNodes();
  * @return
  */
 bool conforms(string T1, const string T2);
+
+/**
+ * Get least upper bound for the set of classes.
+ * @param typeChoices
+ * @return
+ */
 string getLub(vector<string> typeChoices);
 vector<string> getInheritancePath(string klass);
 

@@ -186,8 +186,6 @@ public:
     string exprType;
 
     virtual void traverse() = 0;
-
-    static bool printExprType;
 };
 
 class _assign : public _expr {

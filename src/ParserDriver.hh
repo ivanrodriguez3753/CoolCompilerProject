@@ -24,7 +24,6 @@ using namespace std;
 class ParserDriver {
 public:
     ParserDriver();
-    std::map<std::string, int> variables;
     int result;
 
     //main routine is calling the parser
@@ -49,9 +48,6 @@ public:
     _program* buildSyntaxTree(programNode* root);
     _node* buildSyntaxNode(node* current);
 
-    /**
-     * Keep a pointer to the current env/symtable. Initialize with globalEnv
-     */
 
     friend class _node;
 private:

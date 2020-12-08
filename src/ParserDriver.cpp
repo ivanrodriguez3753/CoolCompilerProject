@@ -98,7 +98,6 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
         programNode* castedCurrent = (programNode*) current;
         _program* result = new _program{castedCurrent->lineNo};
         for(classNode* klass : castedCurrent->clNode->classList) {
-            //TODO
             if(klass->optionalInh == nullptr) {
                 top->install(make_pair(klass->TYPE->value,"class"),  new classRecord{klass->TYPE->value, klass->TYPE->lineNo, "class", "Object"});
             }
@@ -146,7 +145,7 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
     }
     else if(syntaxNodeType == "attribute_no_init") {
         fieldNode* castedCurrent = (fieldNode*) current;
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, nullptr});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{top, castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, nullptr});
         _attributeNoInit* result = new _attributeNoInit{castedCurrent->lineNo, _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "attribute"}, _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value}};
         return result;
     }
@@ -158,27 +157,27 @@ _node *ParserDriver::buildSyntaxNode(node* current) {
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
                 (_expr*)buildSyntaxNode(castedCurrent->init->expr)
         };
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, result->expr});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "attribute"), new objectRecord{top, castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "attribute", castedCurrent->TYPE->value, result->expr});
         return result;
     }
     else if(syntaxNodeType == "method") {
         methodNode* castedCurrent = (methodNode*) current;
         //expression may introduce new scopes (with the let or case expressions)
-        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new methodRecord{castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method", castedCurrent->TYPE->value});
+        top->install(make_pair(castedCurrent->IDENTIFIER->value, "method"), new methodRecord{top, castedCurrent->IDENTIFIER->value, castedCurrent->IDENTIFIER->lineNo, "method", castedCurrent->TYPE->value});
         top->links.insert(make_pair(make_pair(castedCurrent->IDENTIFIER->value, "method"), new Environment{top, Environment::envMetaInfo{castedCurrent->IDENTIFIER->value, "method"}}));
         top = top->links.at(make_pair(castedCurrent->IDENTIFIER->value, "method"));
         _method* result = new _method{
                 _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "method"},
                 _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
-                nullptr//(_expr*)buildSyntaxNode(castedCurrent->expr) TODO i changed this
+                nullptr
         };
         ((methodRecord*)top->previous->symTable.at(make_pair(castedCurrent->IDENTIFIER->value, "method")))->treeNode = result;
-//        top->install(make_pair("self", "local"), (objectRecord*)top->symTable.at({top->previous->metaInfo.identifier,""}));
+
         for(formalNode* formal : castedCurrent->formalsList->formalsList) {
-            top->install(make_pair(formal->IDENTIFIER->value, "local"), new objectRecord{formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local", formal->TYPE->value, nullptr}); //TODO is that supposed to be nullptr?
+            top->install(make_pair(formal->IDENTIFIER->value, "local"), new objectRecord{top, formal->IDENTIFIER->value, formal->IDENTIFIER->lineNo, "local", formal->TYPE->value, nullptr}); //TODO is that supposed to be nullptr?
             result->formalList.push_back((_formal*)buildSyntaxNode(formal));
         }
-        result->body = (_expr*)buildSyntaxNode(castedCurrent->expr); //TODO and moved it here
+        result->body = (_expr*)buildSyntaxNode(castedCurrent->expr);
         top = top->previous;
         return result;
     }
@@ -347,14 +346,7 @@ self, which is implicitly bound in every class.
 
          Can only be a "local" or an "attribute"
          */
-//         if(result->identifier.identifier != "self") { //exprType cannot be determined at AST Node build time for self
 //
-//             result->exprType = top->get({result->identifier.identifier, "local"}) ?
-//                ((objectRecord*)top->get({result->identifier.identifier, "local"}))->type
-//              : ((objectRecord*)top->get({result->identifier.identifier, "attribute"}))->type;
-//
-//
-//         }
         return result;
     }
     else if(syntaxNodeType == "true" || syntaxNodeType == "false") {
@@ -370,16 +362,15 @@ self, which is implicitly bound in every class.
         _let* result = new _let{
             castedCurrent->lineNo,
             _idMeta{castedCurrent->LET->lineNo, "let" + to_string(_let::letCounter++), "let"},
-//            (_expr*)buildSyntaxNode(castedCurrent->expr) TODO i changed this
             nullptr
         };
         top->links.insert(make_pair(make_pair(result->letKey.identifier, "let"), new Environment{top, Environment::envMetaInfo{result->letKey.identifier, result->letKey.kind}}));
         top = top->links.at(make_pair(result->letKey.identifier, "let"));
         for(bindingNode* binding : castedCurrent->blNode->bindingList) {
-            top->install(make_pair(binding->IDENTIFIER->value, "local"), new objectRecord{binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local", binding->TYPE->value, (_expr*)binding->init});
+            top->install(make_pair(binding->IDENTIFIER->value, "local"), new objectRecord{top, binding->IDENTIFIER->value, binding->IDENTIFIER->lineNo, "local", binding->TYPE->value, (_expr*)binding->init});
             result->bindings.push_back((_letBinding*)buildSyntaxNode(binding));
         }
-        result->body = (_expr*)buildSyntaxNode(castedCurrent->expr); //TODO and moved it here
+        result->body = (_expr*)buildSyntaxNode(castedCurrent->expr);
         top = top->previous;
         return result;
     }
@@ -411,8 +402,7 @@ self, which is implicitly bound in every class.
             top->links.insert(make_pair(make_pair("case" + to_string(_caseElement::caseCounter), "case"), new Environment{top, Environment::envMetaInfo{"case" + to_string(_caseElement::caseCounter), "case"}} ));
             top = top->links.at(make_pair("case" + to_string(_caseElement::caseCounter), "case"));
 
-            //TODO INSERTED THIS
-            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), new objectRecord{caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local", caseElement->TYPE->value, nullptr});
+            top->install(make_pair(caseElement->IDENTIFIER->value, "local"), new objectRecord{top, caseElement->IDENTIFIER->value, caseElement->IDENTIFIER->lineNo, "local", caseElement->TYPE->value, nullptr});
             result->cases.push_back((_caseElement*)buildSyntaxNode(caseElement));
 
             top = top->previous;
@@ -424,7 +414,7 @@ self, which is implicitly bound in every class.
         _caseElement* result = new _caseElement {
             _idMeta{castedCurrent->IDENTIFIER->lineNo, castedCurrent->IDENTIFIER->value, "local"},
             _idMeta{castedCurrent->TYPE->lineNo, castedCurrent->TYPE->value},
-            (_expr*)buildSyntaxNode(castedCurrent->expr), //TODO i changed this
+            (_expr*)buildSyntaxNode(castedCurrent->expr),
             _idMeta{castedCurrent->IDENTIFIER->lineNo, "case" + to_string(_caseElement::caseCounter++), "case"}//increment caseCounter here because it's the last time we use it
         };
         ((objectRecord*)top->get({result->identifier.identifier, "local"}))->initExpr = result;
