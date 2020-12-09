@@ -233,7 +233,8 @@ INSTANTIATE_TEST_SUITE_P(Fragments, typeTests, testing::Values(
                             "dynamicDispatchExpr.cl",
                             "SELF_TYPE.cl",
                             "identifierExpr.cl",
-                            "classMapNoInitializations.cl"));
+                            "classMapNoInitializations.cl",
+                            "assignMismatchButConforms.cl"));
 INSTANTIATE_TEST_SUITE_P(TypeFull, typeTests, testing::Values(
                             "arith.cl",
                             "atoi.cl",
@@ -328,4 +329,5 @@ INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTests, testing::Values(
                             "semanticAnalyzerNegative/expression/plusInvalidOperands.cl",
                             "semanticAnalyzerNegative/expression/minusInvalidOperands.cl",
                             "semanticAnalyzerNegative/expression/timesInvalidOperands.cl",
-                            "semanticAnalyzerNegative/expression/divideInvalidOperands.cl"));
+                            "semanticAnalyzerNegative/expression/divideInvalidOperands.cl",
+                            "semanticAnalyzerNegative/expression/assignMismatchNoConforms.cl"));

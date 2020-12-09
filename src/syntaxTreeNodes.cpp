@@ -307,10 +307,7 @@ void _classInh::typeCheck() {
             throw pair<int, string>{superClassIdentifier.lineNo, "class " + typeIdentifier.identifier + " inherits from " + superClassIdentifier.identifier};
         }
     }
-    catch (pair<int, string> error){
-        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
-        errorLog.push_back(error);
-    }
+    catch (pair<int, string> error) {printAndPush(error);}
 }
 _classInh::_classInh(_idMeta id, classRecord* r, _idMeta sId) :
         _class{id, r}, superClassIdentifier{sId}
@@ -374,13 +371,11 @@ void _program::typeCheck() {
         }
         catch(...) {
             pair<int, string> error{0, "Didn't define a 0-param main method inside Main class\n"};
-            cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
-            errorLog.push_back(error);
+            printAndPush(error);
         }
     } catch (...){
         pair<int, string> error{0, "Didn't define a Main class!\n"};
-        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
-        errorLog.push_back(error);
+        printAndPush(error);
     }
 }
 /**
@@ -611,8 +606,7 @@ void _if::typeCheck() {
         }
     }
     catch(pair<int, string> error) {
-        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
-        errorLog.push_back(error);
+        printAndPush(error);
     }
 }
 
@@ -651,8 +645,7 @@ void _while::typeCheck() {
         }
     }
     catch(pair<int, string> error) {
-        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
-        errorLog.push_back(error);
+        printAndPush(error);
     }
 }
 
@@ -748,8 +741,7 @@ void _arith::typeCheck() {
         }
     }
     catch (pair<int, string> error){
-        cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
-        errorLog.push_back(error);
+        printAndPush(error);
     }
 }
 void _arith::traverse() {
@@ -1039,9 +1031,35 @@ void _assign::print(ostream& os) const {
     os << *rhs;
 }
 
+void _assign::typeCheck() {
+    try {
+        if((objectRecord*)top->get({identifier.identifier, "attribute"})) {
+            if(!conforms(rhs->exprType, ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type)) {
+                throw pair<int, string>{lineNo,
+                    "RHS<type=" + rhs->exprType + "> does not conform to LHS<id=" +
+                    identifier.identifier + ", type=" + ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type +
+                    ">\n"};
+            }
+        }
+        else if((objectRecord*)top->get({identifier.identifier, "local"})) {
+            if(!conforms(rhs->exprType, ((objectRecord*)top->get({identifier.identifier, "local"}))->type)) {
+                throw pair<int, string>{lineNo,
+                    "RHS<type=" + rhs->exprType + "> does not conform to LHS<id=" +
+                    identifier.identifier + ", type=" + ((objectRecord*)top->get({identifier.identifier, "local"}))->type +
+                    ">\n"};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+}
+
 void _assign::traverse() {
     rhs->traverse();
     exprType = rhs->exprType;
+
+    typeCheck();
 }
 
 _internal::_internal(string c, string m) :

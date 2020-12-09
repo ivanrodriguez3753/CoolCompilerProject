@@ -10,3 +10,4 @@ METHOD:
 EXPRESSIONS:
 	1. if/then predicate must be bool
 	2. while predicate must be bool
+	3. [ASSIGN]

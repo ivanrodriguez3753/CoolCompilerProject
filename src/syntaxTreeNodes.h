@@ -204,6 +204,8 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+private:
+    void typeCheck();
 };
 
 class _dispatch : public _expr {

@@ -12,6 +12,15 @@ map<string, classRecord*> classMap{};
  */
 map<string, classRecord*> parentMap{};
 
+/**
+ * print error to stderr and push to log
+ * @param error
+ */
+void printAndPush(pair<int,string> error) {
+    cerr << "ERROR: " << to_string(error.first) << ", " << error.second << endl;
+    errorLog.push_back(error);
+}
+
 void buildBasicClassNodes() {
     //Use to conveniently access scope I need
     map<pair<string, string>, Record*> currentSymTable = globalEnv->links.at(make_pair("Object", "class"))->symTable;
@@ -308,8 +317,6 @@ void printImplementationMap(ostream& out) {
 }
 
 bool conforms(string T1, string T2) {
-    string prefix = "|------";
-
     //TODO figure out a better way to do implement SELF_TYPE
     if(T1 == "SELF_TYPE") T1 = lookUpSelfType(top);
     if(T2 == "SELF_TYPE") T2 = lookUpSelfType(top);

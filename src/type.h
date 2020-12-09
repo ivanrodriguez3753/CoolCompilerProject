@@ -46,6 +46,7 @@ bool conforms(string T1, const string T2);
 string getLub(vector<string> typeChoices);
 vector<string> getInheritancePath(string klass);
 
+void printAndPush(pair<int,string>);
 
 class typeError_exception : public exception {
 public:
