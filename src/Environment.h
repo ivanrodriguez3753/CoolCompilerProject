@@ -80,12 +80,24 @@ public:
     map<pair<string, string>, Environment*> links;
     Environment* previous;
 
+    //nothing exists outside a class so it is convenient to have a reference back to the containing class environment
+    Environment* klass;
+
     Environment(Environment* prev, envMetaInfo info);
 
     void install(pair<string, string>key, Record* rec);
     Record* get(pair<string, string> key);
+    objectRecord* getObject(string key);
 
     void reset();
+
+    //convenience method for type checking
+    string O(string key);
+        /**Environment consists of three parts: method environment M, object environment O, and current class C
+         * mapping M(C, f) = (T1,...,Tn) where C is a type, f is a methodName, T1,...,Tn are types
+         * mapping O(v) = T where v is an object identifier, T is a type
+         * current class C in which the expression appears
+         */
 
     /**
      * returns a vector containing a vector of "methods" in the symTable

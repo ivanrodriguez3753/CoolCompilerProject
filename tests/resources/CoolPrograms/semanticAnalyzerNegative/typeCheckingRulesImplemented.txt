@@ -8,6 +8,28 @@ METHOD:
 	1. Didn't define a main method inside Main that had 0 parameters
 
 EXPRESSIONS:
-	1. if/then predicate must be bool
-	2. while predicate must be bool
-	3. [ASSIGN]
+    4. [Var] (doesn't need tests)
+    3. [ASSIGN]
+    [True], [False] have no hypotheses so they are trivially checked
+    [Int], [String] have hypotheses that are enforced by C++ types so they are trivially checked
+    5. [New] (doesn't need tests)
+       [Dispatch]
+       [Static Dispatch]
+	1. [If]
+    [Sequence] is trivially checked
+    9. [Let-Init]
+    [Let-No-Init]
+    [Case]
+	2. [Loop]
+	[Isvoid]
+	6. [Not] and [Neg] (writing tests)
+	7. [Arith]
+	8. [Equal] and [LT] and [LTE]
+	[Attr-Init]
+	[Method]
+
+ivan rules implemented
+EXPRESSIONS:
+    Let:
+        1. Let introduces 0 identifiers
+        2. Let introduces repeat identifier (within those already introduced in let)

@@ -306,6 +306,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _isvoid : public _expr {
@@ -348,6 +350,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _unary : public _expr {
@@ -361,11 +365,13 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _integer : public _expr {
 public:
-    int value;
+    const int value;
 
     _integer(int l, int v);
 
@@ -397,6 +403,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _bool : public _expr {
@@ -416,11 +424,12 @@ public:
     _idMeta identifier;
     _idMeta typeIdentifier;
 
-    _expr* body;
-
     _letBinding(_idMeta id, _idMeta typeId);
 
     virtual void traverse() = 0;
+protected:
+    virtual pair<int, string> typeCheck() = 0;
+    friend class _let;
 };
 
 class _letBindingNoInit : public _letBinding {
@@ -431,6 +440,7 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override{} //Don't need to do anything
+    pair<int, string> typeCheck() override {return pair<int, string>{999, "nonTrivial"};} //don't need to do anything
 };
 
 class _letBindingInit : public _letBinding {
@@ -443,6 +453,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    pair<int, string> typeCheck() override;
 };
 
 class _let : public _expr {
@@ -459,6 +471,9 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
+    void semanticCheck();
 };
 
 class _caseElement : public _expr {

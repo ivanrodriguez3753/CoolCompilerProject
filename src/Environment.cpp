@@ -74,10 +74,16 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
 
         return;
     }
-    if(metaInfo.kind == "class") {
+    else if(metaInfo.kind == "class") {
         install({"self", "attribute"}, new objectRecord{this, "self", 0, "attribute", "SELF_TYPE", nullptr}); //todo fix this nullptr
+        klass = this;
+    }
+    else {
+        klass = prev->klass;
     }
     metaInfo.depth = previous->metaInfo.depth + 1;
+
+
 }
 
 void Environment::install(pair<string, string> key, Record* rec) {
@@ -92,6 +98,41 @@ Record* Environment::get(pair<string, string> key) {
             return currentIt->second;
         }
         current = current->previous; //didn't find key, go to surrounding scope and search again
+    }
+    return nullptr;
+}
+
+string Environment::O(string key) {
+    return getObject(key)->type;
+}
+
+/**
+ * Similar to get but tries both attributes and local variables (not methods though), as well as inherited attributes
+ * This is useful for _identifier expressions because those can only refer to
+ * identifiers for attributes and locals (and not methods) </br>
+ */
+objectRecord* Environment::getObject(string key) {
+    Environment* current = this;
+    while(current->metaInfo.identifier != "global") {
+        map<pair<string, string>, Record*>::iterator currentIt = current->symTable.find({key, "attribute"});
+        if(currentIt != current->symTable.end()) { //found key
+            return (objectRecord*)currentIt->second;
+        }
+        currentIt = current->symTable.find({key, "local"});
+        if(currentIt != current->symTable.end()) { //found key
+            return (objectRecord*)currentIt->second;
+        }
+        current = current->previous; //didn't find key, go to surrounding scope and search again
+    }
+    //current is pointing to globalEnv
+    //Check only attributes of parents (we've already checked "attribute" of the class we're in)
+    string currentParent = ((classRecord*)(current->symTable.at({this->klass->metaInfo.identifier, "class"})))->parent;
+    while(currentParent != "") {
+        Environment* klassEnv = current->links.at({currentParent, "class"});
+        if(klassEnv->symTable.find({key, "attribute"}) != klassEnv->symTable.end()) { //found it
+            return  (objectRecord*)((klassEnv->symTable.find({key, "attribute"}))->second);
+        }
+        currentParent = ((classRecord*)(current->symTable.at({currentParent, "class"})))->parent;
     }
     return nullptr;
 }

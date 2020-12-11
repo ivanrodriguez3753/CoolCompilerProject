@@ -2,6 +2,7 @@
 #include "Environment.h"
 #include "type.h"
 #include <iostream>
+#include <set>
 using namespace std;
 
 _class* Object_class{nullptr};
@@ -304,7 +305,8 @@ void _classInh::typeCheck() {
     //CLASS-2
     try {
         if(superClassIdentifier.identifier == "String" || superClassIdentifier.identifier == "Int" || superClassIdentifier.identifier == "Bool") {
-            throw pair<int, string>{superClassIdentifier.lineNo, "class " + typeIdentifier.identifier + " inherits from " + superClassIdentifier.identifier};
+            throw pair<int, string>{superClassIdentifier.lineNo, "class " + typeIdentifier.identifier + " inherits from " +
+                superClassIdentifier.identifier + ". It is illegal to inherit from String, Int, or Bool.\n"};
         }
     }
     catch (pair<int, string> error) {printAndPush(error);}
@@ -599,12 +601,12 @@ void _if::print(ostream& os) const {
 }
 
 void _if::typeCheck() {
-    //EXPRESSION-1
+    //EXPRESSION-1 [If]
     try {
         if(predicate->exprType != "Bool") {
             throw pair<int, string>{lineNo, "conditional has type " + predicate->exprType + " instead of Bool"};
         }
-    }
+    }//checking e2 : T2 and e3 : T3 is redundant
     catch(pair<int, string> error) {
         printAndPush(error);
     }
@@ -638,12 +640,12 @@ void _while::print(ostream& os) const {
 }
 
 void _while::typeCheck() {
-    //EXPRESSION-2
+    //EXPRESSION-2 [Loop]
     try {
         if(predicate->exprType != "Bool") {
             throw pair<int, string>{lineNo, "conditional has type " + predicate->exprType + " instead of Bool"};
         }
-    }
+    }//trivial to check e2 : T2
     catch(pair<int, string> error) {
         printAndPush(error);
     }
@@ -700,6 +702,27 @@ void _new::traverse() {
     exprType = identifier.identifier;
 }
 
+void _new::typeCheck() {
+    //EXPRESSION-5 [New]
+    try{
+        const string& T = identifier.identifier;
+        const string& T_prime = exprType;
+        if(T == "SELF_TYPE") {
+            if(T_prime != "SELF_TYPE") {
+                throw pair<int, string>{lineNo, ""}; //this will never be thrown?
+            }
+        }
+        else {
+            if(T_prime != T) {
+                throw pair<int, string>{lineNo,""}; //this will never be thrown?
+            }
+        }
+    }
+    catch(pair<int, string>error) {
+        printAndPush(error);
+    }
+}
+
 _isvoid::_isvoid(int l, _expr *e) :
     _expr{l}, expr{e}
 {
@@ -735,6 +758,7 @@ void _arith::print(ostream &os) const {
     os << *right;
 }
 void _arith::typeCheck() {
+    //EXPRESSION-7 [Arith]
     try {
         if(left->exprType != "Int" || right->exprType != "Int") {
             throw pair<int,string>{lineNo, "Cannot do arithmetic operation " + op + " on " + left->exprType + " and " + right->exprType + ", only on two Int's\n"};
@@ -772,6 +796,33 @@ _relational::_relational(int l, _expr *le, string o, _expr *r) :
     exprType = "Bool";
 }
 
+/**
+ * The wrinkle in the rule for equality is that any types may be freely compared except Int, String and Bool, which
+ * may only be compared with objects of the same type. The cases for < and <= are similar to the rule for equality.
+ */
+void _relational::typeCheck() {
+    //just need to check that the implication:
+        //T1 in {Int,String,Bool} OR T2 in {Int,String,Bool} => T1 = T2
+    string& T1 = left->exprType;
+    string& T2 = right->exprType;
+    set<string> IntStringBoolSet{"Int", "String", "Bool"};
+    if((IntStringBoolSet.find(T1) != IntStringBoolSet.end()) || (IntStringBoolSet.find(T2) != IntStringBoolSet.end())) {//found
+        //EXPRESSION-8 [Equal] and [LT] and [LTE]
+        try {
+            if(T1 != T2) {
+                throw pair<int, string>{lineNo, "Comparison between " + T1 + " and " + T2 + "\nUsing any relational "
+                    "operator (<, <=, =) with either argument being "
+                    "type Int/String/Bool requires both arguments to be the same type.\n"};
+            }
+        }
+        catch(pair<int,string> error) {
+            printAndPush(error);
+        }
+    }
+
+
+}
+
 void _relational::print(ostream &os) const {
     os << lineNo << endl;
     if(isAnnotated) {
@@ -785,6 +836,8 @@ void _relational::print(ostream &os) const {
 void _relational::traverse() {
     left->traverse();
     right->traverse();
+
+    typeCheck();
 }
 
 /**
@@ -815,6 +868,28 @@ void _unary::print(ostream& os) const {
 
 void _unary::traverse() {
     expr->traverse();
+
+    typeCheck();
+}
+
+void _unary::typeCheck() {
+    //EXPRESSION-6 [Not] and [Neg]
+    try {
+        if(op == "not") { //[Not]
+            if(expr->exprType != "Bool") {
+                throw pair<int, string>{lineNo, "not operand has type " + expr->exprType + ", but not operator must have operand of type Bool\n"};
+            }
+        }
+        else if(op == "negate") {//[Neg]
+            if(expr->exprType != "Int") {
+                throw pair<int, string>{lineNo, "negate (~) operand has type " + expr->exprType + ", but negate operator must have operand of type Int\n"};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+
 }
 
 _string::_string(int l, string v) :
@@ -848,27 +923,31 @@ void _identifier::print(ostream& os) const {
 
 }
 
+void _identifier::typeCheck() {
+    //EXPRESSION-4 [Var]
+    try {
+        string idType = top->O(identifier.identifier);
+        if(exprType != idType) { //verifying O(Id) = T
+            throw pair<int, string>{lineNo, "Identifier with class " + idType + " does not match the expression's type " + exprType + "\n"};
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error); //dont think this can ever be thrown...
+    }
+}
+
 /**
  * can only be an attribute or local variable (which includes formal parameters, or something introduced in a let)
  */
 void _identifier::traverse() {
-    //need to account for identifiers from an earlier class in the hierarchy, so find the class we're in
-    Environment* current = top;
-    while(current->metaInfo.kind != "class") current = current->previous;
-    vector<string>inhPath = getInheritancePath(current->metaInfo.identifier);
+    vector<string>inhPath = getInheritancePath(top->klass->metaInfo.identifier);
     for(string klass : inhPath) {
-        Environment* classEnv = globalEnv->links.at({klass, "class"});
-        if(((objectRecord*)top->get(make_pair(identifier.identifier,"local")))) {
-            exprType = ((objectRecord*)top->get(make_pair(identifier.identifier,"local")))->type;
-            return;
-        }
-        else if((classEnv->symTable.find(make_pair(identifier.identifier,"attribute"))) != classEnv->symTable.end()) {
-            exprType = ((objectRecord*)classEnv->symTable.at(make_pair(identifier.identifier,"attribute")))->type;
-            return;
+        if(objectRecord* rec = top->getObject(identifier.identifier)) {
+            exprType = rec->type;
+            break;
         }
     }
-    cout << "DIDN'T MATCH A BRANCH IN _IDENTIFIER_EXPR\n";
-    exit(1);
+    typeCheck();
 }
 
 _bool::_bool(int l, bool v) :
@@ -923,7 +1002,27 @@ void _letBindingInit::print(ostream& os) const {
 
 void _letBindingInit::traverse() {
     init->traverse();
+
+//    typeCheck();
 }
+
+
+/**
+ * Returns nontrivial pair if error occurred. Doing it this way because refCompiler wants _let lineNo
+ * @return
+ */
+pair<int, string> _letBindingInit::typeCheck() {
+    string& T1 = init->exprType;
+    string& T0_prime = typeIdentifier.identifier;
+    //EXPRESSION-9 [Let-Init]
+    if(!conforms(T1, T0_prime)) {
+        return pair<int, string>{init->lineNo, "In the let bindings list, " + identifier.identifier + "'s "
+            "initializer expression has type " + init->exprType + " which does not conform to " +
+            identifier.identifier + "'s declared type " + typeIdentifier.identifier + ".\n"};
+    }
+    else return pair<int,string>{};
+}
+
 
 int _let::letCounter = 0;
 _let::_let(int l, _idMeta lk, _expr* b) :
@@ -959,6 +1058,56 @@ void _let::traverse() {
     top = top->previous;
 
     exprType = body->exprType;
+
+    semanticCheck();
+    typeCheck();
+}
+
+/**
+ * "If an identifier is defined multiple times in a let, later bindings hide earlier ones."
+ * Don't like this, will instead make it an error. Will check for at least one identifier though
+ */
+void _let::semanticCheck() {
+    set<string> bindingsSet;
+    for(_letBinding* binding : bindings) {
+        //ivanEXPRESSION-2
+        try {
+            if (bindingsSet.find(binding->identifier.identifier) != bindingsSet.end()) {
+                //already in set, so it's a duplicate in the same set of let bindings
+                //reported using lineNo of the duplicate occurence
+                throw pair<int, string>{binding->identifier.lineNo, binding->identifier.identifier +
+                                                         " is defined more than once in this let expression.\n"};
+            }
+            bindingsSet.insert(binding->identifier.identifier);
+        }
+        catch(pair<int, string>error) {
+            printAndPush(error);
+        }
+    }
+    //ivanEXPRESSION-1
+    try{
+        if(!bindings.size()) {
+            throw pair<int, string>{lineNo, "Let expression introduces 0 identifiers\n"};
+        }
+    }
+    catch(pair<int,string>error) {
+        printAndPush(error);
+    }
+}
+
+void _let::typeCheck() {
+    for(_letBinding* binding : bindings) {
+        //EXPRESSION-9 [Let-Init]
+        pair<int, string> isThereAnError = binding->typeCheck();
+        try {
+            if(isThereAnError != pair<int,string>{0, ""}) { //letBindingNoInit has a dummy sentinel to avoid throwing the error
+                throw pair<int, string>{lineNo, isThereAnError.second};
+            }
+        }
+        catch(pair<int, string> error) {
+            printAndPush(error);
+        }
+    }
 }
 
 int _caseElement::caseCounter = 0;
@@ -1032,6 +1181,7 @@ void _assign::print(ostream& os) const {
 }
 
 void _assign::typeCheck() {
+    //EXPRESSION-3 [ASSIGN]
     try {
         if((objectRecord*)top->get({identifier.identifier, "attribute"})) {
             if(!conforms(rhs->exprType, ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type)) {
