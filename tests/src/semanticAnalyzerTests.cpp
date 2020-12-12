@@ -359,7 +359,10 @@ private:
 protected:
     map<string, pair<int,string>> expectedErrorsMap{
             {"let0Identifiers.cl", {3, "Let expression introduces 0 identifiers\n"}},
-            {"letRepeatIdentifier.cl", {5, "x is defined more than once in this let expression.\n"}}
+            {"letRepeatIdentifier.cl", {5, "x is defined more than once in this let expression.\n"}},
+            {"case0Cases.cl", {3, "\n"}},
+            {"caseRepeatTypes.cl", {3, "\n"}},
+            {"block0Subexpressions.cl", {3, "\n"}}
     };
 
     ParserDriver pdrv;
@@ -401,4 +404,7 @@ TEST_P(negativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
 }
 INSTANTIATE_TEST_SUITE_P(ivanErrors, negativeTypeTestsNoRef, testing::Values(
                             "semanticAnalyzerNegative/expression/let0Identifiers.cl",
-                            "semanticAnalyzerNegative/expression/letRepeatIdentifier.cl"));
+                            "semanticAnalyzerNegative/expression/letRepeatIdentifier.cl",
+                            "semanticAnalyzerNegative/expression/case0Cases.cl",
+                            "semanticAnalyzerNegative/expression/caseRepeatTypes.cl",
+                            "semanticAnalyzerNegative/expression/block0Subexpressions.cl"));

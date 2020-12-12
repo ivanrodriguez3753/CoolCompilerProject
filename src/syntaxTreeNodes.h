@@ -294,6 +294,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void semanticCheck();
 };
 
 class _new : public _expr {
@@ -519,6 +521,12 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+
+    /**
+     * at least one case and no repeat on TYPES. identifiers can be repeated b/c each case has a new scope
+     */
+    void semanticCheck();
 };
 
 

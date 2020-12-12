@@ -676,11 +676,26 @@ void _block::print(ostream& os) const {
     }
 }
 
+void _block::semanticCheck() {
+    if(!body.size()) {
+        throw pair<int,string>{lineNo, "Block expression needs at least one subexpression.\n"};
+    }
+
+}
+
 void _block::traverse() {
     for(auto expr : body) {
         expr->traverse();
     }
-    exprType = body.back()->exprType; //exprType of a _block expression is defined by the exprType of the last expression in its body
+    try {
+        semanticCheck();
+        exprType = body.back()->exprType; //exprType of a _block expression is defined by the exprType of the last expression in its body
+    }
+    catch(pair<int, string>error) {
+        printAndPush(error);
+        exprType = "Object"; //safest type to assign to the _block, since it's usually lastExpr->exprType
+    }
+
 }
 
 _new::_new(int l, _idMeta id) :
@@ -1147,8 +1162,46 @@ void _case::traverse() {
         typeChoices.push_back(kase->exprType);
         top = top->previous;
     }
-    //go up the hierarchy tree as much as we can
     exprType = getLub(typeChoices);
+
+    semanticCheck();
+}
+
+void _case::semanticCheck() {
+    //ivanEXPRESSION-3
+    try {
+        if(!cases.size()) {
+            throw pair<int, string>{lineNo, "Case expression has 0 cases\n"};
+        }
+    }
+    catch(pair<int, string>error) {
+        printAndPush(error);
+    }
+    //ivanEXPRESSION-4
+    try {
+        set<string> typeChoicesSet;
+        set<string> hadDuplicate;
+        for(auto kase : cases) {
+            if(typeChoicesSet.find(kase->exprType) == typeChoicesSet.end()) { //not found, this element is unique (so far)
+                typeChoicesSet.insert(kase->exprType);
+            }
+            else {//was found
+                hadDuplicate.insert(kase->exprType);
+            }
+        }
+        if(hadDuplicate.size()) {
+            set<string>::iterator it = hadDuplicate.begin();
+            string errorMessage = "Multiple cases for the type(s): " + *it;
+            for(it = ++it; it != hadDuplicate.end(); it++) {
+                errorMessage += ", " + *it;
+            }
+            errorMessage += "\n";
+            throw pair<int, string>{lineNo, errorMessage};
+        }
+    }
+    catch(pair<int, string>error) {
+        printAndPush(error);
+    }
 
 }
 

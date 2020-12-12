@@ -346,7 +346,7 @@ bool conforms(string T1, string T2) {
  */
 string getLub(vector<string> typeChoices) {
     if (!typeChoices.size()) {
-        cerr << "need to have at least 1 type choice to get least type of a set\n";
+        return "Object";
     }
     else if(typeChoices.size() == 1) return typeChoices[0];
 
