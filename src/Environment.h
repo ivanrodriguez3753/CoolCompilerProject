@@ -98,6 +98,10 @@ public:
          * mapping O(v) = T where v is an object identifier, T is a type
          * current class C in which the expression appears
          */
+    static vector<string> M(string C, string f);
+
+    string C;
+
 
     /**
      * returns a vector containing a vector of "methods" in the symTable

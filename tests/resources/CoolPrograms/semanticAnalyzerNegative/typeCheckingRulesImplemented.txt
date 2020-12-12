@@ -29,7 +29,7 @@ EXPRESSIONS:
 	7. [Arith]
 	8. [Equal] and [LT] and [LTE]
 
-	[Attr-Init]
+	9. [Attr-Init]
 	[Method]
 
 ivan rules implemented

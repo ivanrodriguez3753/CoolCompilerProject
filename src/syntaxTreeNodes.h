@@ -154,6 +154,9 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+
+private:
+    void typeCheck();
 };
 
 class _method : public _feature {

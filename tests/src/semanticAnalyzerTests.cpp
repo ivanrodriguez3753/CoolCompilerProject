@@ -343,7 +343,8 @@ INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTests, testing::Values(
                             "semanticAnalyzerNegative/expression/equalBool.cl",
                             "semanticAnalyzerNegative/expression/ltBool.cl",
                             "semanticAnalyzerNegative/expression/lteBool.cl",
-                            "semanticAnalyzerNegative/expression/let-init.cl"));
+                            "semanticAnalyzerNegative/expression/let-init.cl",
+                            "semanticAnalyzerNegative/expression/attr-init.cl"));
 
 
 

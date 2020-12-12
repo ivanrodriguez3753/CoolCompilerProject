@@ -81,6 +81,7 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
     else {
         klass = prev->klass;
     }
+    C = klass->metaInfo.identifier;
     metaInfo.depth = previous->metaInfo.depth + 1;
 
 

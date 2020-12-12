@@ -415,6 +415,26 @@ void _attributeInit::traverse() {
     //dont need to traverse symTable unless it is an expression that introduces scope (_let or _case I think)
     //so leave it to caller as usual
     expr->traverse();
+
+    typeCheck();
+}
+
+void _attributeInit::typeCheck() {
+    string& T0 = typeIdentifier.identifier;
+    string& T1 = expr->exprType;
+
+    try {
+        //EXPRESSION-9 [Attr-Init]
+        if(top->O(identifier.identifier) != T0) {
+            throw pair<int, string>{identifier.lineNo, ""}; //dont think I can trigger this?
+        }
+        if(!conforms(T1, T0)) {
+            throw pair<int, string>{identifier.lineNo, "Initializer expression has type " + T1 + " which does not conform to declared type " + T0 + "\n"};
+        }
+    }
+    catch(pair<int, string>error) {
+        printAndPush(error);
+    }
 }
 
 
