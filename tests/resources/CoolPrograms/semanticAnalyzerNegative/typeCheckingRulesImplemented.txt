@@ -21,6 +21,8 @@ EXPRESSIONS:
     [Sequence] is trivially checked
     [Let-No-Init] is trivially checked
     [Case] is trivially checked
+        10. All case types are distinct
+            caseRepeatTypes.cl
 	2. [Loop]
 
 	[Isvoid]
@@ -42,7 +44,5 @@ EXPRESSIONS:
     Case:
         3. At least one case
             case0Cases.cl
-        4. All case types are distinct
-            caseRepeatTypes.cl
     Block:
         5. At least one subexpression

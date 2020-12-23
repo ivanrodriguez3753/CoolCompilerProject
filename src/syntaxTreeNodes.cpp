@@ -1315,39 +1315,31 @@ void _case::traverse() {
 void _case::semanticCheck() {
     //ivanEXPRESSION-3
     try {
-        if(!cases.size()) {
+        if (!cases.size()) {
             throw pair<int, string>{lineNo, "Case expression has 0 cases\n"};
         }
     }
-    catch(pair<int, string>error) {
-        printAndPush(error);
-    }
-    //ivanEXPRESSION-4
-    try {
-        set<string> typeChoicesSet;
-        set<string> hadDuplicate;
-        for(auto kase : cases) {
-            if(typeChoicesSet.find(kase->exprType) == typeChoicesSet.end()) { //not found, this element is unique (so far)
-                typeChoicesSet.insert(kase->exprType);
-            }
-            else {//was found
-                hadDuplicate.insert(kase->exprType);
-            }
-        }
-        if(hadDuplicate.size()) {
-            set<string>::iterator it = hadDuplicate.begin();
-            string errorMessage = "Multiple cases for the type(s): " + *it;
-            for(it = ++it; it != hadDuplicate.end(); it++) {
-                errorMessage += ", " + *it;
-            }
-            errorMessage += "\n";
-            throw pair<int, string>{lineNo, errorMessage};
-        }
-    }
-    catch(pair<int, string>error) {
+    catch (pair<int, string> error) {
         printAndPush(error);
     }
 
+    //EXPRESSION-10
+    map<string, int> typeChoicesMap; //<typeName, firstAppearanceLineNo>
+    for (auto kase : cases) {
+        try {
+            if (typeChoicesMap.find(kase->typeIdentifier.identifier) ==
+                typeChoicesMap.end()) {//not found, this element is unique (so far)
+                typeChoicesMap.insert({kase->typeIdentifier.identifier, kase->identifier.lineNo});
+            } else { //already has a case
+                throw pair<int, string>{kase->identifier.lineNo, "duplicate case branch for type " +
+                    kase->typeIdentifier.identifier + ", first defined at line " + to_string(
+                    typeChoicesMap.at(kase->typeIdentifier.identifier)) + "\n"};
+            }
+        }
+        catch (pair<int, string> error) {
+            printAndPush(error);
+        }
+    }
 }
 
 

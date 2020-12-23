@@ -5,8 +5,16 @@ class Main { --DO NOT EDIT, HARDCODED TEST CASE
             false;
         x : Int  =>
             false;
-        x : Bool =>
+        y
+        :
+        Bool
+        =>
             false; --this breaks because the first case had type Bool as well
+        z : Bool => false;
+        w : Int =>
+            false;
+        n : Int =>
+            false;
         esac
     };
 };

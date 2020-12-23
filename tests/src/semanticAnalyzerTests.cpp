@@ -343,7 +343,8 @@ INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTests, testing::Values(
                             "semanticAnalyzerNegative/expression/ltBool.cl",
                             "semanticAnalyzerNegative/expression/lteBool.cl",
                             "semanticAnalyzerNegative/expression/let-init.cl",
-                            "semanticAnalyzerNegative/expression/attr-init.cl"));
+                            "semanticAnalyzerNegative/expression/attr-init.cl",
+                            "semanticAnalyzerNegative/expression/caseRepeatTypeOnce.cl"));
 
 
 
@@ -361,7 +362,6 @@ protected:
             {"let0Identifiers.cl", {3, "Let expression introduces 0 identifiers\n"}},
             {"letRepeatIdentifier.cl", {5, "x is defined more than once in this let expression.\n"}},
             {"case0Cases.cl", {3, "\n"}},
-            {"caseRepeatTypes.cl", {3, "\n"}},
             {"block0Subexpressions.cl", {3, "\n"}}
     };
 
@@ -406,5 +406,64 @@ INSTANTIATE_TEST_SUITE_P(ivanErrors, negativeTypeTestsNoRef, testing::Values(
                             "semanticAnalyzerNegative/expression/let0Identifiers.cl",
                             "semanticAnalyzerNegative/expression/letRepeatIdentifier.cl",
                             "semanticAnalyzerNegative/expression/case0Cases.cl",
-                            "semanticAnalyzerNegative/expression/caseRepeatTypes.cl",
                             "semanticAnalyzerNegative/expression/block0Subexpressions.cl"));
+
+class multiErrorNegativeTypeTestsNoRef : public testing::TestWithParam<string> {
+private:
+    /**
+     * In folder expectedKeys
+     * @return
+     */
+protected:
+    map<string, vector<pair<int,string>>> expectedErrorsMap {
+        {{"caseRepeatTypeTwice.cl", {{
+                {8, ""},
+                {13, ""}}}},
+         {"caseRepeatTwoTypesTwice.cl", {
+                {8, ""},
+                {13, ""},
+                {14, ""},
+                {16, ""}}}}
+    };
+    ParserDriver pdrv;
+
+    /**
+     * To report an error, write the string
+       ERROR: line_number: Type-Check: message
+       to standard output and terminate the program. You may write whatever you want in the message, but it should be fairly indicative.
+     */
+    vector<pair<int, string>> expectedErrors;
+
+    _program* AST;
+
+    void SetUp() override {
+        //parse the input into global parse tree rootIVAN
+        pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
+        //build syntax tree out of rootIVAN
+        AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+        populateClassMap();
+        populateImplementationMap();
+        populateParentMap();
+        //generate expected error
+        string onlyFileName = GetParam();
+        onlyFileName = onlyFileName.substr(string{"semanticAnalyzerNegative/expression/"}.size(), onlyFileName.size());
+        expectedErrors = expectedErrorsMap.at(onlyFileName);
+    }
+
+    void TearDown() override {
+        classMap.clear();
+        implementationMap.clear();
+        parentMap.clear();
+        globalEnv->reset();
+        errorLog.clear();
+    }
+};
+TEST_P(multiErrorNegativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
+    AST->traverse();
+    for(int i = 0; i < errorLog.size(); i++) {
+        ASSERT_EQ(errorLog[i].first, expectedErrors[i].first);
+    }
+}
+INSTANTIATE_TEST_SUITE_P(ivanErrors, multiErrorNegativeTypeTestsNoRef, testing::Values(
+        "semanticAnalyzerNegative/expression/caseRepeatTypeTwice.cl",
+        "semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl"));

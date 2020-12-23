@@ -451,7 +451,7 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override{} //Don't need to do anything
-    pair<int, string> typeCheck() override {return pair<int, string>{999, "nonTrivial"};} //don't need to do anything
+    pair<int, string> typeCheck() override {return pair<int, string>{0, ""};} //don't need to do anything
 };
 
 class _letBindingInit : public _letBinding {
