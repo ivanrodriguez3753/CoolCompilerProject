@@ -2,6 +2,7 @@
 #include "Environment.h"
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include "syntaxTreeNodes.h"
 
 

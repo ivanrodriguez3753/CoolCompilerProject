@@ -28,7 +28,7 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
         //==============OBJECT====================
         //Every method in Object has no parameters
         list<string> lexemes{"abort", "copy", "type_name"};
-        list<list<pair<string, string>>> parameters{{},{},{}};
+        vector<vector<pair<string, string>>> parameters{{},{},{}};
         list<string> returnTypes{"Object", "SELF_TYPE", "String"};
        /** abort() : Object
          * type_name() : String
@@ -36,10 +36,10 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
         install(make_pair("Object", "class"), new classRecord{"Object", 0, "class", ""});
         links.insert(make_pair(make_pair("Object", "class"), new Environment{this,envMetaInfo{"Object", "class"} }));
         methodRecord::makeAndInstallMethodsRecordAndEnv(lexemes, parameters, returnTypes, links.at(make_pair("Object", "class")));
-
+        parameters.clear();
         //==============IO===================
         lexemes = list<string>{"in_int", "in_string", "out_int", "out_string"};
-        parameters = list<list<pair<string, string>>>{list<pair<string, string>>{}, list<pair<string, string>>{}, list<pair<string, string>>{make_pair("x", "String")},list<pair<string, string>>{make_pair("x", "String")}};
+        parameters = vector<vector<pair<string, string>>>{{}, {}, vector<pair<string,string>>{make_pair("x", "String")}, vector<pair<string,string>>{make_pair("x", "String")}};
         returnTypes = list<string>{"Int", "String", "SELF_TYPE", "SELF_TYPE"};
         /** * out_string(x : String) : SELF_TYPE
             * out_int(x : Int) : SELF_TYPE
@@ -48,10 +48,11 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
         install(make_pair("IO", "class"), new classRecord{"IO", 0, "class", "Object"});
         links.insert(make_pair(make_pair("IO", "class"), new Environment{this, envMetaInfo{"IO", "class"}}));
         methodRecord::makeAndInstallMethodsRecordAndEnv(lexemes, parameters, returnTypes, links.at(make_pair("IO", "class")));
+        parameters.clear();
 
         //=============STRING===================
         lexemes = list<string>{"concat", "length", "substr"};
-        parameters = list<list<pair<string, string>>>{list<pair<string, string>>{make_pair("s", "String")}, list<pair<string, string>>{}, list<pair<string, string>>{make_pair("i", "Int"), make_pair("l", "Int")}};
+        parameters = vector<vector<pair<string, string>>>{{vector<pair<string, string>>{make_pair("s", "String")}}, vector<pair<string, string>>{}, vector<pair<string, string>>{make_pair("i", "Int"), make_pair("l", "Int")}};
         returnTypes = list<string>{"String", "Int", "String"};
         /**length() : Int
          * concat(s : String) : String
@@ -59,7 +60,7 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
         install(make_pair("String", "class"), new classRecord{"String", 0, "class", "Object"});
         links.insert(make_pair(make_pair("String", "class"), new Environment{this, envMetaInfo{"String", "class"}}));
         methodRecord::makeAndInstallMethodsRecordAndEnv(lexemes, parameters, returnTypes, links.at(make_pair("String", "class")));
-
+        parameters.clear();
         //==============INT====================
         //Int has no methods (except those from Object)
         install(make_pair("Int", "class"), new classRecord{"Int", 0, "class", "Object"});
@@ -153,6 +154,26 @@ vector<methodRecord *> Environment::getMethods() {
     return returnThis;
 }
 
+vector<string> Environment::M(string C, string f) {
+    vector<string> returnThis;
+
+    //method arguments are always the only thing in a methodEnvironment's symbol table, because introducing any number
+    //of identifiers would introduce a new scope this a new symTable
+    map<pair<string, string>, Record*>& symTableRef = implementationMap.at(C).at(f).first->containerEnv->links.at({f, "method"})->symTable;
+    vector<objectRecord*> formalParams{};
+    for(auto it : symTableRef) { //populate
+        formalParams.push_back((objectRecord*)(it.second));
+    }
+    //want to return formalParam types in the same order we encountered them, so sort
+    sort(formalParams.begin(), formalParams.end(), [](const objectRecord* lhs, const objectRecord* rhs) {
+        return lhs->encountered < rhs->encountered;
+    });
+    for(auto objRec : formalParams) {//T1 through Tn
+        returnThis.push_back(objRec->type);
+    }
+    returnThis.push_back(implementationMap.at(C).at(f).first->returnType); //T_n+1
+    return returnThis;
+}
 
 
 int Record::orderCounter = 0;
@@ -175,18 +196,23 @@ objectRecord::objectRecord(Environment* container, string lex, int l, string k, 
 }
 
 //parallel lists of method identifiers, formal parameter list (identifier, type) and return types
-void methodRecord::makeAndInstallMethodsRecordAndEnv(list<string> lexemes, list<list<pair<string, string>>> parameters, list<string>returnTypes, Environment *classEnv) {
-    while(!lexemes.empty()) {
+void methodRecord::makeAndInstallMethodsRecordAndEnv(list<string> lexemes, vector<vector<pair<string, string>>> parameters, list<string>returnTypes, Environment *classEnv) {
+    for(int i = 0; i < parameters.size(); i++) {
         classEnv->install(make_pair(lexemes.front(), "method"),
                           new methodRecord{classEnv,lexemes.front(), 0, "method", returnTypes.front()});
         classEnv->links.emplace(make_pair(lexemes.front(), "method"), new Environment{classEnv, Environment::envMetaInfo{lexemes.front(), "method"}});
         Environment *methodEnvironment = (classEnv->links.at(make_pair(lexemes.front(), "method")));
-        for (list<pair<string, string>> parameter : parameters) {
-            methodEnvironment->install(make_pair(parameter.front().first, "local"),
-                                       new objectRecord{methodEnvironment, parameter.front().first, 0, "local", parameter.front().second, nullptr});
+        if(parameters[i].size()) {//make sure size is not 0 because .front() on a list is undefined behavior if the list is empty
+            for (int j = 0; j < parameters[i].size(); j++) {
+                methodEnvironment->install(
+                        make_pair(parameters[i][j].first, "local"),
+                                           new objectRecord{methodEnvironment, parameters[i][j].first,  0, "local", parameters[i][j].second, nullptr});
+            }
         }
-        lexemes.pop_front(); parameters.pop_front(); returnTypes.pop_front();
+
+        lexemes.pop_front(); returnTypes.pop_front();
     }
+
 }
 
 methodRecord::methodRecord(Environment* container, string lex, int l, string k, string rt) :

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <algorithm>
 #include "syntaxTreeNodes.h"
 #include "Environment.h"
 
@@ -43,7 +44,7 @@ public:
     methodRecord(Environment* container, string lex, int l, string k, string rt);
 
 public:
-    static void makeAndInstallMethodsRecordAndEnv(list<string> lexemes, list<list<pair<string,string>>> parameters, list<string> returnTypes, Environment* current);
+    static void makeAndInstallMethodsRecordAndEnv(list<string> lexemes, vector<vector<pair<string,string>>> parameters, list<string> returnTypes, Environment* current);
 };
 
 class classRecord : public Record {
@@ -94,7 +95,7 @@ public:
     //convenience method for type checking
     string O(string key);
         /**Environment consists of three parts: method environment M, object environment O, and current class C
-         * mapping M(C, f) = (T1,...,Tn) where C is a type, f is a methodName, T1,...,Tn are types
+         * mapping M(C, f) = (T1,...,Tn, T_n+1) where C is a type, f is a methodName, T1,...,Tn are types, and T_n+1 is the return type
          * mapping O(v) = T where v is an object identifier, T is a type
          * current class C in which the expression appears
          */

@@ -533,6 +533,50 @@ void _dynamicDispatch::traverse() {
     else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType == "SELF_TYPE") {//static type of dispatch is A,
         exprType = caller->exprType;
     }
+
+    typeCheck();
+}
+
+void _dynamicDispatch::typeCheck() {
+    //first, type check all the subexpressions
+    vector<string> paramAndReturnTypes;
+    if(caller->exprType == "SELF_TYPE") { //otherwise map.at() will throw an error because there is no class SELF_TYPE in the global symbol table
+        paramAndReturnTypes = Environment::M(top->C, method.identifier);
+    }
+    else{
+        paramAndReturnTypes = Environment::M(caller->exprType, method.identifier);
+    }
+    int i = 0;
+    try { //move this try block into the for loop
+        for(_expr* arg : args) {
+            if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1]};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+    i = paramAndReturnTypes.size() - 1; //in case an exception was thrown and we didn't increment i to the last index
+    try {
+        //this is the last element in the array returned by M, so it is the return type which is notated
+        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
+            if(exprType != caller->exprType) {
+                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the type of the caller\n"};
+            }
+        }
+        else {
+
+            if(exprType != paramAndReturnTypes[i]) {
+                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the return type of the called method\n"};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+
+
 }
 
 _staticDispatch::_staticDispatch(int l, _idMeta m, _expr* e, _idMeta ty) :
@@ -570,6 +614,50 @@ void _staticDispatch::traverse() {
         //have to keep the same return type, same number of arguments and their types
     exprType = implementationMap.at(typeIdentifier.identifier).at(method.identifier).first->returnType;
 
+    typeCheck();
+}
+
+void _staticDispatch::typeCheck() {
+    //check if we conform to @ClassName
+    try {
+        if(!conforms(caller->exprType, typeIdentifier.identifier)) {
+            throw pair<int, string>{lineNo, "Caller's expression type " + caller->exprType + " does not conform to @" + typeIdentifier.identifier + '\n'};
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+    //the rest is the same as dynamicDispatch, except instead of using caller->exprType we use @ClassName
+
+    //first, type check all the subexpressions
+    vector<string> paramAndReturnTypes = Environment::M(typeIdentifier.identifier, method.identifier);
+    int i = 0;
+    try {
+        for(_expr* arg : args) {
+            if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1]};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+    try {
+        //this is the last element in the array returned by M, so it is the return type which is notated
+        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
+            if(exprType != caller->exprType) {
+                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the type of @" + typeIdentifier.identifier + "\n"};
+            }
+        }
+        else {
+            if(exprType != paramAndReturnTypes[i]) {
+                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the return type of the called method\n"};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
 }
 
 _selfDispatch::_selfDispatch(int l, _idMeta m) :
@@ -601,6 +689,43 @@ void _selfDispatch::traverse() {
     while(current->metaInfo.kind != "class") current = current->previous;
     //current is the classEnv
     exprType = implementationMap.at(current->metaInfo.identifier).at(method.identifier).first->returnType;
+
+    typeCheck();
+}
+
+/**
+ * Same as dynamicDispatch except caller is self and as a result caller->exprType is SELF_TYPE
+ */
+void _selfDispatch::typeCheck() {
+    //first, type check all the subexpressions
+    vector<string> paramAndReturnTypes = Environment::M(top->C, method.identifier); //caller->exprType in dynamicDisp changed to top->C, the containing class
+    int i = 0;
+    try {
+        for(_expr* arg : args) {
+            if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1]};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
+    try {
+        //this is the last element in the array returned by M, so it is the return type which is notated
+        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
+            if(exprType != "SELF_TYPE") { //change from caller->exprType to SELF_TYPE
+                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the type of the caller\n"};
+            }
+        }
+        else {
+            if(exprType != paramAndReturnTypes[i]) {
+                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the return type of the called method\n"};
+            }
+        }
+    }
+    catch(pair<int, string> error) {
+        printAndPush(error);
+    }
 }
 
 _if::_if(int l, _expr* p, _expr* te, _expr* ee) :

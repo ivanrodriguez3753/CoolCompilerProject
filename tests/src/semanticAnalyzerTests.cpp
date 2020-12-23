@@ -192,7 +192,6 @@ protected:
     }
 
     void TearDown() override {
-//        ofstream ref()
         classMap.clear();
         implementationMap.clear();
         parentMap.clear();
@@ -210,7 +209,7 @@ TEST_P(typeTests, matchesReferenceFull) {
     printImplementationMap(semanticAnalyzerOutput);
     printParentMap(semanticAnalyzerOutput);
     semanticAnalyzerOutput << *AST;
-    AST->prettyPrint(cout, "");
+//    AST->prettyPrint(cout, "");
 
     makeTempsForDiff(reference.str(), semanticAnalyzerOutput.str());
 

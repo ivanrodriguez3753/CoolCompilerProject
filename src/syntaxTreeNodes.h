@@ -231,6 +231,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _staticDispatch : public _dispatch {
@@ -244,6 +246,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _selfDispatch : public _dispatch {
@@ -254,6 +258,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void typeCheck();
 };
 
 class _if : public _expr {
