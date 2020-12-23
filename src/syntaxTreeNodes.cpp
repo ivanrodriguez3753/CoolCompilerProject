@@ -550,7 +550,7 @@ void _dynamicDispatch::typeCheck() {
     try { //move this try block into the for loop
         for(_expr* arg : args) {
             if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
-                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1]};
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in dynamic dispatch\n"};
             }
         }
     }
@@ -635,7 +635,7 @@ void _staticDispatch::typeCheck() {
     try {
         for(_expr* arg : args) {
             if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
-                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1]};
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in static dispatch\n"};
             }
         }
     }
@@ -703,7 +703,7 @@ void _selfDispatch::typeCheck() {
     try {
         for(_expr* arg : args) {
             if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
-                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1]};
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in self dispatch\n"};
             }
         }
     }

@@ -39,7 +39,7 @@ Environment::Environment(Environment* prev, envMetaInfo info) :
         parameters.clear();
         //==============IO===================
         lexemes = list<string>{"in_int", "in_string", "out_int", "out_string"};
-        parameters = vector<vector<pair<string, string>>>{{}, {}, vector<pair<string,string>>{make_pair("x", "String")}, vector<pair<string,string>>{make_pair("x", "String")}};
+        parameters = vector<vector<pair<string, string>>>{{}, {}, vector<pair<string,string>>{make_pair("x", "Int")}, vector<pair<string,string>>{make_pair("x", "String")}};
         returnTypes = list<string>{"Int", "String", "SELF_TYPE", "SELF_TYPE"};
         /** * out_string(x : String) : SELF_TYPE
             * out_int(x : Int) : SELF_TYPE
