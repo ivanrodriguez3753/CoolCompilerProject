@@ -161,7 +161,7 @@ INSTANTIATE_TEST_SUITE_P(classMap, classMapTypeTests, testing::Values(
         "playground.cl"));
 //====================END CLASSMAPTESTS===================================
 
-//TODO delete when not longer using
+//TODO delete when no longer using
 void makeTempsForDiff(string ref, string actual) {
     ofstream refOS{tests_EXE_TO_COOL_PROGRAMS + "tempRef.txt"};
     ofstream actualOS{tests_EXE_TO_COOL_PROGRAMS + "tempActual.txt"};
@@ -210,14 +210,15 @@ TEST_P(typeTests, matchesReferenceFull) {
     printParentMap(semanticAnalyzerOutput);
     semanticAnalyzerOutput << *AST;
 //    AST->prettyPrint(cout, "");
-
-    makeTempsForDiff(reference.str(), semanticAnalyzerOutput.str());
+//    makeTempsForDiff(reference.str(), semanticAnalyzerOutput.str());
 
     ASSERT_EQ(reference.str(), semanticAnalyzerOutput.str());
+    ASSERT_EQ(errorLog.size(), 0);
 }
 INSTANTIATE_TEST_SUITE_P(Fragments, typeTests, testing::Values(
                             "classMapNoInitializations.cl",
                             "assignExpr.cl",
+                            "assignTricky.cl",
                             "caseExprOneCase.cl",
                             "caseExprManyCase.cl",
                             "ifExpression.cl",
@@ -272,7 +273,7 @@ pair<int, string> makeErrorPairFromReference(string fileName) {
     system(command.c_str());
     return returnThis;
 }
-class negativeTypeTests : public testing::TestWithParam<string> {
+class negativeTypeTestsRef : public testing::TestWithParam<string> {
 protected:
     ParserDriver pdrv;
 
@@ -310,19 +311,19 @@ protected:
  * The reference compiler reports only the first error it finds, so test cases must be restricted to a single error.
  * Providing error messages, but only checking line numbers for "correctness" of the test case.
  */
-TEST_P(negativeTypeTests, matchesReferenceError) {
+TEST_P(negativeTypeTestsRef, matchesReferenceError) {
     cout << refError.first << ", " << refError.second << endl;
     AST->traverse();
     ASSERT_EQ(errorLog[0].first, refError.first);
 }
-INSTANTIATE_TEST_SUITE_P(Class, negativeTypeTests, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Class, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/class/inheritString.cl",
                             "semanticAnalyzerNegative/class/noMainClass.cl",
                             "semanticAnalyzerNegative/class/inheritBool.cl",
                             "semanticAnalyzerNegative/class/inheritInt.cl"));
-INSTANTIATE_TEST_SUITE_P(Method, negativeTypeTests, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Method, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/method/parameter-less_main_Main.cl"));
-INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTests, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/expression/arithAll.cl",
                             "semanticAnalyzerNegative/expression/arithDivide.cl",
                             "semanticAnalyzerNegative/expression/arithMinus.cl",
@@ -344,12 +345,23 @@ INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTests, testing::Values(
                             "semanticAnalyzerNegative/expression/lteBool.cl",
                             "semanticAnalyzerNegative/expression/let-init.cl",
                             "semanticAnalyzerNegative/expression/attr-init.cl",
-                            "semanticAnalyzerNegative/expression/caseRepeatTypeOnce.cl"));
-
+                            "semanticAnalyzerNegative/expression/caseRepeatTypeOnce.cl",
+                            "semanticAnalyzerNegative/expression/while.cl",
+                            "semanticAnalyzerNegative/expression/dynamicDispatchMethodNotFound.cl",
+                            "semanticAnalyzerNegative/expression/dynamicDispatchNumArguments.cl",
+                            "semanticAnalyzerNegative/expression/dynamicDispatchParameterNonconformance.cl",
+                            "semanticAnalyzerNegative/expression/selfDispatchMethodNotFound.cl",
+                            "semanticAnalyzerNegative/expression/selfDispatchNumArguments.cl",
+                            "semanticAnalyzerNegative/expression/selfDispatchParameterNonconformance.cl",
+                            "semanticAnalyzerNegative/expression/staticDispatchMethodNotFound.cl",
+                            "semanticAnalyzerNegative/expression/staticDispatchNumArguments.cl",
+                            "semanticAnalyzerNegative/expression/staticDispatchParameterNonconformance.cl",
+                            "semanticAnalyzerNegative/expression/staticDispatch@TypeNonconformance.cl"));
 
 
 /**
- * Type and semantic checks defined by me, not the reference compiler
+ * Semantic checks defined by me, not the reference compiler
+ * Note that this fixture can tests for multiple errors (so long as the error was caught, of course)
  */
 class negativeTypeTestsNoRef : public testing::TestWithParam<string> {
 private:
@@ -358,72 +370,31 @@ private:
      * @return
      */
 protected:
-    map<string, pair<int,string>> expectedErrorsMap{
-            {"let0Identifiers.cl", {3, "Let expression introduces 0 identifiers\n"}},
-            {"letRepeatIdentifier.cl", {5, "x is defined more than once in this let expression.\n"}},
-            {"case0Cases.cl", {3, "\n"}},
-            {"block0Subexpressions.cl", {3, "\n"}}
-    };
-
-    ParserDriver pdrv;
-
-    /**
-     * To report an error, write the string
-       ERROR: line_number: Type-Check: message
-       to standard output and terminate the program. You may write whatever you want in the message, but it should be fairly indicative.
-     */
-    pair<int, string> expectedError;
-
-    _program* AST;
-
-    void SetUp() override {
-        //parse the input into global parse tree rootIVAN
-        pdrv.parse(tests_EXE_TO_COOL_PROGRAMS + GetParam());
-        //build syntax tree out of rootIVAN
-        AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
-        populateClassMap();
-        populateImplementationMap();
-        populateParentMap();
-        //generate expected error
-        string onlyFileName = GetParam();
-        onlyFileName = onlyFileName.substr(string{"semanticAnalyzerNegative/expression/"}.size(), onlyFileName.size());
-        expectedError = expectedErrorsMap.at(onlyFileName);
-    }
-
-    void TearDown() override {
-        classMap.clear();
-        implementationMap.clear();
-        parentMap.clear();
-        globalEnv->reset();
-        errorLog.clear();
-    }
-};
-TEST_P(negativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
-    AST->traverse();
-    ASSERT_EQ(errorLog[0].first, expectedError.first);
-}
-INSTANTIATE_TEST_SUITE_P(ivanErrors, negativeTypeTestsNoRef, testing::Values(
-                            "semanticAnalyzerNegative/expression/let0Identifiers.cl",
-                            "semanticAnalyzerNegative/expression/letRepeatIdentifier.cl",
-                            "semanticAnalyzerNegative/expression/case0Cases.cl",
-                            "semanticAnalyzerNegative/expression/block0Subexpressions.cl"));
-
-class multiErrorNegativeTypeTestsNoRef : public testing::TestWithParam<string> {
-private:
-    /**
-     * In folder expectedKeys
-     * @return
-     */
-protected:
     map<string, vector<pair<int,string>>> expectedErrorsMap {
-        {{"caseRepeatTypeTwice.cl", {{
+        {
+            {"caseRepeatTypeTwice.cl", {{
                 {8, ""},
-                {13, ""}}}},
-         {"caseRepeatTwoTypesTwice.cl", {
+                {13, ""}}}
+            },
+            {"caseRepeatTwoTypesTwice.cl", {{
                 {8, ""},
                 {13, ""},
                 {14, ""},
-                {16, ""}}}}
+                {16, ""}}}
+            },
+            {"let0Identifiers.cl", {{
+                {3, ""}}}
+            },
+            {"letRepeatIdentifier.cl", {{
+                {5, ""}}}
+            },
+            {"case0Cases.cl", {{
+                {3, ""}}}
+            },
+            {"block0Subexpressions.cl", {{
+                {3, ""}}}
+            }
+        }
     };
     ParserDriver pdrv;
 
@@ -458,12 +429,17 @@ protected:
         errorLog.clear();
     }
 };
-TEST_P(multiErrorNegativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
+TEST_P(negativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
     AST->traverse();
     for(int i = 0; i < errorLog.size(); i++) {
         ASSERT_EQ(errorLog[i].first, expectedErrors[i].first);
     }
 }
-INSTANTIATE_TEST_SUITE_P(ivanErrors, multiErrorNegativeTypeTestsNoRef, testing::Values(
+INSTANTIATE_TEST_SUITE_P(multipleErrors, negativeTypeTestsNoRef, testing::Values(
         "semanticAnalyzerNegative/expression/caseRepeatTypeTwice.cl",
         "semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl"));
+INSTANTIATE_TEST_SUITE_P(singleErrors, negativeTypeTestsNoRef, testing::Values(
+        "semanticAnalyzerNegative/expression/let0Identifiers.cl",
+        "semanticAnalyzerNegative/expression/letRepeatIdentifier.cl",
+        "semanticAnalyzerNegative/expression/case0Cases.cl",
+        "semanticAnalyzerNegative/expression/block0Subexpressions.cl"));

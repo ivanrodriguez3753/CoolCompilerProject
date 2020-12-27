@@ -306,7 +306,7 @@ void _classInh::typeCheck() {
     try {
         if(superClassIdentifier.identifier == "String" || superClassIdentifier.identifier == "Int" || superClassIdentifier.identifier == "Bool") {
             throw pair<int, string>{superClassIdentifier.lineNo, "class " + typeIdentifier.identifier + " inherits from " +
-                superClassIdentifier.identifier + ". It is illegal to inherit from String, Int, or Bool.\n"};
+                superClassIdentifier.identifier + ". It is illegal to inherit from String, Int, or Bool."};
         }
     }
     catch (pair<int, string> error) {printAndPush(error);}
@@ -372,11 +372,11 @@ void _program::typeCheck() {
             }
         }
         catch(...) {
-            pair<int, string> error{0, "Didn't define a 0-param main method inside Main class\n"};
+            pair<int, string> error{0, "Didn't define a 0-param main method inside Main class"};
             printAndPush(error);
         }
     } catch (...){
-        pair<int, string> error{0, "Didn't define a Main class!\n"};
+        pair<int, string> error{0, "Didn't define a Main class!"};
         printAndPush(error);
     }
 }
@@ -429,7 +429,7 @@ void _attributeInit::typeCheck() {
             throw pair<int, string>{identifier.lineNo, ""}; //dont think I can trigger this?
         }
         if(!conforms(T1, T0)) {
-            throw pair<int, string>{identifier.lineNo, "Initializer expression has type " + T1 + " which does not conform to declared type " + T0 + "\n"};
+            throw pair<int, string>{identifier.lineNo, "Initializer expression has type " + T1 + " which does not conform to declared type " + T0};
         }
     }
     catch(pair<int, string>error) {
@@ -524,20 +524,52 @@ void _dynamicDispatch::traverse() {
      * result must also conform to A. Inferring accurate static types for dispatch expressions is what justifies
      * including SELF_TYPE in the Cool type system.
      */
-    if(caller->exprType == "SELF_TYPE") { //TODO this branch is a bandaid?
-        exprType = "SELF_TYPE";
+    //TODO: document this error
+    bool error = false;
+    try {
+        string returnType = implementationMap.at(caller->exprType).at(method.identifier).first->returnType;
+        if(returnType == "SELF_TYPE") {//static type of dispatch is A
+            exprType = caller->exprType;
+        }
+        else if(returnType != "SELF_TYPE") { //static type of dispatch is B, since it is a class name
+            exprType = returnType;
+        }
     }
-    else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType != "SELF_TYPE") { //static type of dispatch is B, since it is a class name
-        exprType = implementationMap.at(caller->exprType).at(method.identifier).first->returnType;
-    }
-    else if(implementationMap.at(caller->exprType).at(method.identifier).first->returnType == "SELF_TYPE") {//static type of dispatch is A,
-        exprType = caller->exprType;
+    catch(const std::out_of_range& e) {//dont actually do anything with e
+        printAndPush(pair<int, string>{lineNo,
+           "caller expression with type " + caller->exprType + " does not have a method with "
+                                                               "identifier " + method.identifier});
+        error = true;
+        exprType = "Object";//TODO: is it be reasonable to just assign type Object if it errored?
+                                //just so we can keep parsing
     }
 
-    typeCheck();
+    if(!error) {
+        semanticCheck();//put this call under implementationMap.at(caller->exprType.at(method.identifier)
+        //because we know it won't throw a map error (otherwise it would have already)
+        typeCheck();
+    }
+
+}
+
+void _dynamicDispatch::semanticCheck() {
+    try {
+        //gotta be a better way than going back to the tree. maybe add more info in symTable?
+        //Called by traverse() who has already checked for map errors
+        int formalsSize = implementationMap.at(caller->exprType).at(method.identifier).first->treeNode->formalList.size();
+        if(args.size() != formalsSize) {
+            throw pair<int,string>{method.lineNo, "Passed " + to_string(args.size()) + " argument(s) to " +
+                caller->exprType + "." + method.identifier + " which requires " + to_string(formalsSize) + " arguments"
+            };
+        }
+    }
+    catch(pair<int, string> e) {
+        printAndPush(e);
+    }
 }
 
 void _dynamicDispatch::typeCheck() {
+    //EXPRESSION-10
     //first, type check all the subexpressions
     vector<string> paramAndReturnTypes;
     if(caller->exprType == "SELF_TYPE") { //otherwise map.at() will throw an error because there is no class SELF_TYPE in the global symbol table
@@ -547,34 +579,34 @@ void _dynamicDispatch::typeCheck() {
         paramAndReturnTypes = Environment::M(caller->exprType, method.identifier);
     }
     int i = 0;
-    try { //move this try block into the for loop
-        for(_expr* arg : args) {
+    for(_expr* arg : args) {
+        try {
             if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
-                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in dynamic dispatch\n"};
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in dynamic dispatch"};
             }
         }
-    }
-    catch(pair<int, string> error) {
-        printAndPush(error);
-    }
-    i = paramAndReturnTypes.size() - 1; //in case an exception was thrown and we didn't increment i to the last index
-    try {
-        //this is the last element in the array returned by M, so it is the return type which is notated
-        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
-            if(exprType != caller->exprType) {
-                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the type of the caller\n"};
-            }
-        }
-        else {
-
-            if(exprType != paramAndReturnTypes[i]) {
-                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the return type of the called method\n"};
-            }
+        catch(pair<int, string> error) {
+            printAndPush(error);
         }
     }
-    catch(pair<int, string> error) {
-        printAndPush(error);
-    }
+//  I think this try-catch is extraneous because this->exprType is assigned in
+//  traverse(), and it is comparing against what we used to assign the type
+//    try {
+//        //this is the last element in the array returned by M, so it is the return type which is notated
+//        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
+//            if(exprType != caller->exprType) {
+//                throw pair<int, string>{lineNo, "Dynamic dispatch expression type " + exprType + " does not conform to the caller method's return type SELF_TYPE==" + caller->exprType};
+//            }
+//        }
+//        else {
+//            if(exprType != paramAndReturnTypes[i]) {
+//                throw pair<int, string>{lineNo, "Dynamic dispatch expression type " + exprType + " does not conform to the caller method's return type " + paramAndReturnTypes[i]};
+//            }
+//        }
+//    }
+//    catch(pair<int, string> error) {
+//        printAndPush(error);
+//    }
 
 
 }
@@ -605,23 +637,73 @@ void _staticDispatch::traverse() {
         arg->traverse();
     }
     caller->traverse();
-    //lookup method method.identifier in the implementation map for caller->exprType
-    //To be clear, you are calling what WOULD be called if the caller was type @RHSType
-    //So it doesn't have to have an original (re)definition by RHSType, and caller's
-    // static type just has to conform to RHSType
-    //value of _staticDispatch is value returned by the method selected (most recent method in hierarchy with that name)
-        //but i guess it wouldn't matter which one we choose if all we're assigning is type, since overridden methods
-        //have to keep the same return type, same number of arguments and their types
-    exprType = implementationMap.at(typeIdentifier.identifier).at(method.identifier).first->returnType;
 
-    typeCheck();
+    bool error = false;
+    try {
+        if(!conforms(caller->exprType, typeIdentifier.identifier)) {
+            throw pair<int, string>{lineNo, "caller expression with type " + caller->exprType + " does not conform to @" +
+            typeIdentifier.identifier};
+        }
+    }
+    catch(pair<int, string> e) {
+        printAndPush(e);
+        error = true;
+        exprType = "Object"; //TODO: is it be reasonable to just assign type Object if it errored?
+    }
+    if(!error) {
+        try {
+            //lookup method method.identifier in the implementation map for caller->exprType
+            //To be clear, you are calling what WOULD be called if the caller was type @RHSType
+            //So it doesn't have to have an original (re)definition by RHSType, and caller's
+            // static type just has to conform to RHSType
+            //value of _staticDispatch is value returned by the method selected (most recent method in hierarchy with that name)
+            //but i guess it wouldn't matter which one we choose if all we're assigning is type, since overridden methods
+            //have to keep the same return type, same number of arguments and their types
+            string returnType = implementationMap.at(typeIdentifier.identifier).at(method.identifier).first->returnType;
+            if(returnType == "SELF_TYPE") {
+                exprType = caller->exprType;
+            }
+            else {
+                exprType = returnType;
+            }
+        }
+        catch(const std::out_of_range& e) { //don't do anything with e
+            printAndPush(pair<int,string> {lineNo,
+                "invalid static dispatch: @" + typeIdentifier.identifier + " has no method with identifier " + method.identifier
+            });
+            error = true;
+            exprType = "Object"; //TODO: is it be reasonable to just assign type Object if it errored?
+        }
+    }
+
+    if(!error) {
+        semanticCheck();
+        typeCheck();
+    }
+}
+
+void _staticDispatch::semanticCheck() {
+    try {
+        //gotta be a better way than going back to the tree. maybe add more info in symTable?
+        //Called by traverse() who has already checked for map errors
+        int formalsSize = implementationMap.at(typeIdentifier.identifier).at(method.identifier).first->treeNode->formalList.size();
+        if(args.size() != formalsSize) {
+            throw pair<int,string>{method.lineNo, "Passed " + to_string(args.size()) + " argument(s) to " +
+                typeIdentifier.identifier + "." + method.identifier + " which requires " + to_string(formalsSize) + " arguments"
+            };
+        }
+    }
+    catch(pair<int, string> e) {
+        printAndPush(e);
+    }
 }
 
 void _staticDispatch::typeCheck() {
+    //EXPRESSION-11
     //check if we conform to @ClassName
     try {
         if(!conforms(caller->exprType, typeIdentifier.identifier)) {
-            throw pair<int, string>{lineNo, "Caller's expression type " + caller->exprType + " does not conform to @" + typeIdentifier.identifier + '\n'};
+            throw pair<int, string>{lineNo, "Caller's expression type " + caller->exprType + " does not conform to @" + typeIdentifier.identifier};
         }
     }
     catch(pair<int, string> error) {
@@ -632,32 +714,34 @@ void _staticDispatch::typeCheck() {
     //first, type check all the subexpressions
     vector<string> paramAndReturnTypes = Environment::M(typeIdentifier.identifier, method.identifier);
     int i = 0;
-    try {
-        for(_expr* arg : args) {
+    for(_expr* arg : args) {
+        try {
             if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
-                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in static dispatch\n"};
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in static dispatch"};
             }
         }
-    }
-    catch(pair<int, string> error) {
-        printAndPush(error);
-    }
-    try {
-        //this is the last element in the array returned by M, so it is the return type which is notated
-        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
-            if(exprType != caller->exprType) {
-                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the type of @" + typeIdentifier.identifier + "\n"};
-            }
-        }
-        else {
-            if(exprType != paramAndReturnTypes[i]) {
-                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the return type of the called method\n"};
-            }
+        catch(pair<int, string> error) {
+            printAndPush(error);
         }
     }
-    catch(pair<int, string> error) {
-        printAndPush(error);
-    }
+
+
+//    try {
+//        //this is the last element in the array returned by M, so it is the return type which is notated
+//        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
+//            if(exprType != caller->exprType) {
+//                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the type of @" + typeIdentifier.identifier};
+//            }
+//        }
+//        else {
+//            if(exprType != paramAndReturnTypes[i]) {
+//                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the return type of the called method"};
+//            }
+//        }
+//    }
+//    catch(pair<int, string> error) {
+//        printAndPush(error);
+//    }
 }
 
 _selfDispatch::_selfDispatch(int l, _idMeta m) :
@@ -679,6 +763,22 @@ void _selfDispatch::print(ostream& os) const {
     }
 }
 
+void _selfDispatch::semanticCheck() {
+    try {
+        //gotta be a better way than going back to the tree. maybe add more info in symTable?
+        //Called by traverse() who has already checked for map errors
+        int formalsSize = implementationMap.at(top->C).at(method.identifier).first->treeNode->formalList.size();
+        if(args.size() != formalsSize) {
+            throw pair<int,string>{method.lineNo, "Passed " + to_string(args.size()) + " argument(s) to " +
+                                                  top->C + "." + method.identifier + " which requires " + to_string(formalsSize) + " arguments"
+            };
+        }
+    }
+    catch(pair<int, string> e) {
+        printAndPush(e);
+    }
+}
+
 void _selfDispatch::traverse() {
     for(_expr* arg : args) {
         arg->traverse();
@@ -688,44 +788,61 @@ void _selfDispatch::traverse() {
     Environment* current = top;
     while(current->metaInfo.kind != "class") current = current->previous;
     //current is the classEnv
-    exprType = implementationMap.at(current->metaInfo.identifier).at(method.identifier).first->returnType;
+    bool error = false;
+    try {
+        exprType = implementationMap.at(current->metaInfo.identifier).at(method.identifier).first->returnType;
+    }
+    catch(const std::out_of_range& e) {//dont actually do anything with e
+        printAndPush(pair<int, string>{lineNo,
+                                        "invalid self dispatch in class " + current->metaInfo.identifier + ": no method with "
+                                        "identifier " + method.identifier});
+        error = true;
+        exprType = "Object";//TODO: is it be reasonable to just assign type Object if it errored?
+        //just so we can keep parsing
+    }
+    if(!error) {
+        semanticCheck();
+        typeCheck();
+    }
 
-    typeCheck();
+
 }
 
 /**
  * Same as dynamicDispatch except caller is self and as a result caller->exprType is SELF_TYPE
  */
 void _selfDispatch::typeCheck() {
+    //EXPRESSION-10
     //first, type check all the subexpressions
     vector<string> paramAndReturnTypes = Environment::M(top->C, method.identifier); //caller->exprType in dynamicDisp changed to top->C, the containing class
     int i = 0;
-    try {
-        for(_expr* arg : args) {
+
+    for(_expr* arg : args) {
+        try {
             if(!conforms(arg->exprType, paramAndReturnTypes[i++])) {
-                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in self dispatch\n"};
+                throw pair<int, string>{arg->lineNo, "Actual parameter at position " + to_string(i - 1) + " with type " + arg->exprType + " does not conform to formal parameter type " + paramAndReturnTypes[i - 1] + " in self dispatch"};
             }
         }
-    }
-    catch(pair<int, string> error) {
-        printAndPush(error);
-    }
-    try {
-        //this is the last element in the array returned by M, so it is the return type which is notated
-        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
-            if(exprType != "SELF_TYPE") { //change from caller->exprType to SELF_TYPE
-                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the type of the caller\n"};
-            }
-        }
-        else {
-            if(exprType != paramAndReturnTypes[i]) {
-                throw pair<int, string>{lineNo, "Dynamic dispatch expression type does not match the return type of the called method\n"};
-            }
+        catch(pair<int, string> error) {
+            printAndPush(error);
         }
     }
-    catch(pair<int, string> error) {
-        printAndPush(error);
-    }
+//    try {
+//        //this is the last element in the array returned by M, so it is the return type which is notated
+//        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
+//            if(exprType != "SELF_TYPE") { //change from caller->exprType to SELF_TYPE
+//                throw pair<int, string>{lineNo, "Self dispatch expression type does not match the type of the caller\n"};
+//            }
+//        }
+//        else {
+//            if(exprType != paramAndReturnTypes[i]) {
+//                throw pair<int, string>{lineNo, "Self dispatch expression type does not match the return type of the called method"};
+//            }
+//        }
+//    }
+//    catch(pair<int, string> error) {
+//        printAndPush(error);
+//    }
 }
 
 _if::_if(int l, _expr* p, _expr* te, _expr* ee) :
@@ -823,7 +940,7 @@ void _block::print(ostream& os) const {
 
 void _block::semanticCheck() {
     if(!body.size()) {
-        throw pair<int,string>{lineNo, "Block expression needs at least one subexpression.\n"};
+        throw pair<int,string>{lineNo, "Block expression needs at least one subexpression."};
     }
 
 }
@@ -839,7 +956,7 @@ void _block::traverse() {
     catch(pair<int, string>error) {
         printAndPush(error);
         exprType = "Object"; //safest type to assign to the _block, since it's usually lastExpr->exprType
-    }
+    }//TODO investigate defaulting to Object if there is an error, just so we can keep traversing
 
 }
 
@@ -921,7 +1038,7 @@ void _arith::typeCheck() {
     //EXPRESSION-7 [Arith]
     try {
         if(left->exprType != "Int" || right->exprType != "Int") {
-            throw pair<int,string>{lineNo, "Cannot do arithmetic operation " + op + " on " + left->exprType + " and " + right->exprType + ", only on two Int's\n"};
+            throw pair<int,string>{lineNo, "Cannot do arithmetic operation " + op + " on " + left->exprType + " and " + right->exprType + ", only on two Int's"};
         }
     }
     catch (pair<int, string> error){
@@ -970,9 +1087,9 @@ void _relational::typeCheck() {
         //EXPRESSION-8 [Equal] and [LT] and [LTE]
         try {
             if(T1 != T2) {
-                throw pair<int, string>{lineNo, "Comparison between " + T1 + " and " + T2 + "\nUsing any relational "
+                throw pair<int, string>{lineNo, "Comparison between " + T1 + " and " + T2 + "Using any relational "
                     "operator (<, <=, =) with either argument being "
-                    "type Int/String/Bool requires both arguments to be the same type.\n"};
+                    "type Int/String/Bool requires both arguments to be the same type."};
             }
         }
         catch(pair<int,string> error) {
@@ -1042,7 +1159,7 @@ void _unary::typeCheck() {
         }
         else if(op == "negate") {//[Neg]
             if(expr->exprType != "Int") {
-                throw pair<int, string>{lineNo, "negate (~) operand has type " + expr->exprType + ", but negate operator must have operand of type Int\n"};
+                throw pair<int, string>{lineNo, "negate (~) operand has type " + expr->exprType + ", but negate operator must have operand of type Int"};
             }
         }
     }
@@ -1084,15 +1201,9 @@ void _identifier::print(ostream& os) const {
 }
 
 void _identifier::typeCheck() {
-    //EXPRESSION-4 [Var]
-    try {
-        string idType = top->O(identifier.identifier);
-        if(exprType != idType) { //verifying O(Id) = T
-            throw pair<int, string>{lineNo, "Identifier with class " + idType + " does not match the expression's type " + exprType + "\n"};
-        }
-    }
-    catch(pair<int, string> error) {
-        printAndPush(error); //dont think this can ever be thrown...
+    string idType = top->O(identifier.identifier);
+    if(exprType != idType) { //verifying O(Id) = T
+        throw pair<int, string>{lineNo, "Identifier with class " + idType + " does not match the expression's type " + exprType + "\n"};
     }
 }
 
@@ -1236,7 +1347,7 @@ void _let::semanticCheck() {
                 //already in set, so it's a duplicate in the same set of let bindings
                 //reported using lineNo of the duplicate occurence
                 throw pair<int, string>{binding->identifier.lineNo, binding->identifier.identifier +
-                                                         " is defined more than once in this let expression.\n"};
+                                                         " is defined more than once in this let expression."};
             }
             bindingsSet.insert(binding->identifier.identifier);
         }
@@ -1247,7 +1358,7 @@ void _let::semanticCheck() {
     //ivanEXPRESSION-1
     try{
         if(!bindings.size()) {
-            throw pair<int, string>{lineNo, "Let expression introduces 0 identifiers\n"};
+            throw pair<int, string>{lineNo, "Let expression introduces 0 identifiers"};
         }
     }
     catch(pair<int,string>error) {
@@ -1316,24 +1427,23 @@ void _case::semanticCheck() {
     //ivanEXPRESSION-3
     try {
         if (!cases.size()) {
-            throw pair<int, string>{lineNo, "Case expression has 0 cases\n"};
+            throw pair<int, string>{lineNo, "Case expression has 0 cases"};
         }
     }
     catch (pair<int, string> error) {
         printAndPush(error);
     }
 
-    //EXPRESSION-10
     map<string, int> typeChoicesMap; //<typeName, firstAppearanceLineNo>
     for (auto kase : cases) {
         try {
-            if (typeChoicesMap.find(kase->typeIdentifier.identifier) ==
-                typeChoicesMap.end()) {//not found, this element is unique (so far)
+            if (typeChoicesMap.find(kase->typeIdentifier.identifier) == typeChoicesMap.end()) {//not found, this element is unique (so far)
                 typeChoicesMap.insert({kase->typeIdentifier.identifier, kase->identifier.lineNo});
-            } else { //already has a case
+            }
+            else { //already has a case
                 throw pair<int, string>{kase->identifier.lineNo, "duplicate case branch for type " +
                     kase->typeIdentifier.identifier + ", first defined at line " + to_string(
-                    typeChoicesMap.at(kase->typeIdentifier.identifier)) + "\n"};
+                    typeChoicesMap.at(kase->typeIdentifier.identifier))};
             }
         }
         catch (pair<int, string> error) {
@@ -1372,21 +1482,22 @@ void _assign::print(ostream& os) const {
 
 void _assign::typeCheck() {
     //EXPRESSION-3 [ASSIGN]
-    try {
-        if((objectRecord*)top->get({identifier.identifier, "attribute"})) {
-            if(!conforms(rhs->exprType, ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type)) {
-                throw pair<int, string>{lineNo,
-                    "RHS<type=" + rhs->exprType + "> does not conform to LHS<id=" +
-                    identifier.identifier + ", type=" + ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type +
-                    ">\n"};
-            }
-        }
-        else if((objectRecord*)top->get({identifier.identifier, "local"})) {
+    try { //IMPORTANT: try local variables first because they'll always be further down the scope chain than attributes
+        //SEE: assignTricky.cl
+        if((objectRecord*)top->get({identifier.identifier, "local"})) {
             if(!conforms(rhs->exprType, ((objectRecord*)top->get({identifier.identifier, "local"}))->type)) {
                 throw pair<int, string>{lineNo,
                     "RHS<type=" + rhs->exprType + "> does not conform to LHS<id=" +
                     identifier.identifier + ", type=" + ((objectRecord*)top->get({identifier.identifier, "local"}))->type +
                     ">\n"};
+            }
+        }
+        else if((objectRecord*)top->get({identifier.identifier, "attribute"})) {
+            if(!conforms(rhs->exprType, ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type)) {
+                throw pair<int, string>{lineNo,
+                                        "RHS<type=" + rhs->exprType + "> does not conform to LHS<id=" +
+                                        identifier.identifier + ", type=" + ((objectRecord*)top->get({identifier.identifier, "attribute"}))->type +
+                                        ">"};
             }
         }
     }

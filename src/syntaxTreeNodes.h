@@ -233,6 +233,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void semanticCheck();
 };
 
 class _staticDispatch : public _dispatch {
@@ -248,6 +249,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void semanticCheck();
 };
 
 class _selfDispatch : public _dispatch {
@@ -260,6 +262,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void semanticCheck();
 };
 
 class _if : public _expr {

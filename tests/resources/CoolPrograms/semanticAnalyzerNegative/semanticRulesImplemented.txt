@@ -1,0 +1,91 @@
+Semantic rules implemented
+
+===========BEGIN REFERENCE COMPILER==============================
+SEMANTIC RULES
+CLASS:
+	1. Didn't define a Main class
+	2. Inherited from Int/Bool/String (report line number of Int/Bool/String)
+
+METHOD:
+	1. Didn't define a main method inside Main that had 0 parameters
+
+
+EXPRESSIONS:
+    10. All case types are distinct
+        caseRepeatTypeOnce.cl
+TYPE CHECKING RULES: (these are formally defined in the Cool reference manual)
+    [Var] is trivially checked
+    [True], [False] have no hypotheses so they are trivially checked
+    [Int], [String] have hypotheses that are enforced by C++ types so they are trivially checked
+    [Sequence] is trivially checked
+    [Case] is trivially checked bc _case->exprType was assigned by using getLub()
+    [New] (doesn't need tests) trivially checked?
+    [Let-No-Init] is trivially checked
+	[Isvoid] is trivially checked
+	[Attr-No-Init] is trivially checked
+
+    1. [If]
+        if.cl
+    2. [Loop] (this is while loop construct)
+	    while.cl
+    3. [ASSIGN]
+        ASSIGN.cl
+    6. [Not] and [Neg]
+        not.cl
+        negate.cl
+    7. [Arith]
+        arithAll.cl
+        arithDivide.cl
+        arithMinus.cl
+        arithPlus.cl
+        arithTimes.cl
+    8. [Equal] and [LT] and [LTE]
+        equalBool.cl
+        equalInt.cl
+        equalString.cl
+        ltBool.cl
+        ltInt.cl
+        ltString.cl
+        lteBool.cl
+        lteInt.cl
+        lteString.cl
+    9. [Attr-Init]
+        attr-init.cl
+    10. [Dispatch]
+        dynamicDispatchNumArguments.cl
+        dynamicDispatchMethodNotFound.cl
+        dynamicDispatchParameterNonconformance.cl
+        selfDispatchMethodNotFound.cl
+        selfDispatchNumArguments.cl
+        selfDispatchParameterNonconformance.cl
+    11. [Static Dispatch]
+        staticDispatchMethodNotFound.cl
+        staticDispatchNumArguments.cl
+        staticDispatchParameterNonconformance.cl
+        staticDispatch@TypeNonconformance.c
+
+
+
+
+
+
+
+	[Method]
+===========END REFERENCE COMPILER==============================
+
+============BEGIN IVAN RULES===================================
+EXPRESSIONS:
+    Let:
+        1. Let introduces 0 identifiers
+            let0identifiers.cl
+        2. Let introduces repeat identifier (within those already introduced in same let)
+            letRepeatIdentifier.cl
+    Case:
+        3. At least one case
+            case0Cases.cl
+        10. All case types are distinct
+            caseRepeatTypeTwice.cl
+            caseRepeatTwoTypesTwice.cl
+    Block:
+        5. At least one subexpression
+============END IVAN RULES=====================================
