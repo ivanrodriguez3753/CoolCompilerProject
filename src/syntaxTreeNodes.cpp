@@ -471,7 +471,36 @@ void _method::traverse() {
         formal->traverse();
     }
     body->traverse();
+
+    typeCheck();
+
     top = top->previous;
+}
+
+void _method::typeCheck() {
+    vector<string> paramAndReturnTypes = Environment::M(top->C, identifier.identifier);
+    string& T_0 = paramAndReturnTypes.back(); //return type
+    string Tprime_0 = body->exprType;
+
+    try {
+        if(T_0 == "SELF_TYPE") {
+            if(!conforms(Tprime_0, T_0)) {
+                //in here, we are guaranteed that T_prime0 != SELF_TYPE
+                throw pair<int,string>{identifier.lineNo, "body expression has type " + Tprime_0 + " which does not conform to "
+                    "declared return type SELF_TYPE==" + top->C + " in method " + identifier.identifier};
+            }
+        }
+        else {
+            if(!conforms(Tprime_0, T_0)) {
+                throw pair<int,string>{identifier.lineNo, "body expression has type " + Tprime_0 + " which does not conform to "
+                    "declared return type" + T_0 + " in method " + identifier.identifier};
+            }
+        }
+    }
+    catch(pair<int,string> e) {
+        printAndPush(e);
+    }
+
 }
 
 _formal::_formal(_idMeta id, _idMeta typeId) :
@@ -527,7 +556,9 @@ void _dynamicDispatch::traverse() {
     //TODO: document this error
     bool error = false;
     try {
-        string returnType = implementationMap.at(caller->exprType).at(method.identifier).first->returnType;
+        string callerType = caller->exprType;
+        if(callerType == "SELF_TYPE") callerType = top->C;
+        string returnType = implementationMap.at(callerType).at(method.identifier).first->returnType;
         if(returnType == "SELF_TYPE") {//static type of dispatch is A
             exprType = caller->exprType;
         }
@@ -556,7 +587,9 @@ void _dynamicDispatch::semanticCheck() {
     try {
         //gotta be a better way than going back to the tree. maybe add more info in symTable?
         //Called by traverse() who has already checked for map errors
-        int formalsSize = implementationMap.at(caller->exprType).at(method.identifier).first->treeNode->formalList.size();
+        string callerType = caller->exprType;
+        if(callerType == "SELF_TYPE") callerType = top->C;
+        int formalsSize = implementationMap.at(callerType).at(method.identifier).first->treeNode->formalList.size();
         if(args.size() != formalsSize) {
             throw pair<int,string>{method.lineNo, "Passed " + to_string(args.size()) + " argument(s) to " +
                 caller->exprType + "." + method.identifier + " which requires " + to_string(formalsSize) + " arguments"

@@ -322,7 +322,8 @@ INSTANTIATE_TEST_SUITE_P(Class, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/class/inheritBool.cl",
                             "semanticAnalyzerNegative/class/inheritInt.cl"));
 INSTANTIATE_TEST_SUITE_P(Method, negativeTypeTestsRef, testing::Values(
-                            "semanticAnalyzerNegative/method/parameter-less_main_Main.cl"));
+                            "semanticAnalyzerNegative/method/parameter-less_main_Main.cl",
+                            "semanticAnalyzerNegative/method/methodSELF_TYPEreturnType.cl"));
 INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/expression/arithAll.cl",
                             "semanticAnalyzerNegative/expression/arithDivide.cl",
@@ -372,28 +373,35 @@ private:
 protected:
     map<string, vector<pair<int,string>>> expectedErrorsMap {
         {
-            {"caseRepeatTypeTwice.cl", {{
+            //MULTIPLE ERRORS
+            {"semanticAnalyzerNegative/expression/caseRepeatTypeTwice.cl", {{
                 {8, ""},
                 {13, ""}}}
             },
-            {"caseRepeatTwoTypesTwice.cl", {{
+            {"semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl", {{
                 {8, ""},
                 {13, ""},
                 {14, ""},
                 {16, ""}}}
             },
-            {"let0Identifiers.cl", {{
+
+            //SINGLE ERROR
+            {"semanticAnalyzerNegative/expression/let0Identifiers.cl", {{
                 {3, ""}}}
             },
-            {"letRepeatIdentifier.cl", {{
+            {"semanticAnalyzerNegative/expression/letRepeatIdentifier.cl", {{
                 {5, ""}}}
             },
-            {"case0Cases.cl", {{
+            {"semanticAnalyzerNegative/expression/case0Cases.cl", {{
                 {3, ""}}}
             },
-            {"block0Subexpressions.cl", {{
+            {"semanticAnalyzerNegative/expression/block0Subexpressions.cl", {{
                 {3, ""}}}
+            },
+            {"semanticAnalyzerNegative/method/methodSELF_TYPEreturnType2.cl", {{
+                {12, ""}}}
             }
+
         }
     };
     ParserDriver pdrv;
@@ -416,9 +424,7 @@ protected:
         populateImplementationMap();
         populateParentMap();
         //generate expected error
-        string onlyFileName = GetParam();
-        onlyFileName = onlyFileName.substr(string{"semanticAnalyzerNegative/expression/"}.size(), onlyFileName.size());
-        expectedErrors = expectedErrorsMap.at(onlyFileName);
+        expectedErrors = expectedErrorsMap.at(GetParam());
     }
 
     void TearDown() override {
@@ -437,9 +443,11 @@ TEST_P(negativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
 }
 INSTANTIATE_TEST_SUITE_P(multipleErrors, negativeTypeTestsNoRef, testing::Values(
         "semanticAnalyzerNegative/expression/caseRepeatTypeTwice.cl",
-        "semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl"));
-INSTANTIATE_TEST_SUITE_P(singleErrors, negativeTypeTestsNoRef, testing::Values(
+        "semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl"
+        ));
+INSTANTIATE_TEST_SUITE_P(singleError, negativeTypeTestsNoRef, testing::Values(
         "semanticAnalyzerNegative/expression/let0Identifiers.cl",
         "semanticAnalyzerNegative/expression/letRepeatIdentifier.cl",
         "semanticAnalyzerNegative/expression/case0Cases.cl",
-        "semanticAnalyzerNegative/expression/block0Subexpressions.cl"));
+        "semanticAnalyzerNegative/expression/block0Subexpressions.cl",
+        "semanticAnalyzerNegative/method/methodSELF_TYPEreturnType2.cl"));

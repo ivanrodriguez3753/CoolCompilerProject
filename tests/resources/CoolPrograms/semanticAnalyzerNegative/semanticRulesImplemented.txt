@@ -63,14 +63,7 @@ TYPE CHECKING RULES: (these are formally defined in the Cool reference manual)
         staticDispatchNumArguments.cl
         staticDispatchParameterNonconformance.cl
         staticDispatch@TypeNonconformance.c
-
-
-
-
-
-
-
-	[Method]
+    12. [Method]
 ===========END REFERENCE COMPILER==============================
 
 ============BEGIN IVAN RULES===================================
