@@ -279,8 +279,9 @@ protected:
 
     /**
      * To report an error, write the string
-       ERROR: line_number: Type-Check: message
-       to standard output and terminate the program. You may write whatever you want in the message, but it should be fairly indicative.
+     * ERROR: line_number: Type-Check: message
+     * to standard output and terminate the program. You may write whatever you want in the message, but it should be fairly indicative.
+     * https://dijkstra.eecs.umich.edu/eecs483/pa4.php
      */
     pair<int, string> refError;
 
@@ -323,7 +324,8 @@ INSTANTIATE_TEST_SUITE_P(Class, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/class/inheritInt.cl"));
 INSTANTIATE_TEST_SUITE_P(Method, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/method/parameter-less_main_Main.cl",
-                            "semanticAnalyzerNegative/method/methodSELF_TYPEreturnType.cl"));
+                            "semanticAnalyzerNegative/method/methodSELF_TYPEreturnType.cl",
+                            "semanticAnalyzerNegative/method/methodReturnType.cl"));
 INSTANTIATE_TEST_SUITE_P(Expression, negativeTypeTestsRef, testing::Values(
                             "semanticAnalyzerNegative/expression/arithAll.cl",
                             "semanticAnalyzerNegative/expression/arithDivide.cl",
@@ -384,7 +386,27 @@ protected:
                 {14, ""},
                 {16, ""}}}
             },
-
+            {"semanticAnalyzerNegative/expression/allDispatches.cl", {{
+                {10, ""},
+                {11, ""},
+                {11, ""},
+                {12, ""},
+                {13, ""},
+                {13, ""},
+                {15, ""},
+                {16, ""},
+                {16, ""},
+                {17, ""},
+                {18, ""},
+                {18, ""},
+                {20, ""},
+                {21, ""},
+                {22, ""},
+                {22, ""},
+                {23, ""},
+                {24, ""},
+                {24, ""}}}
+            },
             //SINGLE ERROR
             {"semanticAnalyzerNegative/expression/let0Identifiers.cl", {{
                 {3, ""}}}
@@ -443,7 +465,8 @@ TEST_P(negativeTypeTestsNoRef, errorsNotInReferenceCompiler) {
 }
 INSTANTIATE_TEST_SUITE_P(multipleErrors, negativeTypeTestsNoRef, testing::Values(
         "semanticAnalyzerNegative/expression/caseRepeatTypeTwice.cl",
-        "semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl"
+        "semanticAnalyzerNegative/expression/caseRepeatTwoTypesTwice.cl",
+        "semanticAnalyzerNegative/expression/allDispatches.cl"
         ));
 INSTANTIATE_TEST_SUITE_P(singleError, negativeTypeTestsNoRef, testing::Values(
         "semanticAnalyzerNegative/expression/let0Identifiers.cl",

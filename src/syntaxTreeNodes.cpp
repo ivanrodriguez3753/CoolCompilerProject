@@ -424,7 +424,7 @@ void _attributeInit::typeCheck() {
     string& T1 = expr->exprType;
 
     try {
-        //EXPRESSION-9 [Attr-Init]
+        //EXPRESSION-8 [Attr-Init]
         if(top->O(identifier.identifier) != T0) {
             throw pair<int, string>{identifier.lineNo, ""}; //dont think I can trigger this?
         }
@@ -482,6 +482,7 @@ void _method::typeCheck() {
     string& T_0 = paramAndReturnTypes.back(); //return type
     string Tprime_0 = body->exprType;
 
+    //EXPRESSION-12 [Method]
     try {
         if(T_0 == "SELF_TYPE") {
             if(!conforms(Tprime_0, T_0)) {
@@ -493,7 +494,7 @@ void _method::typeCheck() {
         else {
             if(!conforms(Tprime_0, T_0)) {
                 throw pair<int,string>{identifier.lineNo, "body expression has type " + Tprime_0 + " which does not conform to "
-                    "declared return type" + T_0 + " in method " + identifier.identifier};
+                    "declared return type " + T_0 + " in method " + identifier.identifier};
             }
         }
     }
@@ -602,7 +603,7 @@ void _dynamicDispatch::semanticCheck() {
 }
 
 void _dynamicDispatch::typeCheck() {
-    //EXPRESSION-10
+    //EXPRESSION-9 [Dispatch]
     //first, type check all the subexpressions
     vector<string> paramAndReturnTypes;
     if(caller->exprType == "SELF_TYPE") { //otherwise map.at() will throw an error because there is no class SELF_TYPE in the global symbol table
@@ -732,7 +733,7 @@ void _staticDispatch::semanticCheck() {
 }
 
 void _staticDispatch::typeCheck() {
-    //EXPRESSION-11
+    //EXPRESSION-10 [Static Dispatch]
     //check if we conform to @ClassName
     try {
         if(!conforms(caller->exprType, typeIdentifier.identifier)) {
@@ -845,7 +846,7 @@ void _selfDispatch::traverse() {
  * Same as dynamicDispatch except caller is self and as a result caller->exprType is SELF_TYPE
  */
 void _selfDispatch::typeCheck() {
-    //EXPRESSION-10
+    //EXPRESSION-9 [Dispatch]
     //first, type check all the subexpressions
     vector<string> paramAndReturnTypes = Environment::M(top->C, method.identifier); //caller->exprType in dynamicDisp changed to top->C, the containing class
     int i = 0;
@@ -896,7 +897,7 @@ void _if::print(ostream& os) const {
 }
 
 void _if::typeCheck() {
-    //EXPRESSION-1 [If]
+    //EXPRESSION-2 [If]
     try {
         if(predicate->exprType != "Bool") {
             throw pair<int, string>{lineNo, "conditional has type " + predicate->exprType + " instead of Bool"};
@@ -935,7 +936,7 @@ void _while::print(ostream& os) const {
 }
 
 void _while::typeCheck() {
-    //EXPRESSION-2 [Loop]
+    //EXPRESSION-3 [Loop]
     try {
         if(predicate->exprType != "Bool") {
             throw pair<int, string>{lineNo, "conditional has type " + predicate->exprType + " instead of Bool"};
@@ -972,6 +973,7 @@ void _block::print(ostream& os) const {
 }
 
 void _block::semanticCheck() {
+    //ivanEXPRESSION-5
     if(!body.size()) {
         throw pair<int,string>{lineNo, "Block expression needs at least one subexpression."};
     }
@@ -1068,7 +1070,7 @@ void _arith::print(ostream &os) const {
     os << *right;
 }
 void _arith::typeCheck() {
-    //EXPRESSION-7 [Arith]
+    //EXPRESSION-6 [Arith]
     try {
         if(left->exprType != "Int" || right->exprType != "Int") {
             throw pair<int,string>{lineNo, "Cannot do arithmetic operation " + op + " on " + left->exprType + " and " + right->exprType + ", only on two Int's"};
@@ -1117,7 +1119,7 @@ void _relational::typeCheck() {
     string& T2 = right->exprType;
     set<string> IntStringBoolSet{"Int", "String", "Bool"};
     if((IntStringBoolSet.find(T1) != IntStringBoolSet.end()) || (IntStringBoolSet.find(T2) != IntStringBoolSet.end())) {//found
-        //EXPRESSION-8 [Equal] and [LT] and [LTE]
+        //EXPRESSION-7 [Equal] and [LT] and [LTE]
         try {
             if(T1 != T2) {
                 throw pair<int, string>{lineNo, "Comparison between " + T1 + " and " + T2 + "Using any relational "
@@ -1183,7 +1185,7 @@ void _unary::traverse() {
 }
 
 void _unary::typeCheck() {
-    //EXPRESSION-6 [Not] and [Neg]
+    //EXPRESSION-5 [Not] and [Neg]
     try {
         if(op == "not") { //[Not]
             if(expr->exprType != "Bool") {
@@ -1318,11 +1320,11 @@ void _letBindingInit::traverse() {
 pair<int, string> _letBindingInit::typeCheck() {
     string& T1 = init->exprType;
     string& T0_prime = typeIdentifier.identifier;
-    //EXPRESSION-9 [Let-Init]
+    //EXPRESSION-11 [Let-Init]
     if(!conforms(T1, T0_prime)) {
         return pair<int, string>{init->lineNo, "In the let bindings list, " + identifier.identifier + "'s "
             "initializer expression has type " + init->exprType + " which does not conform to " +
-            identifier.identifier + "'s declared type " + typeIdentifier.identifier + ".\n"};
+            identifier.identifier + "'s declared type " + typeIdentifier.identifier};
     }
     else return pair<int,string>{};
 }
@@ -1401,7 +1403,7 @@ void _let::semanticCheck() {
 
 void _let::typeCheck() {
     for(_letBinding* binding : bindings) {
-        //EXPRESSION-9 [Let-Init]
+        //EXPRESSION-11 [Let-Init]
         pair<int, string> isThereAnError = binding->typeCheck();
         try {
             if(isThereAnError != pair<int,string>{0, ""}) { //letBindingNoInit has a dummy sentinel to avoid throwing the error
@@ -1469,6 +1471,7 @@ void _case::semanticCheck() {
 
     map<string, int> typeChoicesMap; //<typeName, firstAppearanceLineNo>
     for (auto kase : cases) {
+        //ivanEXPRESSION-4
         try {
             if (typeChoicesMap.find(kase->typeIdentifier.identifier) == typeChoicesMap.end()) {//not found, this element is unique (so far)
                 typeChoicesMap.insert({kase->typeIdentifier.identifier, kase->identifier.lineNo});
@@ -1514,7 +1517,7 @@ void _assign::print(ostream& os) const {
 }
 
 void _assign::typeCheck() {
-    //EXPRESSION-3 [ASSIGN]
+    //EXPRESSION-4 [ASSIGN]
     try { //IMPORTANT: try local variables first because they'll always be further down the scope chain than attributes
         //SEE: assignTricky.cl
         if((objectRecord*)top->get({identifier.identifier, "local"})) {
