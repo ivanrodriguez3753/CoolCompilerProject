@@ -52,6 +52,8 @@ public:
     string parent;
     _class* treeNode;
 
+    int numAttributes;
+
     classRecord(string lex, int l, string k, string p);
 };
 

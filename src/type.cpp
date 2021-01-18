@@ -6,7 +6,6 @@
 #include "syntaxTreeNodes.h"
 
 
-
 map<string, classRecord*> classMap{};
 /**
  * Parent map is kinda redundant, it's just a shallow copy without "Object"
@@ -201,6 +200,76 @@ void printClassMap(ostream& out) {
         top = top->previous;
     }
 
+}
+void fillInClassAttributeNum() {
+    vector<classRecord*> recordRefs;
+    for(auto entryIterator : classMap) {
+        recordRefs.push_back(((classRecord*)entryIterator.second));
+    }
+    //sort by ascending alphabetical order
+    sort(recordRefs.begin(), recordRefs.end(), [](const classRecord* lhs, const classRecord* rhs) {
+        return lhs->lexeme < rhs->lexeme;
+    });
+
+    for(auto rec : recordRefs) {
+        top = globalEnv;
+        top = top->links.at({rec->lexeme,"class"});
+
+
+        string klass = rec->lexeme;
+        list<vector<pair<objectRecord*, string>>> attributesByClassInHierarchy{};
+        vector<pair<objectRecord*, string>> attributes; //objectRecord and definingClass
+        vector<string> hierarchyTraversalKeys; //need info about path we took to get back
+        if(klass != "Object" && klass != "Int" && klass != "IO" && klass != "Bool" && klass != "String") {
+            //top = top->links.at(make_pair(rec->lexeme, "class"));
+            //we need every attribute for each class held by rec : recordRefs, so we first have to climb the the inheritance tree
+            //up to but not including Object (has no attributes to print anyway, and is the root of the hierarchy)
+            classRecord* currentClassRec = rec;
+            classRecord* currentParentRec = classMap.at(rec->parent);
+            hierarchyTraversalKeys.push_back(currentClassRec->lexeme);
+            while(currentClassRec->lexeme != "Object") {
+                currentParentRec = currentClassRec;
+                if(classMap.find(currentClassRec->parent) != classMap.end()) {
+                    currentClassRec = classMap.at(currentClassRec->parent);
+                    hierarchyTraversalKeys.push_back(currentClassRec->lexeme);
+                }
+            }
+            //traverse the hierarchy (starting one before Object) back to where we started, pushing back attributes as we encounter them
+            for(int i = hierarchyTraversalKeys.size() - 2; i >= 0; --i) {
+                currentClassRec = classMap.at(hierarchyTraversalKeys[i]);
+                for(auto klasssIt : globalEnv->links.at(make_pair(currentClassRec->lexeme, "class"))->symTable) { //get all attributes for this class
+                    if(klasssIt.second->kind == "attribute") {
+                        attributes.push_back({(objectRecord*)klasssIt.second, currentClassRec->lexeme});
+                    }
+                }
+                sort(attributes.begin(), attributes.end(), [](const pair<objectRecord*, string> lhs, const pair<objectRecord*, string> rhs) { //sort attributes in this class by encountered counter
+                    return lhs.first->encountered < rhs.first->encountered;
+                });
+                attributesByClassInHierarchy.push_back(attributes);
+                attributes.clear();
+
+            }
+
+
+        }
+
+        //flatten the list of vectors for the attributes, can reuse the intermediary vector
+        for(auto currentList : attributesByClassInHierarchy) {
+            for(auto currentRec : currentList) {
+                attributes.push_back(currentRec);
+            }
+        }
+
+        //remove all selfs because we don't want to print them as attributes
+        vector<pair<objectRecord*, string>> attributes2;
+        for(auto attribute : attributes) {
+            if(attribute.first->lexeme != "self") {
+                attributes2.push_back(attribute);
+            }
+        }
+        attributes = attributes2;
+        rec->numAttributes = attributes.size();
+    }
 }
 void populateParentMap() {
     parentMap = classMap;

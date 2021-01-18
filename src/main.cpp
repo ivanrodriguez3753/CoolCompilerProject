@@ -62,4 +62,16 @@ int main(int argc, char** argv) {
 
         AST->prettyPrint(cout, "");
     }
+    else if(option == "--codeGen") {
+        pdrv.parse(file);
+        _program* AST = (_program*) pdrv.buildSyntaxTree(rootIVAN);
+
+        populateClassMap();
+        populateImplementationMap();
+        populateParentMap();
+
+        AST->traverse();
+
+        AST->codeGen();
+    }
 }

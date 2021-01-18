@@ -5,6 +5,7 @@
 #include <string>
 #include "parseTreeNodes.h"
 #include "Environment.h"
+#include "codegen.h"
 
 using namespace std;
 
@@ -50,6 +51,8 @@ public:
     virtual void traverse() = 0;
 
     friend ostream& operator<<(ostream& os, const _node& n);
+
+//    virtual void codeGen(vector<string>& instructions);
 };
 
 /**
@@ -82,8 +85,16 @@ public:
 
     void print(ostream &os) const override;
     void prettyPrint(ostream& os, string prefix) const;
+
+    void codeGen();
 private:
     void typeCheck();
+
+    void genVTables();
+    void genConstructors();
+    void genMethods();
+    void genStartLabel();
+    void actuallyPrint() {for(auto s : code) cout << s << endl;}
 };
 
 class _class : public _node {
@@ -196,6 +207,7 @@ public:
     string exprType;
 
     virtual void traverse() = 0;
+    virtual void codeGen(){} //= 0; //TODO: Make this pure virtual
 };
 
 class _assign : public _expr {
@@ -395,6 +407,7 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override{}
+    void codeGen() override;
 };
 
 class _string : public _expr {
@@ -433,6 +446,7 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override{}
+    void codeGen() override;
 };
 
 class _letBinding : public _expr {

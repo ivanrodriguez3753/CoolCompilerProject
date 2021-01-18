@@ -25,6 +25,11 @@ void populateImplementationMap();
 void printImplementationMap(ostream& out);
 void buildBasicClassNodes();
 
+
+
+void fillInClassAttributeNum();
+
+
 /**
  * Returns true iff T1 <= T2 as described in the Cool reference manual
  * Definition 4.1 (Conformance) Let 𝙰,𝙲, and 𝙿 be types.
