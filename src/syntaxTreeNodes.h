@@ -90,13 +90,17 @@ public:
 private:
     void typeCheck();
 
-    void genVTables();
+    void genVTablesAndGlobalStringConstantsClassNames();
     void genConstructors();
     void genMethods();
-    void genStartLabel();
+    void genStart();
     void actuallyPrint() {for(auto s : code) cout << s << endl;}
-};
 
+    void tackOnGlobalStringConstants();
+    void pushBackHardcodedMethods();
+    void pushBackHardcodedHelpers();
+    void setUpHardcodeStringStream(int i, stringstream& s);
+};
 class _class : public _node {
 public:
     _idMeta typeIdentifier;
@@ -277,6 +281,8 @@ public:
 private:
     void typeCheck();
     void semanticCheck();
+
+    void codeGen() override;
 };
 
 class _if : public _expr {
@@ -364,6 +370,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void codeGen() override;
 };
 
 class _relational : public _expr {
@@ -434,6 +441,8 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+
+    void codeGen() override;
 };
 
 class _bool : public _expr {

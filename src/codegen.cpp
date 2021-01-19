@@ -5,6 +5,25 @@
 
 vector<string> code;
 
+
+const string emptyStringLabel = "the.empty.string:";
+const string abortLabel = "abort:";
+const string substrLabel = "substr:";
+/**
+ * Initialize with misc global string constants things we need to hardcode
+ */
+vector<string> globalStringConstants{
+    emptyStringLabel,
+        "\tconstant \"\"",
+    abortLabel,
+        "\tconstant \"abort!\\n\"",
+    substrLabel,
+        "\tconstant \"ERROR: 0: Exception: String.substr out of range\\n\""
+};
+
+
+
+
 /**
  * Activation Record layout (for convenience, I show a downward growing stack):
  *      Temporaries
@@ -24,6 +43,8 @@ const string sp = "sp";
 const string fp = "fp";
 const string ra = "ra";
 
+const string exitt = "exit";
+
 const string& self_reg = r0;
 const string& acc_reg = r1;
 const string& temp_reg = r2;
@@ -31,6 +52,11 @@ const string new_frame = "\tmov fp <- sp";
 const string rreturn = "\treturn";
 const string newSuffix = ".new";
 const string vTableSuffix = ".vtable";
+
+bool isLHS = true; //TODO: stop passing around globals for codeGen
+
+string currentClass;
+string currentMethod;
 
 const int classTagOffset = 0;
 const int objectSizeOffset = 1;
@@ -70,6 +96,24 @@ void sub(string r_dest, string r_subtractFrom, string r_subtractThis) {
 void add(string r_dest, string r_addTo, string r_addThis) {
     code.push_back("\tadd " + r_dest + " <- " + r_addTo + " " + r_addThis);
 }
+void ld(string r_dest, string r_base, int offset) {
+    code.push_back("\tld " + r_dest + " <- " + r_base +  '[' + to_string(offset) + ']');
+}
+void mul(string r_dest, string r_addTo, string r_addThis) {
+    code.push_back("\tmul " + r_dest + " <- " + r_addTo + " " + r_addThis);
+}
+void div(string r_dest, string r_addTo, string r_addThis) {
+    code.push_back("\tdiv " + r_dest + " <- " + r_addTo + " " + r_addThis);
+}
+/**
+ * return pointer to base of newly allocated memory
+ * @param r_dest which register to save the pointer in
+ * @param r_numWords register holding an integer
+ */
+void alloc(string r_dest, string r_numWords) {
+    code.push_back("\talloc " + r_dest + " " + r_numWords);
+}
+
 /**
  * caller conventions
  * @param klass
@@ -96,11 +140,11 @@ void callerCallAndReturnSequence(string klass, string subroutine) {
  */
 void calleeCallSequence(string method, int stackRoomForTemps = 1) {
     //COMMENT
-    code.push_back(";;Callee calling conventions;;;;;;;;;;;;;;");
+    code.push_back("\t;;Callee calling conventions;;;;;;;;;;;;;;");
     code.push_back(new_frame);
     if(method != newSuffix) pop(self_reg);
     //COMMENT
-    code.push_back(";; stack room for temps: " + to_string(stackRoomForTemps) + ";;;;;;;;;;");
+    code.push_back("\t;; stack room for temps: " + to_string(stackRoomForTemps) + ";;;;;;;;;;");
     li(temp_reg, stackRoomForTemps);
     sub(sp, sp, temp_reg);
     push(ra);
@@ -215,28 +259,25 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
 /**
  * hard coded
  */
-void genStart() {
+void _program::genStart() {
+    //COMMENT
+    code.push_back(";;ENTRY POINT HERE;;;;;;;;;;;;;;;;");
+
     code.push_back("start:");
     push(fp);
-    la(temp_reg, "Main" + newSuffix);
+    la(temp_reg, "Main." + newSuffix);
     call(temp_reg);
 
     push(fp);
     push(acc_reg);
     la(temp_reg, "Main.main");
     call(temp_reg);
+    syscall(exitt);
 
 }
 
 
-/**
- * return pointer to base of newly allocated memory
- * @param r_dest which register to save the pointer in
- * @param r_numWords register holding an integer
- */
-void alloc(string r_dest, string r_numWords) {
-    code.push_back("\talloc " + r_dest + " " + r_numWords);
-}
+
 
 
 
@@ -244,6 +285,10 @@ void alloc(string r_dest, string r_numWords) {
 
 
 map<string, list<objectRecord*>> classMapOrdered;
+
+/**
+ * <string_class, list<pair<methodRecord*, string_mostRecentDefiningClass>>>
+ */
 map<string, list<pair<methodRecord*, string>>> implementationMapOrdered;
 
 
@@ -375,8 +420,7 @@ void populateImplementationMapOrdered() {
     }
 }
 static int stringCounter = 1;
-void _program::genVTables() {
-    populateImplementationMapOrdered();
+void _program::genVTablesAndGlobalStringConstantsClassNames() {
     for(map<string, classRecord*>::iterator klassIt = classMap.begin(); klassIt != classMap.end(); ++klassIt) {
         const string& klass = klassIt->first;
 
@@ -398,10 +442,15 @@ void _program::genVTables() {
 
         //print label for string constant which holds class name
         //internal names are generated with a static counter
-        code.push_back("\tconstant string" + to_string(stringCounter++));
+        string internalName = "string" + to_string(stringCounter++);
+        code.push_back("\tconstant " + internalName);
+
+        //for tacking onto code at some point. saving internal names as we generate them
+        globalStringConstants.push_back(internalName + ':');
+        globalStringConstants.push_back("\tconstant \"" + klass + '\"');
 
         //label for constructor
-        const string ctrLbl = "\tconstant " + klass + newSuffix;
+        const string ctrLbl = "\tconstant " + klass + '.' + newSuffix;
         code.push_back(ctrLbl); //constructor "klass..new" is always first routine in klass..vtable:
 
         for(pair<methodRecord*, string> method : implementationMapOrdered.at(klass)) {
@@ -412,89 +461,6 @@ void _program::genVTables() {
 }
 
 void _program::genConstructors() {
-    fillInClassAttributeNum(); //make this better hahahaha copied and pasted from printClassMap
-    populateClassMapOrdered();
-    for (map<string, classRecord *>::iterator klassIt = classMap.begin(); klassIt != classMap.end(); ++klassIt) {
-        //COMMENT
-        code.push_back(";;start " + klassIt->first + "'s constructor;;;;;;;;;;;;;;;;;;;;;");
-
-        //print the label Klass..new
-        code.push_back(klassIt->first + newSuffix);
-
-
-        //COMMENT
-        code.push_back("\t;;calling convention stuff: create new activation record;;;;;;;;;;;");
-        code.push_back(new_frame);
-
-
-
-        //COMMENT
-        code.push_back("\t;; get size needed for heapFrame, then create heapFrame and save pointer;;;;;;;;;;;");
-
-        //load heapFrame size into a register, which we know statically from numAttributes
-        //*p -> heap
-        //[vtable, attributes... ]
-
-        li(self_reg, klassIt->second->numAttributes + 1);
-        //+1 for the vtable pointer
-
-
-
-
-        //ask OS for space in the heap
-        alloc(self_reg, self_reg);
-
-        //COMMENT
-        code.push_back("\t;; store attributes (includes vtable pointer!);;;;;;;;;");
-
-        //store attributes (vtable pointer is an attribute in this context)
-        la(temp_reg, klassIt->first + "..vtable");
-        st(self_reg, vtablePointerOffset, temp_reg);
-
-        //now the actual attributes...
-        int i = 1;
-        for(objectRecord* attribute : classMapOrdered.at(klassIt->first)) {
-            //COMMENT
-            code.push_back("\t;; loading and calling constructor " + attribute->type + newSuffix +  " for attribute " + attribute->lexeme);
-
-            //if this object has an initialization expression
-            if(attribute->initExpr) {
-                push(fp);
-                push(self_reg);
-
-                la(temp_reg, attribute->type + newSuffix);
-                call(temp_reg);
-
-                pop(self_reg);
-                pop(fp);
-
-
-
-                //TODO better way of accessing the thing in the conditional above??
-                code.push_back("\t;;placeholder cgen for initializer expression");
-
-
-
-                st(self_reg, i++, acc_reg); //stores result of evaluating initializer expression
-
-            }
-        }
-
-        //COMMENT
-        code.push_back("\t;;copy self pointer into accumulator;;;;;;;");
-        mov(acc_reg, self_reg);
-
-        //COMMENT
-        code.push_back("\t;;clean up the stack;;;;;;;");
-        pop(ra);
-        pop(fp);
-        code.push_back(rreturn);
-    }
-}
-
-void genConstructors2() {
-    fillInClassAttributeNum();
-    populateClassMapOrdered();
 
     for(map<string, list<objectRecord*>>::const_iterator klassIt = classMapOrdered.begin(); klassIt != classMapOrdered.end(); ++klassIt) {
         //COMMENT
@@ -514,8 +480,411 @@ void genConstructors2() {
     }
 }
 
-void _program::genMethods() {
+//map<string, vector<string>> hardcodedStarterObjectMethodBodies{
 
+
+//};
+
+void _program::setUpHardcodeStringStream(int i, stringstream& s) {
+    s.clear();
+    switch(i) {
+        case 0: //Object.abort
+            s = stringstream("    la r1 <- abort\n"
+                             "    syscall IO.out_string\n"
+                             "    syscall exit");
+            break;
+        case 1: //Object.copy
+            s = stringstream("    ld r2 <- r0[1]\n"
+                             "    alloc r1 r2\n"
+                             "    push r1\n"
+                             "l1:\n"
+                             "    bz r2 l2\n"
+                             "    ld r3 <- r0[0]\n"
+                             "    st r1[0] <- r3\n"
+                             "    li r3 <- 1\n"
+                             "    add r0 <- r0 r3\n"
+                             "    add r1 <- r1 r3\n"
+                             "    li r3 <- 1\n"
+                             "    sub r2 <- r2 r3\n"
+                             "    jmp l1\n"
+                             "l2:\n"
+                             "    ;; done with Object.copy loop\n"
+                             "    pop r1");
+            break;
+        case 2: //Object.type_name
+            s = stringstream("    push fp\n"
+                             "    push r0\n"
+                             "    la r2 <- String..new\n"
+                             "    call r2\n"
+                             "    pop r0\n"
+                             "    pop fp\n"
+                             "    ;; obtain vtable for self object\n"
+                             "    ld r2 <- r0[2]\n"
+                             "    ;; look up type name at offset 0 in vtable\n"
+                             "    ld r2 <- r2[0]\n"
+                             "    st r1[3] <- r2");
+            break;
+        case 3: //IO.in_int
+            s = stringstream("    push fp\n"
+                             "    push r0\n"
+                             "    la r2 <- Int..new\n"
+                             "    call r2\n"
+                             "    pop r0\n"
+                             "    pop fp\n"
+                             "    mov r2 <- r1\n"
+                             "    syscall IO.in_int\n"
+                             "    st r2[3] <- r1\n"
+                             "    mov r1 <- r2");
+            break;
+        case 4: //IO.in_string
+            s = stringstream("    push fp\n"
+                             "    push r0\n"
+                             "    la r2 <- String..new\n"
+                             "    call r2\n"
+                             "    pop r0\n"
+                             "    pop fp\n"
+                             "    mov r2 <- r1\n"
+                             "    syscall IO.in_string\n"
+                             "    st r2[3] <- r1\n"
+                             "    mov r1 <- r2");
+            break;
+        case 5: //IO.out_int
+            s = stringstream("    ld r2 <- fp[2]\n"
+                             "    ld r1 <- r2[3]\n"
+                             "    syscall IO.out_int\n"
+                             "    mov r1 <- r0");
+            break;
+        case 6: //IO.out_string
+            s = stringstream("    ld r2 <- fp[2]\n"
+                             "    ld r1 <- r2[3]\n"
+                             "    syscall IO.out_string\n"
+                             "    mov r1 <- r0");
+            break;
+        case 7: //String.concat
+            s = stringstream("    push fp\n"
+                             "    push r0\n"
+                             "    la r2 <- String..new\n"
+                             "    call r2\n"
+                             "    pop r0\n"
+                             "    pop fp\n"
+                             "    mov r3 <- r1\n"
+                             "    ld r2 <- fp[2]\n"
+                             "    ld r2 <- r2[3]\n"
+                             "    ld r1 <- r0[3]\n"
+                             "    syscall String.concat\n"
+                             "    st r3[3] <- r1\n"
+                             "    mov r1 <- r3");
+            break;
+        case 8: //String.length
+            s = stringstream("    push fp\n"
+                             "    push r0\n"
+                             "    la r2 <- Int..new\n"
+                             "    call r2\n"
+                             "    pop r0\n"
+                             "    pop fp\n"
+                             "    mov r2 <- r1\n"
+                             "    ld r1 <- r0[3]\n"
+                             "    syscall String.length\n"
+                             "    st r2[3] <- r1\n"
+                             "    mov r1 <- r2");
+            break;
+        case 9: //String.substr
+            s = stringstream("    push fp\n"
+                             "    push r0\n"
+                             "    la r2 <- String..new\n"
+                             "    call r2\n"
+                             "    pop r0\n"
+                             "    pop fp\n"
+                             "    mov r3 <- r1\n"
+                             "    ld r2 <- fp[2]\n"
+                             "    ld r2 <- r2[3]\n"
+                             "    ld r1 <- fp[3]\n"
+                             "    ld r1 <- r1[3]\n"
+                             "    ld r0 <- r0[3]\n"
+                             "    syscall String.substr\n"
+                             "    bnz r1 l3\n"
+                             "    la r1 <- substr\n"
+                             "    syscall IO.out_string\n"
+                             "    syscall exit\n"
+                             "l3:\n"
+                             "    st r3[3] <- r1\n"
+                             "    mov r1 <- r3");
+            break;
+        case 10:
+            s = stringstream("eq_handler:             ;; helper function for =\n"
+                             "                        mov fp <- sp\n"
+                             "                        pop r0\n"
+                             "                        push ra\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        beq r1 r2 eq_true\n"
+                             "                        li r3 <- 0\n"
+                             "                        beq r1 r3 eq_false\n"
+                             "                        beq r2 r3 eq_false\n"
+                             "                        ld r1 <- r1[0]\n"
+                             "                        ld r2 <- r2[0]\n"
+                             "                        ;; place the sum of the type tags in r1\n"
+                             "                        add r1 <- r1 r2\n"
+                             "                        li r2 <- 0\n"
+                             "                        beq r1 r2 eq_bool\n"
+                             "                        li r2 <- 2\n"
+                             "                        beq r1 r2 eq_int\n"
+                             "                        li r2 <- 6\n"
+                             "                        beq r1 r2 eq_string\n"
+                             "                        ;; otherwise, use pointer comparison\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        beq r1 r2 eq_true\n"
+                             "eq_false:               ;; not equal\n"
+                             "                        ;; new Bool\n"
+                             "                        push fp\n"
+                             "                        push r0\n"
+                             "                        la r2 <- Bool..new\n"
+                             "                        call r2\n"
+                             "                        pop r0\n"
+                             "                        pop fp\n"
+                             "                        jmp eq_end\n"
+                             "eq_true:                ;; equal\n"
+                             "                        ;; new Bool\n"
+                             "                        push fp\n"
+                             "                        push r0\n"
+                             "                        la r2 <- Bool..new\n"
+                             "                        call r2\n"
+                             "                        pop r0\n"
+                             "                        pop fp\n"
+                             "                        li r2 <- 1\n"
+                             "                        st r1[3] <- r2\n"
+                             "                        jmp eq_end\n"
+                             "eq_bool:                ;; two Bools\n"
+                             "eq_int:                 ;; two Ints\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        ld r1 <- r1[3]\n"
+                             "                        ld r2 <- r2[3]\n"
+                             "                        beq r1 r2 eq_true\n"
+                             "                        jmp eq_false\n"
+                             "eq_string:              ;; two Strings\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        ld r1 <- r1[3]\n"
+                             "                        ld r2 <- r2[3]\n"
+                             "                        ld r1 <- r1[0]\n"
+                             "                        ld r2 <- r2[0]\n"
+                             "                        beq r1 r2 eq_true\n"
+                             "                        jmp eq_false\n"
+                             "eq_end:                 pop ra\n"
+                             "                        li r2 <- 2\n"
+                             "                        add sp <- sp r2\n"
+                             "                        return\n"
+                             "                        ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n"
+                             "le_handler:             ;; helper function for <=\n"
+                             "                        mov fp <- sp\n"
+                             "                        pop r0\n"
+                             "                        push ra\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        beq r1 r2 le_true\n"
+                             "                        li r3 <- 0\n"
+                             "                        beq r1 r3 le_false\n"
+                             "                        beq r2 r3 le_false\n"
+                             "                        ld r1 <- r1[0]\n"
+                             "                        ld r2 <- r2[0]\n"
+                             "                        ;; place the sum of the type tags in r1\n"
+                             "                        add r1 <- r1 r2\n"
+                             "                        li r2 <- 0\n"
+                             "                        beq r1 r2 le_bool\n"
+                             "                        li r2 <- 2\n"
+                             "                        beq r1 r2 le_int\n"
+                             "                        li r2 <- 6\n"
+                             "                        beq r1 r2 le_string\n"
+                             "                        ;; for non-primitives, equality is our only hope\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        beq r1 r2 le_true\n"
+                             "le_false:               ;; not less-than-or-equal\n"
+                             "                        ;; new Bool\n"
+                             "                        push fp\n"
+                             "                        push r0\n"
+                             "                        la r2 <- Bool..new\n"
+                             "                        call r2\n"
+                             "                        pop r0\n"
+                             "                        pop fp\n"
+                             "                        jmp le_end\n"
+                             "le_true:                ;; less-than-or-equal\n"
+                             "                        ;; new Bool\n"
+                             "                        push fp\n"
+                             "                        push r0\n"
+                             "                        la r2 <- Bool..new\n"
+                             "                        call r2\n"
+                             "                        pop r0\n"
+                             "                        pop fp\n"
+                             "                        li r2 <- 1\n"
+                             "                        st r1[3] <- r2\n"
+                             "                        jmp le_end\n"
+                             "le_bool:                ;; two Bools\n"
+                             "le_int:                 ;; two Ints\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        ld r1 <- r1[3]\n"
+                             "                        ld r2 <- r2[3]\n"
+                             "                        ble r1 r2 le_true\n"
+                             "                        jmp le_false\n"
+                             "le_string:              ;; two Strings\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        ld r1 <- r1[3]\n"
+                             "                        ld r2 <- r2[3]\n"
+                             "                        ld r1 <- r1[0]\n"
+                             "                        ld r2 <- r2[0]\n"
+                             "                        ble r1 r2 le_true\n"
+                             "                        jmp le_false\n"
+                             "le_end:                 pop ra\n"
+                             "                        li r2 <- 2\n"
+                             "                        add sp <- sp r2\n"
+                             "                        return\n"
+                             "                        ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n"
+                             "lt_handler:             ;; helper function for <\n"
+                             "                        mov fp <- sp\n"
+                             "                        pop r0\n"
+                             "                        push ra\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        li r3 <- 0\n"
+                             "                        beq r1 r3 lt_false\n"
+                             "                        beq r2 r3 lt_false\n"
+                             "                        ld r1 <- r1[0]\n"
+                             "                        ld r2 <- r2[0]\n"
+                             "                        ;; place the sum of the type tags in r1\n"
+                             "                        add r1 <- r1 r2\n"
+                             "                        li r2 <- 0\n"
+                             "                        beq r1 r2 lt_bool\n"
+                             "                        li r2 <- 2\n"
+                             "                        beq r1 r2 lt_int\n"
+                             "                        li r2 <- 6\n"
+                             "                        beq r1 r2 lt_string\n"
+                             "                        ;; for non-primitives, < is always false\n"
+                             "lt_false:               ;; not less than\n"
+                             "                        ;; new Bool\n"
+                             "                        push fp\n"
+                             "                        push r0\n"
+                             "                        la r2 <- Bool..new\n"
+                             "                        call r2\n"
+                             "                        pop r0\n"
+                             "                        pop fp\n"
+                             "                        jmp lt_end\n"
+                             "lt_true:                ;; less than\n"
+                             "                        ;; new Bool\n"
+                             "                        push fp\n"
+                             "                        push r0\n"
+                             "                        la r2 <- Bool..new\n"
+                             "                        call r2\n"
+                             "                        pop r0\n"
+                             "                        pop fp\n"
+                             "                        li r2 <- 1\n"
+                             "                        st r1[3] <- r2\n"
+                             "                        jmp lt_end\n"
+                             "lt_bool:                ;; two Bools\n"
+                             "lt_int:                 ;; two Ints\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        ld r1 <- r1[3]\n"
+                             "                        ld r2 <- r2[3]\n"
+                             "                        blt r1 r2 lt_true\n"
+                             "                        jmp lt_false\n"
+                             "lt_string:              ;; two Strings\n"
+                             "                        ld r1 <- fp[3]\n"
+                             "                        ld r2 <- fp[2]\n"
+                             "                        ld r1 <- r1[3]\n"
+                             "                        ld r2 <- r2[3]\n"
+                             "                        ld r1 <- r1[0]\n"
+                             "                        ld r2 <- r2[0]\n"
+                             "                        blt r1 r2 lt_true\n"
+                             "                        jmp lt_false\n"
+                             "lt_end:                 pop ra\n"
+                             "                        li r2 <- 2\n"
+                             "                        add sp <- sp r2\n"
+                             "                        return");
+            break;
+    }
+}
+void _program::pushBackHardcodedMethods() {
+    //parallel vectors
+    vector<string> klasses{"Object", "Object", "Object", "IO", "IO", "IO", "IO", "String", "String", "String"};
+    vector<string> methods{"abort", "copy", "type_name", "in_int", "in_string", "out_int", "out_string", "concat", "length", "substr"};
+    vector<int> maxStackRoom{1,1,1,1,1,2,2,2,1,3};
+    stringstream s; string line;
+
+    for(int i = 0; i < 10; ++i) {
+        //push back method label
+        code.push_back(klasses[i] + '.' + methods[i] + ':');
+        calleeCallSequence(methods[i]); //use default value 1 for stackRoomForTemps
+        //COMMENT
+        code.push_back("\t;;method body begins;;;;;;;;;;;");
+        setUpHardcodeStringStream(i, s);
+        while(getline(s, line)) {
+            code.push_back(line);
+        }
+        calleeReturnSequence(klasses[i], methods[i], maxStackRoom[i]);
+    }
+}
+
+void _program::pushBackHardcodedHelpers() {
+    //COMMENT
+    code.push_back(";;start helper subroutines;;;;;;;;;;;;;;;;;;;;;;;;;;;");
+    stringstream s; string line;
+    setUpHardcodeStringStream(10, s);
+    while(getline(s, line)) {
+        code.push_back(line);
+    }
+    //COMMENT
+    code.push_back(";;end helper subroutines;;;;;;;;;;;;;;;;;;;;;;;;;;;");
+}
+
+void _program::genMethods() {
+    //TODO: implement DFS of class hierarchy starting at Object, each depth being taken care of according operator<
+     //the above isn't needed at all but would help with debugging against the ref compiler
+    //level order traversal of the hierarchy
+//    string currentParent = "Object";
+//    vector<string> klassPrintOrder{"Object"};
+    //COMMENT
+    code.push_back(";;start method generation;;;;;;;;;;");
+
+    pushBackHardcodedMethods();
+
+    for(auto x : classMapOrdered) {
+        const string& klass = x.first;
+        for(pair<methodRecord*, string> methodAndDefiner : implementationMapOrdered.at(klass)) {
+            //only process if it is a defining class AND not one of the hardcoded classes
+            if(klass != "Object" && klass != "IO" && klass != "String" && klass == methodAndDefiner.second) {
+                code.push_back(klass + '.' + methodAndDefiner.first->lexeme + ':');
+
+                //COMMENT
+                code.push_back("\t;;method definition;;;;;;;;;;;");
+                calleeCallSequence(methodAndDefiner.first->lexeme, methodAndDefiner.first->treeNode->formalList.size() + 2); //TODO: calculate stackRoomForTemps
+
+                //COMMENT
+                code.push_back("\t;;method body begins;;;;;;;;;;;");
+
+
+                code.push_back("\t;;PLACEHOLDER FOR METHOD BODY");
+                top = globalEnv->links.at({klass, "class"});
+                methodAndDefiner.first->treeNode->body->codeGen();
+
+                //COMMENT
+                code.push_back("\t;;method body ends;;;;;;;;;;;");
+                calleeReturnSequence(klass, methodAndDefiner.first->lexeme, methodAndDefiner.first->treeNode->formalList.size() + 2); //TODO: calculate stackRoomForTemps
+            }
+        }
+    }
+    //COMMENT
+    code.push_back(";;end method generation;;;;;;;;;;");
+
+}
+
+void _program::tackOnGlobalStringConstants() {
+    //COMMENT
+    code.push_back(";;global string constants;;;;;;;;;;;;;");
+    code.insert(code.end(), globalStringConstants.begin(), globalStringConstants.end());
 }
 
 
@@ -524,8 +893,15 @@ void _program::genMethods() {
  * @param instructions
  */
 void _program::codeGen() {
-    genVTables();
-    genConstructors2();
+    fillInClassAttributeNum();
+    populateClassMapOrdered();
+    populateImplementationMapOrdered();
+
+    genVTablesAndGlobalStringConstantsClassNames();
+    genConstructors();
+    genMethods();
+    tackOnGlobalStringConstants();
+    pushBackHardcodedHelpers();
     genStart();
 
     actuallyPrint();
@@ -545,4 +921,95 @@ void _integer::codeGen() {
 void _bool::codeGen() {
     li(temp_reg, value);
     st(acc_reg, firstAttributeOffset, temp_reg);
+}
+
+void _arith::codeGen() {
+//    isLHS = true;
+    left->codeGen();
+    st(fp, 0, acc_reg);
+//    isLHS = false;
+    right->codeGen();
+    ld(temp_reg, fp, 0);
+    if(op == "plus") {
+        add(acc_reg, temp_reg, acc_reg);
+    }
+    else if(op == "minus") {
+        sub(acc_reg, temp_reg, acc_reg);
+    }
+    else if(op == "times") {
+        mul(acc_reg, temp_reg, acc_reg);
+    }
+    else {//op == divides
+        div(acc_reg, temp_reg, acc_reg);
+    }
+    st(fp, 0, acc_reg);
+
+    //_arith nodes always return an Int
+    currentClass = "Int";
+    currentMethod = ".new";
+    callerCallAndReturnSequence(currentClass, currentMethod);
+
+    ld(temp_reg, fp, 0);
+    st(acc_reg, firstAttributeOffset, temp_reg);
+    push(acc_reg);
+    push(self_reg);
+}
+
+void _identifier::codeGen() {
+    //COMMENT
+    code.push_back("\t;;identifier: " + identifier.identifier);
+    objectRecord* id = (objectRecord*)top->getObject(identifier.identifier);
+
+    int offsetWRTfirstAttribute = 0;
+    if(id->kind == "attribute") {//has an offset
+        list<objectRecord*>& listtt = classMapOrdered.at(currentClass);
+        for(objectRecord* current : listtt) {
+            if(current == id) {
+                break;
+            }
+            offsetWRTfirstAttribute++;
+        }
+    }
+    else {
+//        mov()
+    }
+//    if(isLHS) {
+        ld(acc_reg, self_reg, firstAttributeOffset + offsetWRTfirstAttribute); //find position of this identifier in the frame. So it must be >= firstAttributeOffset
+        ld(acc_reg, acc_reg, firstAttributeOffset);
+//        st(fp, 0, acc_reg);
+//    }
+//    else {//isRHS
+//
+//    }
+}
+
+void _selfDispatch::codeGen() {
+    //TODO: do these two lines go here?
+    push(self_reg);
+    push(fp);
+
+//    currentClass = args.front()->exprType; //TODO: iterate over all arguments after figuring out whether there is stuff before/after this.
+//    currentMethod = ".new";
+    currentClass = top->C;
+    currentMethod = method.identifier;
+    args.front()->codeGen();
+
+    //COMMENT
+    code.push_back("\t;;obtain vtable for self object of type " + top->C);
+    ld(temp_reg, self_reg, vtablePointerOffset);
+
+    //COMMENT
+
+    int offset = 0;
+    list<pair<methodRecord*, string>>& methods = implementationMapOrdered.at(top->C);
+    for(pair<methodRecord*, string> m : methods) {
+        if(method.identifier != m.first->lexeme) {
+            offset++;
+        }
+    }
+    code.push_back("\t;;look up " + method.identifier + " at offset " + to_string(offset));
+    ld(temp_reg, temp_reg, offset);
+    call(temp_reg);
+    pop(fp);
+    pop(r0);
 }
