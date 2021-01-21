@@ -328,6 +328,7 @@ public:
     void traverse() override;
 private:
     void semanticCheck();
+    void codeGen();
 };
 
 class _new : public _expr {

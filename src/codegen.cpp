@@ -63,6 +63,10 @@ const int objectSizeOffset = 1;
 const int vtablePointerOffset = 2;
 const int firstAttributeOffset = 3;
 
+const int classNameOffset = 0;
+const int newPointerOffset = 1;
+const int firstMethodOffset = 2;
+
 void li(string r, int i) {
     code.push_back("\tli " + r + " <- " + to_string(i));
 }
@@ -856,11 +860,13 @@ void _program::genMethods() {
         for(pair<methodRecord*, string> methodAndDefiner : implementationMapOrdered.at(klass)) {
             //only process if it is a defining class AND not one of the hardcoded classes
             if(klass != "Object" && klass != "IO" && klass != "String" && klass == methodAndDefiner.second) {
+                currentMethod = methodAndDefiner.first->lexeme;
+                currentClass = klass;
                 code.push_back(klass + '.' + methodAndDefiner.first->lexeme + ':');
 
                 //COMMENT
                 code.push_back("\t;;method definition;;;;;;;;;;;");
-                calleeCallSequence(methodAndDefiner.first->lexeme, methodAndDefiner.first->treeNode->formalList.size() + 2); //TODO: calculate stackRoomForTemps
+                calleeCallSequence(methodAndDefiner.first->lexeme, 999); //TODO: calculate stackRoomForTemps
 
                 //COMMENT
                 code.push_back("\t;;method body begins;;;;;;;;;;;");
@@ -872,7 +878,7 @@ void _program::genMethods() {
 
                 //COMMENT
                 code.push_back("\t;;method body ends;;;;;;;;;;;");
-                calleeReturnSequence(klass, methodAndDefiner.first->lexeme, methodAndDefiner.first->treeNode->formalList.size() + 2); //TODO: calculate stackRoomForTemps
+                calleeReturnSequence(klass, methodAndDefiner.first->lexeme, 999); //TODO: calculate stackRoomForTemps
             }
         }
     }
@@ -914,16 +920,19 @@ void _program::codeGen() {
 * So it is at position 3.
 */
 void _integer::codeGen() {
+    cout << "_integer::codeGen()\n";
     li(temp_reg, value);
     st(acc_reg, firstAttributeOffset, temp_reg);
 }
 
 void _bool::codeGen() {
+    cout << "_bool::codeGen()\n";
     li(temp_reg, value);
     st(acc_reg, firstAttributeOffset, temp_reg);
 }
 
 void _arith::codeGen() {
+    cout << "_arith::codeGen()\n";
 //    isLHS = true;
     left->codeGen();
     st(fp, 0, acc_reg);
@@ -951,11 +960,14 @@ void _arith::codeGen() {
 
     ld(temp_reg, fp, 0);
     st(acc_reg, firstAttributeOffset, temp_reg);
-    push(acc_reg);
-    push(self_reg);
+
+
+//    push(acc_reg);
+//    push(self_reg);
 }
 
 void _identifier::codeGen() {
+    cout << "_identifier::codeGen()\n";
     //COMMENT
     code.push_back("\t;;identifier: " + identifier.identifier);
     objectRecord* id = (objectRecord*)top->getObject(identifier.identifier);
@@ -984,32 +996,43 @@ void _identifier::codeGen() {
 }
 
 void _selfDispatch::codeGen() {
-    //TODO: do these two lines go here?
+    cout << "_selfDispatch::codeGen()\n";
+
+    //COMMENT
+    code.push_back("\t;;" + method.identifier + "(...)");
     push(self_reg);
     push(fp);
 
-//    currentClass = args.front()->exprType; //TODO: iterate over all arguments after figuring out whether there is stuff before/after this.
-//    currentMethod = ".new";
-    currentClass = top->C;
-    currentMethod = method.identifier;
-    args.front()->codeGen();
+    for(_expr* arg : args) {
+        callerCallAndReturnSequence(arg->exprType, newSuffix);
+        arg->codeGen();
+        push(acc_reg);
+    }
+
+    push(self_reg);
 
     //COMMENT
-    code.push_back("\t;;obtain vtable for self object of type " + top->C);
+    code.push_back("\t;;obtain vtable for self object of type " + currentClass);
     ld(temp_reg, self_reg, vtablePointerOffset);
 
-    //COMMENT
-
-    int offset = 0;
-    list<pair<methodRecord*, string>>& methods = implementationMapOrdered.at(top->C);
-    for(pair<methodRecord*, string> m : methods) {
-        if(method.identifier != m.first->lexeme) {
-            offset++;
-        }
+    //todo: include this info on the method record so we don't have to traverse to find its position
+    int methodOffset = firstMethodOffset;
+    list<pair<methodRecord*, string>>& methods = implementationMapOrdered.at(currentClass);
+    for(pair<methodRecord*, string> methodPair : methods) {
+        if(methodPair.first->lexeme == method.identifier) break;
+        ++methodOffset;
     }
-    code.push_back("\t;;look up " + method.identifier + " at offset " + to_string(offset));
-    ld(temp_reg, temp_reg, offset);
+    //COMMENT
+    code.push_back("\t;;look up " + method.identifier + "() at offset " + to_string(methodOffset) + " in vtable");
+    ld(temp_reg, temp_reg, methodOffset);
     call(temp_reg);
     pop(fp);
     pop(r0);
+}
+
+void _block::codeGen() {
+    cout << "_block::codeGen()\n";
+    for(_expr* e : body) {
+        e->codeGen();
+    }
 }

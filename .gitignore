@@ -8,3 +8,4 @@
 *.cl-type
 bison.pdf
 *TEST.cl
+*.cl-asm
