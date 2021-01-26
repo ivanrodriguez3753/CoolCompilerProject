@@ -143,6 +143,8 @@ public:
 
     _feature(int l, _idMeta id, _idMeta typeId);
 
+    virtual void populateStackRoomForTemps() {};//do nothing for _attribute(No)Init, override in _method
+
 };
 
 class _attributeNoInit : public _feature {
@@ -176,10 +178,11 @@ private:
 
 class _method : public _feature {
 public:
+    static int tempsRequired;
     list<_formal*> formalList;
     _expr* body;
 
-    methodRecord* rec;
+//    methodRecord* rec;
 
     _method(_idMeta id, _idMeta typeId, _expr* b);
 
@@ -187,8 +190,12 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+
+    void populateStackRoomForTemps() override;
 private:
     void typeCheck();
+    int preorderDriver(Environment* e);
+    int preorderRecurse(Environment* e, pair<int, int> temps);
 };
 
 class _formal : public _node {
@@ -206,9 +213,17 @@ public:
 
 class _expr : public _node {
 public:
+    static int numIdentifiersInThisScope;
     _expr(int l);
 
     string exprType;
+
+
+    /**
+     * on dispatch, we always return the result of the last expression, so we don't need to hold the value produced,
+     * we can just put it in the return register.
+     */
+    bool rootExpression = false;
 
     virtual void traverse() = 0;
     virtual void codeGen(){} //= 0; //TODO: Make this pure virtual
@@ -328,7 +343,7 @@ public:
     void traverse() override;
 private:
     void semanticCheck();
-    void codeGen();
+    void codeGen() override;
 };
 
 class _new : public _expr {
@@ -342,6 +357,7 @@ public:
 
     void traverse() override;
 private:
+    void codeGen() override;
     void typeCheck();
 };
 
@@ -416,6 +432,8 @@ public:
 
     void traverse() override{}
     void codeGen() override;
+
+
 };
 
 class _string : public _expr {

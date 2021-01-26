@@ -37,6 +37,7 @@ public:
 
 class methodRecord : public Record {
 public:
+    int maxIdentifiers;
     string returnType;
 
     _method* treeNode;

@@ -67,6 +67,8 @@ const int classNameOffset = 0;
 const int newPointerOffset = 1;
 const int firstMethodOffset = 2;
 
+const int firstArgOffset = 2;
+
 void li(string r, int i) {
     code.push_back("\tli " + r + " <- " + to_string(i));
 }
@@ -125,7 +127,7 @@ void alloc(string r_dest, string r_numWords) {
  */
 void callerCallAndReturnSequence(string klass, string subroutine) {
     //COMMENT
-    code.push_back("\t;;Caller calling conventions;;;;;;;");
+    code.push_back("\t;; new " + klass + " Caller calling conventions;;;;;;;");
     push(fp);
     push(self_reg);
     la(temp_reg, klass + "." + subroutine);
@@ -233,9 +235,6 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
                 //COMMENTS
                 code.push_back(comment);
                 code.push_back("\t;;new " + attr->initExpr->exprType + " for initializer expression;;;;;;;;;");
-                callerCallAndReturnSequence(attr->type, newSuffix);
-                //COMMENT
-//if(attr->type == "Int") {//TODO: TEMPORARY. NEEDS TO WORK FOR ALL TYPES
                 //COMMENT
                 code.push_back("\t;;evaluate " + attr->type + " expression and store;;;;;;;;;;;;;;;;;");
                 attr->initExpr->codeGen();
@@ -243,7 +242,6 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
                 //COMMENT
                 code.push_back("\t;;store result of creating object from initializer expression;;;;;;;;;;");
                 st(self_reg, curOffset, acc_reg);
-//}
 
             }
             else {
@@ -856,6 +854,7 @@ void _program::genMethods() {
     pushBackHardcodedMethods();
 
     for(auto x : classMapOrdered) {
+        top = globalEnv->links.at({x.first, "class"});
         const string& klass = x.first;
         for(pair<methodRecord*, string> methodAndDefiner : implementationMapOrdered.at(klass)) {
             //only process if it is a defining class AND not one of the hardcoded classes
@@ -866,19 +865,31 @@ void _program::genMethods() {
 
                 //COMMENT
                 code.push_back("\t;;method definition;;;;;;;;;;;");
-                calleeCallSequence(methodAndDefiner.first->lexeme, 999); //TODO: calculate stackRoomForTemps
 
-                //COMMENT
-                code.push_back("\t;;method body begins;;;;;;;;;;;");
+                int stackRoomForTemps = max(methodAndDefiner.first->maxIdentifiers, 1);
+                calleeCallSequence(methodAndDefiner.first->lexeme, stackRoomForTemps); //TODO: calculate stackRoomForTemps
 
-
-                code.push_back("\t;;PLACEHOLDER FOR METHOD BODY");
                 top = globalEnv->links.at({klass, "class"});
+                int i = 0;
+                for(objectRecord* curAttr : classMapOrdered.at(klass)) {
+                    //COMMENT
+                    code.push_back("\t;; self[" + to_string(firstAttributeOffset + i++) + "] holds field " + curAttr->lexeme + " (" + curAttr->type + ')');
+                }
+                list<_formal*>& formals = methodAndDefiner.first->treeNode->formalList;
+                i = firstArgOffset + formals.size() - 1;
+                for(_formal* formal : formals) {
+                    //COMMENT
+                    code.push_back("\t;; fp[" + to_string(i--) + "] holds argument " + formal->identifier.identifier + " (" + formal->typeIdentifier.identifier + ')');
+                }
+                //COMMENT
+                code.push_back("\t;; method body begins");
+
+                top = globalEnv->links.at({klass, "class"})->links.at({methodAndDefiner.first->lexeme, "method"});
                 methodAndDefiner.first->treeNode->body->codeGen();
 
                 //COMMENT
                 code.push_back("\t;;method body ends;;;;;;;;;;;");
-                calleeReturnSequence(klass, methodAndDefiner.first->lexeme, 999); //TODO: calculate stackRoomForTemps
+                calleeReturnSequence(klass, methodAndDefiner.first->lexeme, stackRoomForTemps + methodAndDefiner.first->treeNode->formalList.size()); //TODO: calculate stackRoomForTemps
             }
         }
     }
@@ -920,19 +931,17 @@ void _program::codeGen() {
 * So it is at position 3.
 */
 void _integer::codeGen() {
-    cout << "_integer::codeGen()\n";
+    callerCallAndReturnSequence("Int", ".new");
     li(temp_reg, value);
     st(acc_reg, firstAttributeOffset, temp_reg);
 }
 
 void _bool::codeGen() {
-    cout << "_bool::codeGen()\n";
     li(temp_reg, value);
     st(acc_reg, firstAttributeOffset, temp_reg);
 }
 
 void _arith::codeGen() {
-    cout << "_arith::codeGen()\n";
 //    isLHS = true;
     left->codeGen();
     st(fp, 0, acc_reg);
@@ -961,15 +970,12 @@ void _arith::codeGen() {
     ld(temp_reg, fp, 0);
     st(acc_reg, firstAttributeOffset, temp_reg);
 
-
-//    push(acc_reg);
-//    push(self_reg);
+    if(!rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);
 }
 
 void _identifier::codeGen() {
-    cout << "_identifier::codeGen()\n";
     //COMMENT
-    code.push_back("\t;;identifier: " + identifier.identifier);
+    code.push_back("\t;; " + identifier.identifier);
     objectRecord* id = (objectRecord*)top->getObject(identifier.identifier);
 
     int offsetWRTfirstAttribute = 0;
@@ -981,22 +987,31 @@ void _identifier::codeGen() {
             }
             offsetWRTfirstAttribute++;
         }
+        ld(acc_reg, self_reg, firstAttributeOffset + offsetWRTfirstAttribute);
+        if(!rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);//TODO: DOES THIS GO HERE
+    }
+    //the only local variables in a methodEnv are the method parameters
+    else if( (top->metaInfo.kind == "method") && (id->kind == "local") ) { //method parameter. need to refer using fp
+        pair<methodRecord*, string> methodRec = implementationMap.at(top->C).at(top->metaInfo.identifier);
+        list<_formal*>::iterator formalsIt = methodRec.first->treeNode->formalList.begin();
+        int i = 0;
+        while(i < methodRec.first->treeNode->formalList.size()) {
+            if((*(formalsIt++))->identifier.identifier == id->lexeme) {
+                break;
+            }
+            ++i;
+
+        }
+        ld(acc_reg, fp, (firstArgOffset + methodRec.first->treeNode->formalList.size() - 1) - i);
+        //TODO does this go here?
+        if(!rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);
     }
     else {
-//        mov()
+        code.push_back("\t;; did nothing with _identifier");
     }
-//    if(isLHS) {
-        ld(acc_reg, self_reg, firstAttributeOffset + offsetWRTfirstAttribute); //find position of this identifier in the frame. So it must be >= firstAttributeOffset
-        ld(acc_reg, acc_reg, firstAttributeOffset);
-//        st(fp, 0, acc_reg);
-//    }
-//    else {//isRHS
-//
-//    }
 }
 
 void _selfDispatch::codeGen() {
-    cout << "_selfDispatch::codeGen()\n";
 
     //COMMENT
     code.push_back("\t;;" + method.identifier + "(...)");
@@ -1004,7 +1019,7 @@ void _selfDispatch::codeGen() {
     push(fp);
 
     for(_expr* arg : args) {
-        callerCallAndReturnSequence(arg->exprType, newSuffix);
+        arg->rootExpression = true;
         arg->codeGen();
         push(acc_reg);
     }
@@ -1017,7 +1032,7 @@ void _selfDispatch::codeGen() {
 
     //todo: include this info on the method record so we don't have to traverse to find its position
     int methodOffset = firstMethodOffset;
-    list<pair<methodRecord*, string>>& methods = implementationMapOrdered.at(currentClass);
+    list<pair<methodRecord*, string>>& methods = implementationMapOrdered.at(top->C);
     for(pair<methodRecord*, string> methodPair : methods) {
         if(methodPair.first->lexeme == method.identifier) break;
         ++methodOffset;
@@ -1031,8 +1046,11 @@ void _selfDispatch::codeGen() {
 }
 
 void _block::codeGen() {
-    cout << "_block::codeGen()\n";
     for(_expr* e : body) {
         e->codeGen();
     }
+}
+
+void _new::codeGen() {
+    callerCallAndReturnSequence(identifier.identifier, newSuffix);
 }

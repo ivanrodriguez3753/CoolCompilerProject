@@ -394,6 +394,7 @@ void _program::traverse() {
     typeCheck();
 }
 
+int _expr::numIdentifiersInThisScope = 0;
 _expr::_expr(int l) : _node(l) {
 
 }
@@ -465,12 +466,19 @@ string lookUpSelfType(Environment* current) {
     }
     return current->metaInfo.identifier;
 }
+
+int _method::tempsRequired;
 void _method::traverse() {
     top = top->links[{identifier.identifier, "method"}];
     for(auto formal : formalList) {
         formal->traverse();
     }
+    tempsRequired = 0;
+
+    body->rootExpression = true; //TODO check if this is necessary here
     body->traverse();
+
+    implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = tempsRequired;
 
     typeCheck();
 
@@ -502,6 +510,46 @@ void _method::typeCheck() {
         printAndPush(e);
     }
 
+}
+
+int _method::preorderDriver(Environment* e){
+    return preorderRecurse(e, {0,0});
+}
+/**
+ * pair<int,int> denotes <tempsPrevScope, currentMax>
+ * @param e
+ * @param temps
+ * @return
+ */
+int _method::preorderRecurse(Environment* e, pair<int,int> tempsPrevAndMax) {
+    int tempsHere = e->symTable.size();
+    if(tempsHere + tempsPrevAndMax.first > tempsPrevAndMax.second) {
+        tempsPrevAndMax.second = tempsHere + tempsPrevAndMax.first;
+    }
+
+    for(auto x : e->links) {
+        tempsPrevAndMax.second = preorderRecurse(x.second, {tempsPrevAndMax.first + tempsHere, tempsPrevAndMax.second});
+    }
+
+    return tempsPrevAndMax.second;
+
+}
+
+
+void _method::populateStackRoomForTemps() {
+    int currentMax = 1; //always need 1 for retVal, but that one is reused if we need it for a temp.
+    //so 0 temps and 1 temps both return 1.
+    for(map<pair<string,string>, Environment*>::iterator linksIt = top->links.begin();
+        linksIt != top->links.end();
+        ++linksIt) { //start one environment past current method (so first let/case) because you don't use stack for arguments
+        //we use stack for temps required in the function call
+//        rec->maxIdentifiers = preorderDriver(linksIt->second);
+        int i = preorderDriver(linksIt->second);
+        if(i > currentMax) {
+            currentMax = i;
+        }
+    }
+    implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = currentMax;
 }
 
 _formal::_formal(_idMeta id, _idMeta typeId) :
@@ -815,6 +863,7 @@ void _selfDispatch::semanticCheck() {
 
 void _selfDispatch::traverse() {
     for(_expr* arg : args) {
+        arg->rootExpression = true;
         arg->traverse();
     }
 
@@ -1081,8 +1130,15 @@ void _arith::typeCheck() {
     }
 }
 void _arith::traverse() {
+    int startTempsReq = _method::tempsRequired;
+
     left->traverse();
+    int max1 = _method::tempsRequired - startTempsReq; //NT(e1)
+
     right->traverse();
+    int max2 = 1 + (_method::tempsRequired - max1 - startTempsReq); //1 + NT(e2)
+
+    _method::tempsRequired = max({max1, max2});
 
     typeCheck();
 }
@@ -1253,6 +1309,12 @@ void _identifier::traverse() {
             break;
         }
     }
+
+    if(top->symTable.find({identifier.identifier, "local"}) != top->symTable.end()) { //found
+        numIdentifiersInThisScope++;
+    }
+
+    ++_method::tempsRequired;
     typeCheck();
 }
 

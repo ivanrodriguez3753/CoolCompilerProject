@@ -34,7 +34,7 @@ extern const int objectSizeOffset;
 extern const int vtablePointerOffset;
 extern const int firstAttributeOffset;
 
-extern bool isLHS;
+extern const int firstArgOffset;
 
 extern map<string, list<objectRecord*>> classMapOrdered;
 extern map<string, list<pair<methodRecord*, string>>> implementationMapOrdered;
