@@ -178,7 +178,9 @@ private:
 
 class _method : public _feature {
 public:
-    static int tempsRequired;
+    static int currentMaxTemps;
+    static int currentTemps;
+
     list<_formal*> formalList;
     _expr* body;
 
@@ -213,7 +215,6 @@ public:
 
 class _expr : public _node {
 public:
-    static int numIdentifiersInThisScope;
     _expr(int l);
 
     string exprType;
@@ -512,6 +513,7 @@ public:
 
     void traverse() override;
 private:
+    void codeGen() override {init->codeGen();}
     pair<int, string> typeCheck() override;
 };
 
@@ -532,6 +534,7 @@ public:
 private:
     void typeCheck();
     void semanticCheck();
+    void codeGen() override;
 };
 
 class _caseElement : public _expr {

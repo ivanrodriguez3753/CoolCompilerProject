@@ -394,7 +394,6 @@ void _program::traverse() {
     typeCheck();
 }
 
-int _expr::numIdentifiersInThisScope = 0;
 _expr::_expr(int l) : _node(l) {
 
 }
@@ -467,18 +466,18 @@ string lookUpSelfType(Environment* current) {
     return current->metaInfo.identifier;
 }
 
-int _method::tempsRequired;
+int _method::currentMaxTemps, _method::currentTemps;
 void _method::traverse() {
     top = top->links[{identifier.identifier, "method"}];
     for(auto formal : formalList) {
         formal->traverse();
     }
-    tempsRequired = 0;
+    currentMaxTemps = currentTemps = 0; //reset
 
     body->rootExpression = true; //TODO check if this is necessary here
     body->traverse();
 
-    implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = tempsRequired;
+    implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = currentMaxTemps;
 
     typeCheck();
 
@@ -1130,15 +1129,13 @@ void _arith::typeCheck() {
     }
 }
 void _arith::traverse() {
-    int startTempsReq = _method::tempsRequired;
-
-    left->traverse();
-    int max1 = _method::tempsRequired - startTempsReq; //NT(e1)
-
-    right->traverse();
-    int max2 = 1 + (_method::tempsRequired - max1 - startTempsReq); //1 + NT(e2)
-
-    _method::tempsRequired = max({max1, max2});
+    left->traverse();//NT(e1)
+    /**
+     * From http://kjleach.eecs.umich.edu/c18/l16.pdf
+     * Temporaries needed for an _arith node is max(NT(e1), 1+ NT(e2))
+     */
+    ++_method::currentTemps; right->traverse();//1 + NT(e2)
+    --_method::currentTemps;
 
     typeCheck();
 }
@@ -1310,11 +1307,13 @@ void _identifier::traverse() {
         }
     }
 
-    if(top->symTable.find({identifier.identifier, "local"}) != top->symTable.end()) { //found
-        numIdentifiersInThisScope++;
-    }
+//    if(top->symTable.find({identifier.identifier, "local"}) != top->symTable.end()) { //found
+        ++_method::currentTemps;
+        if(_method::currentTemps > _method::currentMaxTemps) _method::currentMaxTemps = _method::currentTemps;
+        --_method::currentTemps;
+//    }
 
-    ++_method::tempsRequired;
+
     typeCheck();
 }
 
@@ -1415,15 +1414,26 @@ void _let::print(ostream &os) const {
 }
 
 void _let::traverse() {
+    /**
+     * the optional initializer expression in a binding should NOT take into account the
+     * identifiers currently being introduced when calculating stackRoomForTemps, since initializer expressions can't use any
+     * of the identifiers being introduced. Erroneous example:
+     * let x : Int, y : Int <- x + 1 in {expr}
+     * This would either error, or use an x declared in a previous scope
+     */
     for(auto binding : bindings) {
         //Don't need to change scope for a binding w/o initialization but will do it anyway
         top = top->links.at({letKey.identifier, letKey.kind});
         binding->traverse();
         top = top->previous;
     }
+
+    _method::currentTemps += bindings.size();
+    if(_method::currentTemps > _method::currentMaxTemps) _method::currentMaxTemps = _method::currentTemps;
     top = top->links.at({letKey.identifier, letKey.kind});
     body->traverse();
     top = top->previous;
+    _method::currentTemps -= bindings.size();
 
     exprType = body->exprType;
 

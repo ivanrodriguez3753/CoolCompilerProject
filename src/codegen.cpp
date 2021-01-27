@@ -1054,3 +1054,11 @@ void _block::codeGen() {
 void _new::codeGen() {
     callerCallAndReturnSequence(identifier.identifier, newSuffix);
 }
+
+void _let::codeGen() {
+    for(_letBinding* binding : bindings) {
+        binding->codeGen();
+    }
+    body->codeGen();
+
+}
