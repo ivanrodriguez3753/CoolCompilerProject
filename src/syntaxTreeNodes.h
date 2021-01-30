@@ -180,6 +180,8 @@ class _method : public _feature {
 public:
     static int currentMaxTemps;
     static int currentTemps;
+    static int fpOffset;
+    static bool letInitializer;
 
     list<_formal*> formalList;
     _expr* body;
@@ -217,6 +219,7 @@ class _expr : public _node {
 public:
     _expr(int l);
 
+    bool isIdentifierExpr;
     string exprType;
 
 
@@ -480,6 +483,11 @@ public:
 
 class _letBinding : public _expr {
 public:
+    /**
+     * refactor this out later
+     */
+    int fpOffset;
+
     _idMeta identifier;
     _idMeta typeIdentifier;
 
@@ -488,6 +496,7 @@ public:
     virtual void traverse() = 0;
 protected:
     virtual pair<int, string> typeCheck() = 0;
+    virtual void codeGen() = 0;
     friend class _let;
 };
 
@@ -499,7 +508,10 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override{} //Don't need to do anything
+private:
+    void codeGen() override;
     pair<int, string> typeCheck() override {return pair<int, string>{0, ""};} //don't need to do anything
+
 };
 
 class _letBindingInit : public _letBinding {
@@ -513,7 +525,7 @@ public:
 
     void traverse() override;
 private:
-    void codeGen() override {init->codeGen();}
+    void codeGen() override;
     pair<int, string> typeCheck() override;
 };
 

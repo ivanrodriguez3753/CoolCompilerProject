@@ -121,20 +121,18 @@ void alloc(string r_dest, string r_numWords) {
 }
 
 /**
- * caller conventions
+ * caller conventions for calling a constructor.
  * @param klass
  * @param subroutine
  */
-void callerCallAndReturnSequence(string klass, string subroutine) {
+void callerConstructorCallAndReturnSequence(string klass) {
     //COMMENT
     code.push_back("\t;; new " + klass + " Caller calling conventions;;;;;;;");
     push(fp);
     push(self_reg);
-    la(temp_reg, klass + "." + subroutine);
+    la(temp_reg, klass + "." + newSuffix);
     call(temp_reg);
 
-    //COMMENT
-    code.push_back("\t;;Caller return conventions;;;;;;;;");
     pop(self_reg);
     pop(fp);
 }
@@ -224,7 +222,7 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
             //COMMENT
             code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr->lexeme + " (" + attr->type + "), so construct a new " + attr->type);
 
-            callerCallAndReturnSequence(attr->type, newSuffix);
+            callerConstructorCallAndReturnSequence(attr->type);
             st(self_reg, curOffset++, acc_reg);
         }
         curOffset = firstAttributeOffset; //start at beginning of attributes
@@ -235,6 +233,8 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
                 //COMMENTS
                 code.push_back(comment);
                 code.push_back("\t;;new " + attr->initExpr->exprType + " for initializer expression;;;;;;;;;");
+                callerConstructorCallAndReturnSequence(attr->type);
+
                 //COMMENT
                 code.push_back("\t;;evaluate " + attr->type + " expression and store;;;;;;;;;;;;;;;;;");
                 attr->initExpr->codeGen();
@@ -254,8 +254,6 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
     }
 
     return heapFrameSize;
-
-
 }
 
 /**
@@ -470,6 +468,7 @@ void _program::genConstructors() {
 
         //print the label Klass..new
         code.push_back(klassIt->first + '.' + newSuffix + ':');
+
 
         calleeCallSequence(newSuffix);
         allocAndStoreAttributesAndInitializers(classMap.at(klassIt->first));
@@ -864,10 +863,10 @@ void _program::genMethods() {
                 code.push_back(klass + '.' + methodAndDefiner.first->lexeme + ':');
 
                 //COMMENT
-                code.push_back("\t;;method definition;;;;;;;;;;;");
+
 
                 int stackRoomForTemps = max(methodAndDefiner.first->maxIdentifiers, 1);
-                calleeCallSequence(methodAndDefiner.first->lexeme, stackRoomForTemps); //TODO: calculate stackRoomForTemps
+                calleeCallSequence(methodAndDefiner.first->lexeme, stackRoomForTemps);
 
                 top = globalEnv->links.at({klass, "class"});
                 int i = 0;
@@ -931,7 +930,7 @@ void _program::codeGen() {
 * So it is at position 3.
 */
 void _integer::codeGen() {
-    callerCallAndReturnSequence("Int", ".new");
+    if(rootExpression && !_method::letInitializer) callerConstructorCallAndReturnSequence("Int");
     li(temp_reg, value);
     st(acc_reg, firstAttributeOffset, temp_reg);
 }
@@ -962,10 +961,10 @@ void _arith::codeGen() {
     }
     st(fp, 0, acc_reg);
 
-    //_arith nodes always return an Int
+    //_arith nodes always return an Int    if(!rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);
     currentClass = "Int";
     currentMethod = ".new";
-    callerCallAndReturnSequence(currentClass, currentMethod);
+    callerConstructorCallAndReturnSequence(currentClass);
 
     ld(temp_reg, fp, 0);
     st(acc_reg, firstAttributeOffset, temp_reg);
@@ -973,6 +972,7 @@ void _arith::codeGen() {
     if(!rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);
 }
 
+int _method::fpOffset;
 void _identifier::codeGen() {
     //COMMENT
     code.push_back("\t;; " + identifier.identifier);
@@ -1006,6 +1006,10 @@ void _identifier::codeGen() {
         //TODO does this go here?
         if(!rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);
     }
+    else if(top->metaInfo.kind == "let" || top->metaInfo.kind == "case") { //should be all other possible variables (locals)
+        ld(acc_reg, fp, - id->fpOffset);
+        if(!rootExpression)ld(acc_reg, acc_reg, firstAttributeOffset);
+    }
     else {
         code.push_back("\t;; did nothing with _identifier");
     }
@@ -1019,7 +1023,7 @@ void _selfDispatch::codeGen() {
     push(fp);
 
     for(_expr* arg : args) {
-        arg->rootExpression = true;
+        arg->rootExpression = true;//not sure if ill still use this
         arg->codeGen();
         push(acc_reg);
     }
@@ -1027,7 +1031,7 @@ void _selfDispatch::codeGen() {
     push(self_reg);
 
     //COMMENT
-    code.push_back("\t;;obtain vtable for self object of type " + currentClass);
+    code.push_back("\t;;obtain vtable for self object of type " + top->C);
     ld(temp_reg, self_reg, vtablePointerOffset);
 
     //todo: include this info on the method record so we don't have to traverse to find its position
@@ -1052,13 +1056,46 @@ void _block::codeGen() {
 }
 
 void _new::codeGen() {
-    callerCallAndReturnSequence(identifier.identifier, newSuffix);
+    callerConstructorCallAndReturnSequence(identifier.identifier);
 }
 
 void _let::codeGen() {
-    for(_letBinding* binding : bindings) {
-        binding->codeGen();
-    }
-    body->codeGen();
+    if (top->metaInfo.kind == "method")
+        _method::fpOffset = 0;
 
+    int fpOffsetOld = _method::fpOffset;
+    for (_letBinding *binding : bindings) {
+        binding->rootExpression = true;
+        //COMMENT
+        code.push_back("\t;; fp[" + to_string(-_method::fpOffset) + "] holds local " + binding->identifier.identifier + " (" + binding->typeIdentifier.identifier + ')');
+        binding->codeGen(); //codegen must be in right environment, which EXCLUDES vars introduced in this let
+        binding->fpOffset = _method::fpOffset++;
+    }
+
+    top = top->links.at({letKey.identifier, "let"});
+    for(_letBinding *binding : bindings) {
+        ((objectRecord*)top->symTable.at({binding->identifier.identifier, "local"}))->fpOffset = fpOffsetOld++;
+    }
+    body->rootExpression = true;
+    body->codeGen();
+    top = top->previous;
 }
+
+void _letBindingNoInit::codeGen() {
+    callerConstructorCallAndReturnSequence(typeIdentifier.identifier);
+    st(fp, -_method::fpOffset, acc_reg);
+}
+
+bool _method::letInitializer = false;
+void _letBindingInit::codeGen() {
+    //TODO: see when to conditionally apply this.
+    //TODO: figured it out. don't need to call an assembly constructor if the initializer expression is an
+    //_identifier, since it doesn't need to be reallocated
+    if(!init->isIdentifierExpr)callerConstructorCallAndReturnSequence(typeIdentifier.identifier);
+    init->rootExpression = true;
+    _method::letInitializer = true;
+    init->codeGen();
+    _method::letInitializer = false;
+    st(fp, -_method::fpOffset, acc_reg);
+}
+

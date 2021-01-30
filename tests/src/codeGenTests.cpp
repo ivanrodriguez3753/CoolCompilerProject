@@ -93,7 +93,9 @@ TEST_P(codeGen, errorsNotInReferenceCompiler) {
 INSTANTIATE_TEST_SUITE_P(codeGenEndToEnd, codeGen, testing::Values(
         "PA5YouTubeExample.cl",
         "methodsDifferentNumParameters.cl",
-        "methodsDifferentNumParametersLet.cl"
+        "methodsDifferentNumParametersLet.cl",
+        "methodsDifferentNumParametersLetWithInitializer.cl",
+        "methodsDifferentNumParametersLetWithInitializers.cl"
 
 
 ));

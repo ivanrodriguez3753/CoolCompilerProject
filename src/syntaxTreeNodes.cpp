@@ -394,7 +394,7 @@ void _program::traverse() {
     typeCheck();
 }
 
-_expr::_expr(int l) : _node(l) {
+_expr::_expr(int l) : _node(l), isIdentifierExpr{false} {
 
 }
 
@@ -472,9 +472,12 @@ void _method::traverse() {
     for(auto formal : formalList) {
         formal->traverse();
     }
-    currentMaxTemps = currentTemps = 0; //reset
+    currentMaxTemps = 1; //reset
 
     body->rootExpression = true; //TODO check if this is necessary here
+
+    //every method needs at least one temp for return value
+    currentTemps = 1;
     body->traverse();
 
     implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = currentMaxTemps;
@@ -1135,6 +1138,7 @@ void _arith::traverse() {
      * Temporaries needed for an _arith node is max(NT(e1), 1+ NT(e2))
      */
     ++_method::currentTemps; right->traverse();//1 + NT(e2)
+    if(_method::currentTemps > _method::currentMaxTemps) _method::currentMaxTemps = _method::currentTemps;
     --_method::currentTemps;
 
     typeCheck();
@@ -1275,7 +1279,7 @@ void _string::print(ostream& os) const {
 _identifier::_identifier(int l, _idMeta id) :
     _expr{l}, identifier{id}
 {
-
+    isIdentifierExpr = true;
 }
 
 void _identifier::print(ostream& os) const {
@@ -1306,14 +1310,6 @@ void _identifier::traverse() {
             break;
         }
     }
-
-//    if(top->symTable.find({identifier.identifier, "local"}) != top->symTable.end()) { //found
-        ++_method::currentTemps;
-        if(_method::currentTemps > _method::currentMaxTemps) _method::currentMaxTemps = _method::currentTemps;
-        --_method::currentTemps;
-//    }
-
-
     typeCheck();
 }
 
@@ -1357,7 +1353,7 @@ void _letBindingNoInit::print(ostream& os) const {
 _letBindingInit::_letBindingInit(_idMeta id, _idMeta typeId, _expr* i) :
     _letBinding(id, typeId), init{i}
 {
-
+    init->rootExpression = true;
 }
 
 void _letBindingInit::print(ostream& os) const {
@@ -1427,7 +1423,6 @@ void _let::traverse() {
         binding->traverse();
         top = top->previous;
     }
-
     _method::currentTemps += bindings.size();
     if(_method::currentTemps > _method::currentMaxTemps) _method::currentMaxTemps = _method::currentTemps;
     top = top->links.at({letKey.identifier, letKey.kind});

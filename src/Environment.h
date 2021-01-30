@@ -60,6 +60,11 @@ public:
 
 class objectRecord : public Record {
 public:
+    /**
+     * Refactor this out later but for local objects, keep track of frame pointer offset
+     */
+    int fpOffset;
+
     string type;
     _expr* initExpr;
 

@@ -11,11 +11,16 @@ class Main inherits IO{
         out_int(x1 + x2)
     };
     method7(x1 : Int, x2 : Int, x3 : Int, x4 : Int, x5 : Int, x6 : Int, x7 : Int) : Object {{
-        let x : Int, y : Int, z : Int in
-            let x : Int, y : Int, z : Int in
-                out_int(999);
-        let x : Int, y : Int, z : Int, ab : Int in
-            out_int(999);
+        --let x : Int <- 3, y : Int, ab : Int <- 4 in
+        --    out_int(x + ab + a + 2); --3 + 4 + 3 + 2 = 12
+            --using initialized local vars(2), attribute(1), and literal(1)
+        let x : Int, y : Int, z1 : Int <- 1 in
+            let x : Int, y : Int, z2 : Int <- a in
+                out_int(z1 + z2); --1 + 3 + 3 + 2 = 9
+                --using local vars(2) from different scopes, one initialized with an attribute,
+                --attribute(1), and literal(1)
+                --need to try with a local who has been assigned to
+
     }};
 
     main() : Object {{

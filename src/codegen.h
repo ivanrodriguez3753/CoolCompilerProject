@@ -21,7 +21,7 @@ void div(string r_dest, string r_addTo, string r_addThis);
 void alloc(string r_dest, string r_numWords);
 
 
-void callerCallAndReturnSequence(string klass, string subroutine);
+void callerConstructorCallAndReturnSequence(string klass);
 
 extern const string new_frame;
 extern const string rreturn;
