@@ -223,6 +223,7 @@ public:
      */
     bool rootExpression = false;
     bool isDynamicDispatch = false;
+    bool isInitializer = false;
 
     virtual void traverse() = 0;
     virtual void codeGen(){} //= 0; //TODO: Make this pure virtual
@@ -369,6 +370,7 @@ private:
 
 class _isvoid : public _expr {
 public:
+    static int labelCounter;
     _expr* expr;
 
     _isvoid(int l, _expr* e);
@@ -377,6 +379,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
+private:
+    void codeGen() override;
 };
 
 class _arith : public _expr {

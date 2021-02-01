@@ -401,7 +401,7 @@ _expr::_expr(int l) : _node(l), isIdentifierExpr{false} {
 _attributeInit::_attributeInit(int l, _idMeta id, _idMeta typeId, _expr *e) :
         _feature{l, id, typeId}, expr{e}
 {
-
+    expr->isInitializer = true;
 }
 
 void _attributeInit::print(ostream &os) const {

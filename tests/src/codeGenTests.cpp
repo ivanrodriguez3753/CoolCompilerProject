@@ -98,7 +98,8 @@ INSTANTIATE_TEST_SUITE_P(codeGenEndToEnd, codeGen, testing::Values(
         "methodsDifferentNumParametersLetWithInitializers.cl",
         "chainedCopy.cl",
         "dynamicDispatchOffAnonymous.cl",
-        "if.cl"
+        "if.cl",
+        "isvoid.cl"
 
 
 ));

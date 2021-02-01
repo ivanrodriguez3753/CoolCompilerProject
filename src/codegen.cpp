@@ -118,6 +118,9 @@ void div(string r_dest, string r_addTo, string r_addThis) {
 void bnz(string r_source, string label) {
     code.push_back("\tbnz " + r_source + ' ' + label);
 }
+void bz(string r_source, string label) {
+    code.push_back("\tbz " + r_source + ' ' + label);
+}
 void jmp(string label) {
     code.push_back("\tjmp " + label);
 }
@@ -227,7 +230,7 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
         }
         st(self_reg, curOffset++, acc_reg);
     }
-    else {
+    else { //any class that is not String/Int/Bool
         for(objectRecord* attr : classMapOrdered.at(klass->lexeme)) {
             //COMMENT
             code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr->lexeme + " (" + attr->type + "), so construct a new " + attr->type);
@@ -872,9 +875,6 @@ void _program::genMethods() {
                 currentClass = klass;
                 code.push_back(klass + '.' + methodAndDefiner.first->lexeme + ':');
 
-                //COMMENT
-
-
                 int stackRoomForTemps = max(methodAndDefiner.first->maxTemps, 1);
                 calleeCallSequence(methodAndDefiner.first->lexeme, stackRoomForTemps);
 
@@ -1157,9 +1157,11 @@ void _block::codeGen() {
 }
 
 void _new::codeGen() {
-    if(identifier.identifier == "SELF_TYPE") callerConstructorCallAndReturnSequence(lookUpSelfType(top));
-    else {
-        callerConstructorCallAndReturnSequence(identifier.identifier);
+    if(!isInitializer) { //do nothing if this is an initializer expression
+        if(identifier.identifier == "SELF_TYPE") callerConstructorCallAndReturnSequence(lookUpSelfType(top));
+        else {
+            callerConstructorCallAndReturnSequence(identifier.identifier);
+        }
     }
 }
 
@@ -1228,5 +1230,36 @@ void _if::codeGen() {
     thenExpr->rootExpression = true;
     thenExpr->codeGen();
     //no jmp here, fall through
+    code.push_back(endLabel + ':');
+}
+
+int _isvoid::labelCounter = 1;
+void _isvoid::codeGen() {
+    //COMMENT
+    code.push_back("\t;; start isvoid expression by evaluating argument");
+
+    expr->rootExpression = true;
+    expr->codeGen();
+
+    const string trueLabel = "isvoid_l" + to_string(labelCounter++);
+    const string falseLabel = "isvoid_l" + to_string(labelCounter++);
+    const string endLabel = "isvoid_end_l" + to_string(labelCounter++);
+
+    bz(acc_reg, trueLabel);
+
+    code.push_back(falseLabel + ':');
+    //COMMENT
+    code.push_back("\t;; false branch of isvoid");
+    callerConstructorCallAndReturnSequence("Bool");
+    jmp(endLabel);
+
+    code.push_back(trueLabel + ':');
+    //COMMENT
+    code.push_back("\t;; true branch of isvoid");
+    callerConstructorCallAndReturnSequence("Bool");
+    //initialize to true
+    li(temp_reg, 1);
+    st(acc_reg, firstAttributeOffset, temp_reg);
+
     code.push_back(endLabel + ':');
 }
