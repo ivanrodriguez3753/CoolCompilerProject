@@ -118,6 +118,9 @@ void div(string r_dest, string r_addTo, string r_addThis) {
 void bnz(string r_source, string label) {
     code.push_back("\tbnz " + r_source + ' ' + label);
 }
+void jmp(string label) {
+    code.push_back("\tjmp " + label);
+}
 /**
  * return pointer to base of newly allocated memory
  * @param r_dest which register to save the pointer in
@@ -426,7 +429,7 @@ void populateImplementationMapOrdered() {
         }
     }
 }
-static int stringCounter = 1;
+int _string::stringCounter = 1;
 void _program::genVTablesAndGlobalStringConstantsClassNames() {
     for(map<string, classRecord*>::iterator klassIt = classMap.begin(); klassIt != classMap.end(); ++klassIt) {
         const string& klass = klassIt->first;
@@ -449,7 +452,7 @@ void _program::genVTablesAndGlobalStringConstantsClassNames() {
 
         //print label for string constant which holds class name
         //internal names are generated with a static counter
-        string internalName = "string" + to_string(stringCounter++);
+        string internalName = "string" + to_string(_string::stringCounter++);
         code.push_back("\tconstant " + internalName);
 
         //for tacking onto code at some point. saving internal names as we generate them
@@ -923,7 +926,7 @@ void _program::codeGen() {
     genVTablesAndGlobalStringConstantsClassNames();
     genConstructors();
     genMethods();
-    tackOnGlobalStringConstants();
+    tackOnGlobalStringConstants(); //this needs to be after the other codeGen
     pushBackHardcodedHelpers();
     genStart();
 
@@ -947,7 +950,28 @@ void _integer::codeGen() {
 }
 
 void _bool::codeGen() {
-    li(temp_reg, value);
+    if(rootExpression && !_method::letInitializer) callerConstructorCallAndReturnSequence("Bool");
+    if(value) {
+        li(temp_reg, value);
+        st(acc_reg, firstAttributeOffset, temp_reg);
+    } //default initialized to 0 (false) so don't do anything if false
+
+}
+
+/**
+ * TODO: stop using vector for globalStringConstants so that we don't use multiple
+ *      /different locations for copies of a constant that happens to show up more than once
+ *
+ */
+void _string::codeGen() {
+    if(rootExpression && !_method::letInitializer) callerConstructorCallAndReturnSequence("String");
+
+    string constLabel = "string" + to_string(_string::stringCounter++);
+    globalStringConstants.push_back(constLabel + ':');
+    globalStringConstants.push_back("\tconstant \"" + value + '\"');
+    //COMMENT-- this might break with \n and \t characters
+    code.push_back("\t;; " + constLabel + " holds \"" + value + '\"');
+    la(temp_reg, constLabel);
     st(acc_reg, firstAttributeOffset, temp_reg);
 }
 
@@ -1179,8 +1203,30 @@ void _letBindingInit::codeGen() {
     st(fp, -_method::fpOffset, acc_reg);
 }
 
-//void _assign::codeGen() {
-//    rhs->rootExpression = true;
-//    rhs->codeGen();
-//    top->getObject(identifier.identifier)->
-//}
+int _if::labelCounter = 0;
+void _if::codeGen() {
+    predicate->rootExpression = true;
+    predicate->codeGen();
+
+    string trueLabel = "if_l" + to_string(labelCounter++);
+    string falseLabel = "if_l" + to_string(labelCounter++);
+    string endLabel = "fi_l" + to_string(labelCounter++);
+
+    ld(acc_reg, acc_reg, firstAttributeOffset);
+    bnz(acc_reg, trueLabel);
+
+    code.push_back(falseLabel + ':');
+    //COMMENT
+    code.push_back("\t;; false branch");
+    elseExpr->rootExpression = true;
+    elseExpr->codeGen();
+    jmp(endLabel);
+
+    code.push_back(trueLabel + ':');
+    //COMMENT
+    code.push_back("\t;; true branch");
+    thenExpr->rootExpression = true;
+    thenExpr->codeGen();
+    //no jmp here, fall through
+    code.push_back(endLabel + ':');
+}

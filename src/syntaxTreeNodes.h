@@ -306,6 +306,7 @@ private:
 
 class _if : public _expr {
 public:
+    static int labelCounter;
     _expr* predicate;
     _expr* thenExpr;
     _expr* elseExpr;
@@ -318,6 +319,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void codeGen() override;
 };
 
 class _while : public _expr {
@@ -440,6 +442,7 @@ public:
 
 class _string : public _expr {
 public:
+    static int stringCounter;
     string value;
 
     _string(int l, string v);
@@ -448,6 +451,8 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override{} //don't need to do anything
+private:
+    void codeGen() override;
 };
 
 class _identifier : public _expr {
