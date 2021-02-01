@@ -37,7 +37,7 @@ public:
 
 class methodRecord : public Record {
 public:
-    int maxIdentifiers;
+    int maxTemps;
     string returnType;
 
     _method* treeNode;
@@ -64,6 +64,12 @@ public:
      * Refactor this out later but for local objects, keep track of frame pointer offset
      */
     int fpOffset;
+
+    /**
+     * Refactor this out later but for attribute objects, keep track of self[firstAttributeOffset + thisOffset]
+     * Do not include firstAttributeOffset in this
+     */
+    int selfOffset;
 
     string type;
     _expr* initExpr;

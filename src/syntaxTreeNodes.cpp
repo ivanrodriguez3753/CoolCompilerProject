@@ -239,7 +239,7 @@ void _unary::prettyPrint(ostream& os, string prefix) const {
 }
 
 void _integer::prettyPrint(ostream& os, string prefix) const {
-    os << prefix << "├──";
+    os << prefix << "├──" << "INTEGER_EXPR<$type=" << exprType << " , $lineNo=" << lineNo << endl;
 }
 
 void _string::prettyPrint(ostream& os, string prefix) const {
@@ -480,7 +480,7 @@ void _method::traverse() {
     currentTemps = 1;
     body->traverse();
 
-    implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = currentMaxTemps;
+    implementationMap.at(top->C).at(identifier.identifier).first->maxTemps = currentMaxTemps;
 
     typeCheck();
 
@@ -514,46 +514,6 @@ void _method::typeCheck() {
 
 }
 
-int _method::preorderDriver(Environment* e){
-    return preorderRecurse(e, {0,0});
-}
-/**
- * pair<int,int> denotes <tempsPrevScope, currentMax>
- * @param e
- * @param temps
- * @return
- */
-int _method::preorderRecurse(Environment* e, pair<int,int> tempsPrevAndMax) {
-    int tempsHere = e->symTable.size();
-    if(tempsHere + tempsPrevAndMax.first > tempsPrevAndMax.second) {
-        tempsPrevAndMax.second = tempsHere + tempsPrevAndMax.first;
-    }
-
-    for(auto x : e->links) {
-        tempsPrevAndMax.second = preorderRecurse(x.second, {tempsPrevAndMax.first + tempsHere, tempsPrevAndMax.second});
-    }
-
-    return tempsPrevAndMax.second;
-
-}
-
-
-void _method::populateStackRoomForTemps() {
-    int currentMax = 1; //always need 1 for retVal, but that one is reused if we need it for a temp.
-    //so 0 temps and 1 temps both return 1.
-    for(map<pair<string,string>, Environment*>::iterator linksIt = top->links.begin();
-        linksIt != top->links.end();
-        ++linksIt) { //start one environment past current method (so first let/case) because you don't use stack for arguments
-        //we use stack for temps required in the function call
-//        rec->maxIdentifiers = preorderDriver(linksIt->second);
-        int i = preorderDriver(linksIt->second);
-        if(i > currentMax) {
-            currentMax = i;
-        }
-    }
-    implementationMap.at(top->C).at(identifier.identifier).first->maxIdentifiers = currentMax;
-}
-
 _formal::_formal(_idMeta id, _idMeta typeId) :
     _node{0}, identifier{id}, typeIdentifier{typeId}
 {
@@ -574,7 +534,7 @@ _dispatch::_dispatch(int l, _idMeta m) :
 _dynamicDispatch::_dynamicDispatch(int l, _idMeta m, _expr *e) :
         _dispatch{l, m}, caller{e}
 {
-
+    isDynamicDispatch = true;
 }
 
 void _dynamicDispatch::print(ostream& os) const {
@@ -808,24 +768,6 @@ void _staticDispatch::typeCheck() {
             printAndPush(error);
         }
     }
-
-
-//    try {
-//        //this is the last element in the array returned by M, so it is the return type which is notated
-//        if(paramAndReturnTypes[i] == "SELF_TYPE") { //T'_n+1
-//            if(exprType != caller->exprType) {
-//                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the type of @" + typeIdentifier.identifier};
-//            }
-//        }
-//        else {
-//            if(exprType != paramAndReturnTypes[i]) {
-//                throw pair<int, string>{lineNo, "Static dispatch expression type does not match the return type of the called method"};
-//            }
-//        }
-//    }
-//    catch(pair<int, string> error) {
-//        printAndPush(error);
-//    }
 }
 
 _selfDispatch::_selfDispatch(int l, _idMeta m) :

@@ -143,7 +143,6 @@ public:
 
     _feature(int l, _idMeta id, _idMeta typeId);
 
-    virtual void populateStackRoomForTemps() {};//do nothing for _attribute(No)Init, override in _method
 
 };
 
@@ -186,20 +185,15 @@ public:
     list<_formal*> formalList;
     _expr* body;
 
-//    methodRecord* rec;
-
     _method(_idMeta id, _idMeta typeId, _expr* b);
 
     void print(ostream& os) const override;
     void prettyPrint(ostream& os, string prefix) const;
 
     void traverse() override;
-
-    void populateStackRoomForTemps() override;
+    void codeGen();
 private:
     void typeCheck();
-    int preorderDriver(Environment* e);
-    int preorderRecurse(Environment* e, pair<int, int> temps);
 };
 
 class _formal : public _node {
@@ -228,6 +222,7 @@ public:
      * we can just put it in the return register.
      */
     bool rootExpression = false;
+    bool isDynamicDispatch = false;
 
     virtual void traverse() = 0;
     virtual void codeGen(){} //= 0; //TODO: Make this pure virtual
@@ -246,6 +241,7 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 private:
     void typeCheck();
+//    void codeGen();
 };
 
 class _dispatch : public _expr {
@@ -256,10 +252,13 @@ public:
     _dispatch(int l, _idMeta m);
 
     virtual void traverse() = 0;
+protected:
+    static vector<string> callChain;
 };
 
 class _dynamicDispatch : public _dispatch {
 public:
+    static int labelCounter;
     _expr* caller;
 
     _dynamicDispatch(int l, _idMeta m, _expr* e);
@@ -271,6 +270,7 @@ public:
 private:
     void typeCheck();
     void semanticCheck();
+    void codeGen() override;
 };
 
 class _staticDispatch : public _dispatch {
@@ -436,8 +436,6 @@ public:
 
     void traverse() override{}
     void codeGen() override;
-
-
 };
 
 class _string : public _expr {

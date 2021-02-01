@@ -19,7 +19,7 @@ void ld(string r_dest, string r_base, int offset);
 void mul(string r_dest, string r_addTo, string r_addThis);
 void div(string r_dest, string r_addTo, string r_addThis);
 void alloc(string r_dest, string r_numWords);
-
+void bnz(string r_source, string label);
 
 void callerConstructorCallAndReturnSequence(string klass);
 
@@ -56,7 +56,7 @@ extern vector<string> globalStringConstants;
 extern const string emptyStringLabel;
 extern const string abortLabel;
 extern const string substrLabel;
-
+extern const string is_voidLabel;
 /**
  *  maps KlassName.methodName to assembly code needed for that method
  */

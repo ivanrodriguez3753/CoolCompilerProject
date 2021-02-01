@@ -1,4 +1,5 @@
 #include <sstream>
+#include <stack>
 #include "syntaxTreeNodes.h"
 #include "codegen.h"
 #include "type.h"
@@ -6,19 +7,22 @@
 vector<string> code;
 
 
-const string emptyStringLabel = "the.empty.string:";
-const string abortLabel = "abort:";
-const string substrLabel = "substr:";
+const string emptyStringLabel = "the.empty.string";
+const string abortLabel = "abort";
+const string substrLabel = "substr";
+const string is_voidLabel = "is_void";
 /**
  * Initialize with misc global string constants things we need to hardcode
  */
 vector<string> globalStringConstants{
-    emptyStringLabel,
+    emptyStringLabel + ':',
         "\tconstant \"\"",
-    abortLabel,
+    abortLabel + ':',
         "\tconstant \"abort!\\n\"",
-    substrLabel,
-        "\tconstant \"ERROR: 0: Exception: String.substr out of range\\n\""
+    substrLabel + ':',
+        "\tconstant \"ERROR: 0: Exception: String.substr out of range\\n\"",
+    is_voidLabel + ':',
+        "\tconstant \"ERROR: Dispatch on void\\n\""
 };
 
 
@@ -110,6 +114,9 @@ void mul(string r_dest, string r_addTo, string r_addThis) {
 }
 void div(string r_dest, string r_addTo, string r_addThis) {
     code.push_back("\tdiv " + r_dest + " <- " + r_addTo + " " + r_addThis);
+}
+void bnz(string r_source, string label) {
+    code.push_back("\tbnz " + r_source + ' ' + label);
 }
 /**
  * return pointer to base of newly allocated memory
@@ -865,7 +872,7 @@ void _program::genMethods() {
                 //COMMENT
 
 
-                int stackRoomForTemps = max(methodAndDefiner.first->maxIdentifiers, 1);
+                int stackRoomForTemps = max(methodAndDefiner.first->maxTemps, 1);
                 calleeCallSequence(methodAndDefiner.first->lexeme, stackRoomForTemps);
 
                 top = globalEnv->links.at({klass, "class"});
@@ -884,8 +891,8 @@ void _program::genMethods() {
                 code.push_back("\t;; method body begins");
 
                 top = globalEnv->links.at({klass, "class"})->links.at({methodAndDefiner.first->lexeme, "method"});
-                methodAndDefiner.first->treeNode->body->codeGen();
-
+//                methodAndDefiner.first->treeNode->body->codeGen();
+                methodAndDefiner.first->treeNode->codeGen();
                 //COMMENT
                 code.push_back("\t;;method body ends;;;;;;;;;;;");
                 calleeReturnSequence(klass, methodAndDefiner.first->lexeme, stackRoomForTemps + methodAndDefiner.first->treeNode->formalList.size()); //TODO: calculate stackRoomForTemps
@@ -921,6 +928,10 @@ void _program::codeGen() {
     genStart();
 
     actuallyPrint();
+}
+
+void _method::codeGen() {
+    body->codeGen();
 }
 
 /**
@@ -1048,6 +1059,72 @@ void _selfDispatch::codeGen() {
     pop(fp);
     pop(r0);
 }
+vector<string> _dispatch::callChain;
+int _dynamicDispatch::labelCounter = 0;
+void _dynamicDispatch::codeGen() {
+    bool chainWasEmpty = false;
+
+    //COMMENT
+
+    if(callChain.empty()) { //will happen once on most nested recursion
+        caller->rootExpression = true;
+        _dynamicDispatch* curDispatch = this;
+
+        while(curDispatch->caller->isDynamicDispatch) {
+            callChain.push_back(curDispatch->method.identifier);
+            curDispatch = (_dynamicDispatch*)curDispatch->caller;
+        }
+        callChain.push_back(curDispatch->method.identifier);
+        reverse(callChain.begin(), callChain.end());
+    }
+    if(!callChain.empty()) {
+        //STILL COMMENT;
+        string comment = "(rootExpr)";
+        for(string dispatch : callChain) {
+            comment += '.' + dispatch + "(...)";
+        }
+        code.push_back("\t;; " + comment);
+        callChain.erase(--callChain.end());
+    }
+    push(self_reg);
+    push(fp);
+
+    for(_expr* arg : args) {
+        arg->rootExpression = true;//not sure if ill still use this
+        arg->codeGen();
+        push(acc_reg);
+    }
+
+    caller->codeGen();
+
+    code.push_back("\t;; is_void check");
+
+    string label = "dynDisp_l" + to_string(_dynamicDispatch::labelCounter++);
+    bnz(acc_reg, label);
+    la(acc_reg, is_voidLabel);
+    syscall("IO.out_string");
+    syscall("exit");
+
+    code.push_back(label + ':');
+    push(acc_reg);
+
+    //COMMENT
+    code.push_back("\t;; obtain vtable from object in " + acc_reg + " with static type " + caller->exprType);
+    ld(temp_reg, acc_reg, vtablePointerOffset);
+
+    int offset = firstMethodOffset;
+    for(pair<methodRecord*, string> methodPair : implementationMapOrdered.at(top->C)) {
+        if(methodPair.first->lexeme == method.identifier) break;
+        offset++;
+    }
+    //COMMENT
+    code.push_back("\t;; look up " + method.identifier + "() at offset " + to_string(offset) + " in vtable");
+
+    ld(temp_reg, temp_reg, offset);
+    call(temp_reg);
+    pop(fp);
+    pop(self_reg);
+}
 
 void _block::codeGen() {
     for(_expr* e : body) {
@@ -1056,7 +1133,10 @@ void _block::codeGen() {
 }
 
 void _new::codeGen() {
-    callerConstructorCallAndReturnSequence(identifier.identifier);
+    if(identifier.identifier == "SELF_TYPE") callerConstructorCallAndReturnSequence(lookUpSelfType(top));
+    else {
+        callerConstructorCallAndReturnSequence(identifier.identifier);
+    }
 }
 
 void _let::codeGen() {
@@ -1099,3 +1179,8 @@ void _letBindingInit::codeGen() {
     st(fp, -_method::fpOffset, acc_reg);
 }
 
+//void _assign::codeGen() {
+//    rhs->rootExpression = true;
+//    rhs->codeGen();
+//    top->getObject(identifier.identifier)->
+//}
