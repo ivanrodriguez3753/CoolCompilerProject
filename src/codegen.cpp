@@ -215,56 +215,109 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
     st(self_reg, curOffset++, temp_reg);
 
     //COMMENT
-    code.push_back("\t;; now start attributes. make new default objects;;;;;;;;;;;");
-    if(klass->lexeme == "String" || klass->lexeme == "Int" || klass->lexeme == "Bool") {
-        //COMMENT
-        code.push_back("\t;;this is 1 of 3 basic classes. Only one attribute, which is the unboxed raw");
-        pair<string, string> attr{"raw"+klass->lexeme, klass->lexeme};
-        code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr.first + " (" + attr.second + "), DON'T construct a new Bool. Just save raw value");
+    code.push_back("\t;; now start attributes. make new default void objects, except on String/Int/Bool;;;;;;;;;;;");
+    const int oldCurOffset = curOffset;
 
-        if(klass->lexeme == "Int" || klass->lexeme == "Bool") {
-            li(acc_reg, 0); //0 is default for Bool and Int (assembly types and Cool types)
+    //String/Int/Bool can never be void objects. They are default initialized
+    if(klass->lexeme == "String" || klass->lexeme == "Int" || klass->lexeme == "Bool") {
+        //not looping over attributes because these three classes only have one attribute (in addition to the required ones): unboxed raw
+        //COMMENT
+        code.push_back("\t;;self[" + to_string(firstAttributeOffset) + "] holds unboxed raw " + klass->lexeme);
+        if(klass ->lexeme == "Bool" || klass->lexeme == "Int") {
+            li(acc_reg, 0);
         }
-        else if(klass->lexeme == "String") {
-            la(acc_reg, "the.empty.string");
+        else {//String
+            la(acc_reg, emptyStringLabel);
         }
-        st(self_reg, curOffset++, acc_reg);
+        st(self_reg, firstAttributeOffset, acc_reg);
     }
-    else { //any class that is not String/Int/Bool
+    else {//everything else starts as void object, even if it has an initExpr
         for(objectRecord* attr : classMapOrdered.at(klass->lexeme)) {
             //COMMENT
-            code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr->lexeme + " (" + attr->type + "), so construct a new " + attr->type);
+            code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr->lexeme + " (" + attr->type + ')');
 
-            callerConstructorCallAndReturnSequence(attr->type);
+            //String/Int/Bool can never be void objects
+            if(attr->type == "String" || attr->type == "Bool" || attr->type == "Int") {
+                callerConstructorCallAndReturnSequence(attr->type);
+            }//everything else starts off as void, even if it has an initializer
+            //a pointer to a value of zero is a void object
+            else {
+                li(acc_reg, 0);
+            }
             st(self_reg, curOffset++, acc_reg);
         }
-        curOffset = firstAttributeOffset; //start at beginning of attributes
+
+        //COMMENT
+        code.push_back("\t;;now handle initializers for each attribute");
+        curOffset = oldCurOffset;
         for(objectRecord* attr : classMapOrdered.at(klass->lexeme)) {
-            //COMMENT
-            string comment = "\t;;self[" + to_string(curOffset) + "] " + attr->lexeme + " (" + attr->type + ") initializer ";
+            string comment = "\t;; self[" + to_string(curOffset) + "] initializer";
             if(attr->initExpr) {
-                //COMMENTS
-                code.push_back(comment);
-                code.push_back("\t;;new " + attr->initExpr->exprType + " for initializer expression;;;;;;;;;");
-                callerConstructorCallAndReturnSequence(attr->type);
-
                 //COMMENT
-                code.push_back("\t;;evaluate " + attr->type + " expression and store;;;;;;;;;;;;;;;;;");
+                code.push_back(comment);
+                callerConstructorCallAndReturnSequence(attr->initExpr->exprType);
                 attr->initExpr->codeGen();
-
-                //COMMENT
-                code.push_back("\t;;store result of creating object from initializer expression;;;;;;;;;;");
-                st(self_reg, curOffset, acc_reg);
-
+                st(self_reg, curOffset++, acc_reg);
             }
-            else {
+            else {//no initializer
+                comment += " --none";
                 //COMMENT
-                comment += "-- none";
                 code.push_back(comment);
+                curOffset++;
             }
-            ++curOffset;
         }
     }
+
+//    if(klass->lexeme == "String" || klass->lexeme == "Int" || klass->lexeme == "Bool") {
+//        //COMMENT
+//        code.push_back("\t;;this is 1 of 3 basic classes. Only one attribute, which is the unboxed raw");
+//        pair<string, string> attr{"raw"+klass->lexeme, klass->lexeme};
+//        code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr.first + " (" + attr.second + "), DON'T construct a new Bool/Int. Just save raw value");
+//
+//        callerConstructorCallAndReturnSequence(klass->lexeme);
+//        if(klass->lexeme == "Int" || klass->lexeme == "Bool") {
+//            li(acc_reg, 0); //0 is default for Bool and Int (assembly types and Cool types)
+//        }
+//        else if(klass->lexeme == "String") {
+//            la(acc_reg, emptyStringLabel);
+//        }
+//        st(self_reg, curOffset++, acc_reg);
+//    }
+//    else { //any class that is not String/Int/Bool
+//        for(objectRecord* attr : classMapOrdered.at(klass->lexeme)) {
+//            //COMMENT
+//            code.push_back("\t;;self[" + to_string(curOffset) + "] holds attr " + attr->lexeme + " (" + attr->type + "), so construct a new " + attr->type);
+//
+//            li(acc_reg, 0);
+//            st(self_reg, curOffset++, acc_reg);
+//        }
+//        curOffset = firstAttributeOffset; //start at beginning of attributes
+//        for(objectRecord* attr : classMapOrdered.at(klass->lexeme)) {
+//            //COMMENT
+//            string comment = "\t;;self[" + to_string(curOffset) + "] " + attr->lexeme + " (" + attr->type + ") initializer ";
+//            if(attr->initExpr) {
+//                //COMMENTS
+//                code.push_back(comment);
+//                code.push_back("\t;;new " + attr->initExpr->exprType + " for initializer expression;;;;;;;;;");
+//                callerConstructorCallAndReturnSequence(attr->type);
+//
+//                //COMMENT
+//                code.push_back("\t;;evaluate " + attr->type + " expression and store;;;;;;;;;;;;;;;;;");
+//                attr->initExpr->codeGen();
+//
+//                //COMMENT
+//                code.push_back("\t;;store result of creating object from initializer expression;;;;;;;;;;");
+//                st(self_reg, curOffset, acc_reg);
+//
+//            }
+//            else {
+//                //COMMENT
+//                comment += "-- none";
+//                code.push_back(comment);
+//            }
+//            ++curOffset;
+//        }
+//    }
 
     return heapFrameSize;
 }
