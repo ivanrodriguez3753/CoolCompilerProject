@@ -1146,7 +1146,10 @@ void _relational::print(ostream &os) const {
 
 void _relational::traverse() {
     left->traverse();
-    right->traverse();
+
+    ++_method::currentTemps; right->traverse();
+    if(_method::currentTemps > _method::currentMaxTemps) _method::currentMaxTemps = _method::currentTemps;
+    --_method::currentTemps;
 
     typeCheck();
 }

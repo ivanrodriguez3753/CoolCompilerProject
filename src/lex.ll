@@ -97,7 +97,7 @@ t[rR][uU][eE]			        	return make_TRUE(yytext, loc);
 <<EOF>>                             return yy::parser::make_YYEOF(loc);
 
 <STRLIT>{
-[0-9A-Za-z \.,?!\-\+_=/\\:;]*			{
+[0-9A-Za-z \.,?!\-\+_=/\\:;\<]*			{
 	                                    stringLiteral += string(yytext);}
     
     /*this rule is for typing \n within a string*/

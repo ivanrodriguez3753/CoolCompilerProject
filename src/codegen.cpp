@@ -161,7 +161,7 @@ void calleeCallSequence(string method, int stackRoomForTemps = 1) {
     code.push_back(new_frame);
     if(method != newSuffix) pop(self_reg);
     //COMMENT
-    code.push_back("\t;; stack room for temps: " + to_string(stackRoomForTemps) + ";;;;;;;;;;");
+    code.push_back("\t;; stack room for temporaries: " + to_string(stackRoomForTemps) );
     li(temp_reg, stackRoomForTemps);
     sub(sp, sp, temp_reg);
     push(ra);
@@ -1315,4 +1315,27 @@ void _isvoid::codeGen() {
     st(acc_reg, firstAttributeOffset, temp_reg);
 
     code.push_back(endLabel + ':');
+}
+
+void _relational::codeGen() {
+    push(self_reg);
+    push(fp);
+    //we treat < = <= as function calls in assembly because they are, but we don't ever need
+    //stack space for temporaries because it is inherently 2 in a binary operation
+    left->rootExpression = left->isInitializer = true;
+    left->codeGen();
+    push(acc_reg);
+
+    right->rootExpression = right->isInitializer = true;
+    right->codeGen();
+    push(acc_reg);
+
+    push(self_reg);
+    if(op == "lt") call("lt_handler"); //TODO replace with a const strings that look in a map
+    if(op == "le") call("le_handler"); //TODO replace with a const strings that look in a map
+    if(op == "eq") call("eq_handler"); //TODO replace with a const strings that look in a map
+    pop(fp);
+    pop(self_reg);
+
+
 }

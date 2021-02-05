@@ -176,7 +176,9 @@ vector<string> Environment::M(string C, string f) {
 }
 
 
-int Record::orderCounter = 0;
+//TODO: I'm using orderCounter to make unique classTags, and I need Bool/Int/String to be 0/1/3, so start
+// this at 4 and hardcode the classTag for Bool/Int/String
+int Record::orderCounter = 4;
 Record::Record(Environment* container, string lex, int l, string k) :
         containerEnv{container}, lexeme{lex}, lineNo{l}, kind{k}, encountered{orderCounter++}
 {
@@ -186,6 +188,16 @@ Record::Record(Environment* container, string lex, int l, string k) :
 classRecord::classRecord(string lex, int l, string k, string p) :
     Record{globalEnv, lex, l, k}, parent{p}
 {
+    //TODO same todo as the one above Record's constructor. delete this when fixed
+    if(lex == "Bool") {
+        encountered = 0;
+    }
+    else if(lex == "Int") {
+        encountered = 1;
+    }
+    else if(lex == "String") {
+        encountered = 3;
+    }
 
 }
 

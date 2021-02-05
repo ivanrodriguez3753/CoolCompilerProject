@@ -99,7 +99,8 @@ INSTANTIATE_TEST_SUITE_P(codeGenEndToEnd, codeGen, testing::Values(
         "chainedCopy.cl",
         "dynamicDispatchOffAnonymous.cl",
         "if.cl",
-        "isvoid.cl"
+        "isvoid.cl",
+        "relational.cl"
 
 
 ));

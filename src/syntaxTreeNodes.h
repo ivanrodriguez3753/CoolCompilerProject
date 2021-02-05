@@ -414,6 +414,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void codeGen() override;
 };
 
 class _unary : public _expr {
