@@ -1181,7 +1181,10 @@ void _unary::print(ostream& os) const {
 }
 
 void _unary::traverse() {
+    _method::currentTemps++;
+    if(_method::currentMaxTemps < _method::currentTemps) _method::currentMaxTemps = _method::currentTemps;
     expr->traverse();
+    _method::currentTemps--;
 
     typeCheck();
 }

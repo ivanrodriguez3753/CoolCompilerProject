@@ -255,7 +255,8 @@ int allocAndStoreAttributesAndInitializers(classRecord* klass) {
             if(attr->initExpr) {
                 //COMMENT
                 code.push_back(comment);
-                callerConstructorCallAndReturnSequence(attr->initExpr->exprType);
+//                callerConstructorCallAndReturnSequence(attr->initExpr->exprType);
+                attr->initExpr->isInitializer = attr->initExpr->rootExpression = true;
                 attr->initExpr->codeGen();
                 st(self_reg, curOffset++, acc_reg);
             }
@@ -536,6 +537,8 @@ void _program::genConstructors() {
         code.push_back(klassIt->first + '.' + newSuffix + ':');
 
 
+//        if(klassIt->first == "Main") calleeCallSequence(newSuffix, 2);
+//        else
         calleeCallSequence(newSuffix);
         allocAndStoreAttributesAndInitializers(classMap.at(klassIt->first));
         calleeReturnSequence(klassIt->first, newSuffix);
@@ -1337,5 +1340,60 @@ void _relational::codeGen() {
     pop(fp);
     pop(self_reg);
 
+
+}
+
+int _unary::labelCounter = 0;
+void _unary::codeGen() {
+    if(op == "negate") {
+        callerConstructorCallAndReturnSequence("Int");
+        //initialize raw int to 0, st in firstAttributeOffset of the new Int, then load that and store on stack
+        li(temp_reg, 0);
+        st(acc_reg, firstAttributeOffset, temp_reg);
+        ld(acc_reg, acc_reg, firstAttributeOffset);
+        st(fp, 0, acc_reg);
+
+        //we want to consider the argument of negate as a root expression
+        expr->rootExpression = true;
+        expr->codeGen();
+
+        //now load the int and subtract/add from 0 if it the unnegated integer is positive/negative.
+        //0 case doesn't matter
+        ld(acc_reg, acc_reg, firstAttributeOffset);
+        ld(temp_reg, fp, 0);
+        if(((_integer*)expr)->value >= 0) {
+            sub(acc_reg, temp_reg, acc_reg);
+        }
+        else { // < 0
+            add(acc_reg, temp_reg, acc_reg);
+        }
+        st(fp, 0, acc_reg);
+
+        callerConstructorCallAndReturnSequence("Int");
+        ld(temp_reg, fp, 0);
+        st(acc_reg, firstAttributeOffset, temp_reg);
+    }
+    else {//op == not
+        expr->codeGen();
+
+        const string trueLabel = "negate_l" + to_string(labelCounter++);
+        const string falseLabel = "negate_l" + to_string(labelCounter++);
+        const string endLabel = "negate_end_l" + to_string(labelCounter++);
+
+        bnz(acc_reg, trueLabel);
+
+        code.push_back(falseLabel + ':');
+        //COMMENT
+        code.push_back("\t;; false branch");
+        callerConstructorCallAndReturnSequence("Bool");
+        li(temp_reg, 1); //true
+        st(acc_reg, firstAttributeOffset, temp_reg);
+        jmp(endLabel);
+
+        code.push_back(trueLabel + ':');
+        //COMMENT
+        code.push_back("\t;; true branch");
+        callerConstructorCallAndReturnSequence("Bool");
+    }
 
 }

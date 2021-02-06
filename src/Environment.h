@@ -50,6 +50,7 @@ public:
 
 class classRecord : public Record {
 public:
+    int maxTempsCtr = 1; //default for internals
     string parent;
     _class* treeNode;
 

@@ -419,6 +419,7 @@ private:
 
 class _unary : public _expr {
 public:
+    static int labelCounter;
     string op; //not or ~, using words not or negate
     _expr* expr;
 
@@ -430,6 +431,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void codeGen() override;
 };
 
 class _integer : public _expr {

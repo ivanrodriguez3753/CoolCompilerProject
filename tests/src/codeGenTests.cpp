@@ -77,7 +77,7 @@ protected:
     }
 
     void TearDown() override {
-        removeRefAndIvanTemps();
+//        removeRefAndIvanTemps();
 
         classMap.clear(); classMapOrdered.clear();
         implementationMap.clear(); implementationMapOrdered.clear();
@@ -91,16 +91,16 @@ TEST_P(codeGen, errorsNotInReferenceCompiler) {
     ASSERT_EQ(expected.str(), actual.str());
 }
 INSTANTIATE_TEST_SUITE_P(codeGenEndToEnd, codeGen, testing::Values(
-        "PA5YouTubeExample.cl",
-        "methodsDifferentNumParameters.cl",
-        "methodsDifferentNumParametersLet.cl",
-        "methodsDifferentNumParametersLetWithInitializer.cl",
-        "methodsDifferentNumParametersLetWithInitializers.cl",
-        "chainedCopy.cl",
-        "dynamicDispatchOffAnonymous.cl",
-        "if.cl",
-        "isvoid.cl",
-        "relational.cl"
-
+//        "PA5YouTubeExample.cl",
+//        "methodsDifferentNumParameters.cl",
+//        "methodsDifferentNumParametersLet.cl",
+//        "methodsDifferentNumParametersLetWithInitializer.cl",
+//        "methodsDifferentNumParametersLetWithInitializers.cl",
+//        "chainedCopy.cl",
+//        "dynamicDispatchOffAnonymous.cl",
+//        "if.cl",
+//        "isvoid.cl",
+//        "relational.cl",
+        "unary.cl"
 
 ));
