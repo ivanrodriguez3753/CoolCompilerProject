@@ -1523,7 +1523,7 @@ void _caseElement::traverse() {
 _assign::_assign(int l, _idMeta id, _expr* r) :
     _expr{l}, identifier{id}, rhs{r}
 {
-
+    rhs->rootExpression = true;
 }
 
 void _assign::print(ostream& os) const {

@@ -242,7 +242,7 @@ public:
     void prettyPrint(ostream& os, string prefix) const;
 private:
     void typeCheck();
-//    void codeGen();
+    void codeGen() override;
 };
 
 class _dispatch : public _expr {

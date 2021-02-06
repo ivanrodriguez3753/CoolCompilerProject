@@ -77,7 +77,7 @@ protected:
     }
 
     void TearDown() override {
-//        removeRefAndIvanTemps();
+        removeRefAndIvanTemps();
 
         classMap.clear(); classMapOrdered.clear();
         implementationMap.clear(); implementationMapOrdered.clear();
@@ -101,6 +101,6 @@ INSTANTIATE_TEST_SUITE_P(codeGenEndToEnd, codeGen, testing::Values(
         "if.cl",
         "isvoid.cl",
         "relational.cl",
-        "unary.cl"
-
+        "unary.cl",
+        "assign.cl"
 ));

@@ -1395,3 +1395,43 @@ void _unary::codeGen() {
     }
 
 }
+
+void _assign::codeGen() {
+    rhs->codeGen();
+    //figure out a way to NOT just copy and paste _identifier::codeGen() (with the ld's changed to st's)
+    //COMMENT
+    code.push_back("\t;; " + identifier.identifier);
+    objectRecord* id = (objectRecord*)top->getObject(identifier.identifier);
+
+    int offsetWRTfirstAttribute = 0;
+    if(id->kind == "attribute") {//has an offset
+        list<objectRecord*>& listtt = classMapOrdered.at(currentClass);
+        for(objectRecord* current : listtt) {
+            if(current == id) {
+                break;
+            }
+            offsetWRTfirstAttribute++;
+        }
+        st(self_reg, firstAttributeOffset + offsetWRTfirstAttribute, acc_reg);
+    }
+        //the only local variables in a methodEnv are the method parameters
+    else if( (top->metaInfo.kind == "method") && (id->kind == "local") ) { //method parameter. need to refer using fp
+        pair<methodRecord*, string> methodRec = implementationMap.at(top->C).at(top->metaInfo.identifier);
+        list<_formal*>::iterator formalsIt = methodRec.first->treeNode->formalList.begin();
+        int i = 0;
+        while(i < methodRec.first->treeNode->formalList.size()) {
+            if((*(formalsIt++))->identifier.identifier == id->lexeme) {
+                break;
+            }
+            ++i;
+
+        }
+        st(fp, (firstArgOffset + methodRec.first->treeNode->formalList.size() - 1) - i, acc_reg);
+    }
+    else if(top->metaInfo.kind == "let" || top->metaInfo.kind == "case") { //should be all other possible variables (locals)
+        st(fp, - id->fpOffset, acc_reg);
+    }
+    else {
+        code.push_back("\t;; did nothing with _identifier");
+    }
+}
