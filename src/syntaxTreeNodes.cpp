@@ -412,9 +412,14 @@ void _attributeInit::print(ostream &os) const {
 }
 
 void _attributeInit::traverse() {
+    _method::currentTemps = _method::currentMaxTemps = 1; //reset
+
     //dont need to traverse symTable unless it is an expression that introduces scope (_let or _case I think)
     //so leave it to caller as usual
     expr->traverse();
+
+    int& m = classMap.at(top->C)->maxTempsCtr;
+    if(_method::currentMaxTemps > m) m = _method::currentMaxTemps;
 
     typeCheck();
 }

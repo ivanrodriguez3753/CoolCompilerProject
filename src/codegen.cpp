@@ -537,9 +537,7 @@ void _program::genConstructors() {
         code.push_back(klassIt->first + '.' + newSuffix + ':');
 
 
-//        if(klassIt->first == "Main") calleeCallSequence(newSuffix, 2);
-//        else
-        calleeCallSequence(newSuffix);
+        calleeCallSequence(newSuffix, classMap.at(klassIt->first)->maxTempsCtr);
         allocAndStoreAttributesAndInitializers(classMap.at(klassIt->first));
         calleeReturnSequence(klassIt->first, newSuffix);
 
