@@ -946,8 +946,11 @@ void _while::typeCheck() {
 }
 
 void _while::traverse() {
+    _method::currentTemps++;
+    if(_method::currentMaxTemps < _method::currentTemps) _method::currentMaxTemps = _method::currentTemps;
     predicate->traverse();
     body->traverse();
+    _method::currentTemps--;
 
     typeCheck();
 }

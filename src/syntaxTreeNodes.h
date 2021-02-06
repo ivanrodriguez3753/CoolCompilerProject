@@ -325,6 +325,7 @@ private:
 
 class _while : public _expr {
 public:
+    static int labelCounter;
     _expr* predicate;
     _expr* body;
 
@@ -336,6 +337,7 @@ public:
     void traverse() override;
 private:
     void typeCheck();
+    void codeGen() override;
 };
 
 class _block : public _expr {

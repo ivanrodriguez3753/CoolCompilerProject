@@ -1034,7 +1034,9 @@ void _arith::codeGen() {
     left->codeGen();
     st(fp, 0, acc_reg);
 //    isLHS = false;
+    right->rootExpression = true;
     right->codeGen();
+    if(!isIdentifierExpr) ld(acc_reg, acc_reg, firstAttributeOffset);
     ld(temp_reg, fp, 0);
     if(op == "plus") {
         add(acc_reg, temp_reg, acc_reg);
@@ -1205,6 +1207,8 @@ void _dynamicDispatch::codeGen() {
 }
 
 void _block::codeGen() {
+    //make last expression in block a rootExpression, since _block returns whatever its last expr was
+    (*(--body.end()))->rootExpression = true;
     for(_expr* e : body) {
         e->codeGen();
     }
@@ -1434,4 +1438,27 @@ void _assign::codeGen() {
     else {
         code.push_back("\t;; did nothing with _identifier");
     }
+}
+
+int _while::labelCounter;
+void _while::codeGen() {
+    const string loopLabel = "loop_l" + to_string(labelCounter++);
+    const string poolLabel = "pool_l" + to_string(labelCounter++);
+
+    code.push_back("\t;;begin IVAN");
+
+    code.push_back(loopLabel + ':');
+
+    predicate->rootExpression = true;
+    predicate->codeGen();
+
+    ld(acc_reg, acc_reg, firstAttributeOffset);
+    bz(acc_reg, poolLabel);
+
+    body->codeGen();
+
+    jmp(loopLabel);
+
+    code.push_back(poolLabel + ':');
+    code.push_back("\t;;end IVAN");
 }
