@@ -77,7 +77,7 @@ protected:
     }
 
     void TearDown() override {
-//        removeRefAndIvanTemps();
+        removeRefAndIvanTemps();
 
         classMap.clear(); classMapOrdered.clear();
         implementationMap.clear(); implementationMapOrdered.clear();
@@ -101,7 +101,21 @@ INSTANTIATE_TEST_SUITE_P(codeGenEndToEnd, codeGen, testing::Values(
         "if.cl",
         "isvoid.cl",
         "relational.cl",
-        "unary.cl",
+        "unaryNegate.cl",
+        "unaryNot.cl",
         "assign.cl",
-        "while.cl"
+        "while.cl",
+        "while2.cl"
+));
+INSTANTIATE_TEST_SUITE_P(codeGenFull, codeGen, testing::Values(
+//        "../CoolPrograms/arith.cl",
+//        "../CoolPrograms/atoi.cl",
+//        "../CoolPrograms/cells.cl",
+        "../CoolPrograms/hello-world.cl",
+//        "../CoolPrograms/hs.cl",
+        "../CoolPrograms/list.cl",
+//        "../CoolPrograms/new-complex.cl",
+//        "../CoolPrograms/primes.cl",
+        "../CoolPrograms/print-cool.cl"
+//        "../CoolPrograms/sort-list.cl"
 ));

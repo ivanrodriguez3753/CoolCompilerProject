@@ -26,19 +26,6 @@ class Main inherits IO{
         fi;
 
 
-
-        --if not ffalse then
-        --    out_string("negation on false works\n")
-        --else
-        --    out_string("negation on false DOES NOT work\n")
-        --fi;
-
-        --if not ttrue then
-        --    out_string("negation on true DOES NOT works\n")
-        --else
-        --    out_string("negation on true works\n")
-        --fi;
-
     }};
 
 

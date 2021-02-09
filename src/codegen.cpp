@@ -1069,6 +1069,11 @@ void _identifier::codeGen() {
     code.push_back("\t;; " + identifier.identifier);
     objectRecord* id = (objectRecord*)top->getObject(identifier.identifier);
 
+    if(identifier.identifier == "self") {
+        mov(acc_reg, self_reg);
+        return;
+    }
+
     int offsetWRTfirstAttribute = 0;
     if(id->kind == "attribute") {//has an offset
         list<objectRecord*>& listtt = classMapOrdered.at(currentClass);
@@ -1193,7 +1198,9 @@ void _dynamicDispatch::codeGen() {
     ld(temp_reg, acc_reg, vtablePointerOffset);
 
     int offset = firstMethodOffset;
-    for(pair<methodRecord*, string> methodPair : implementationMapOrdered.at(top->C)) {
+    string lookupThisType = caller->exprType;
+    if(lookupThisType == "SELF_TYPE") lookupThisType = lookUpSelfType(top);
+    for(pair<methodRecord*, string> methodPair : implementationMapOrdered.at(lookupThisType)) {
         if(methodPair.first->lexeme == method.identifier) break;
         offset++;
     }
@@ -1377,6 +1384,7 @@ void _unary::codeGen() {
     }
     else {//op == not
         expr->codeGen();
+        if(rootExpression) ld(acc_reg, acc_reg, firstAttributeOffset);
 
         const string trueLabel = "negate_l" + to_string(labelCounter++);
         const string falseLabel = "negate_l" + to_string(labelCounter++);
@@ -1396,6 +1404,9 @@ void _unary::codeGen() {
         //COMMENT
         code.push_back("\t;; true branch");
         callerConstructorCallAndReturnSequence("Bool");
+        //no need for li(temp_reg, 0) (false) bc that's how Bool's are constructed
+
+        code.push_back(endLabel + ':');
     }
 
 }
@@ -1408,6 +1419,11 @@ void _assign::codeGen() {
     objectRecord* id = (objectRecord*)top->getObject(identifier.identifier);
 
     int offsetWRTfirstAttribute = 0;
+
+    if(identifier.identifier == "self") {
+        code.push_back("\t;; FIX THIS IN _assign::codeGen()"); //TODO
+    }
+
     if(id->kind == "attribute") {//has an offset
         list<objectRecord*>& listtt = classMapOrdered.at(currentClass);
         for(objectRecord* current : listtt) {

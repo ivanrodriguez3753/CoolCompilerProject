@@ -907,6 +907,7 @@ void _if::typeCheck() {
 }
 
 void _if::traverse() {
+    predicate->rootExpression = thenExpr->rootExpression = elseExpr->rootExpression = true;
     predicate->traverse();
     thenExpr->traverse();
     elseExpr->traverse();
@@ -946,10 +947,11 @@ void _while::typeCheck() {
 }
 
 void _while::traverse() {
-    _method::currentTemps++;
-    if(_method::currentMaxTemps < _method::currentTemps) _method::currentMaxTemps = _method::currentTemps;
     predicate->traverse();
     body->traverse();
+
+    _method::currentTemps++;
+    if(_method::currentMaxTemps < _method::currentTemps) _method::currentMaxTemps = _method::currentTemps;
     _method::currentTemps--;
 
     typeCheck();
@@ -1171,6 +1173,7 @@ void _relational::traverse() {
 _unary::_unary(int l, string o, _expr* e) :
     _expr{l}, op{o}, expr{e}
 {
+    expr->rootExpression = true;
     if(o == "not") {
         exprType = "Bool";
     }
@@ -1189,10 +1192,15 @@ void _unary::print(ostream& os) const {
 }
 
 void _unary::traverse() {
-    _method::currentTemps++;
-    if(_method::currentMaxTemps < _method::currentTemps) _method::currentMaxTemps = _method::currentTemps;
-    expr->traverse();
-    _method::currentTemps--;
+    if(!rootExpression) {
+        _method::currentTemps++;
+        if(_method::currentMaxTemps < _method::currentTemps) _method::currentMaxTemps = _method::currentTemps;
+        expr->traverse();
+        _method::currentTemps--;
+    }
+    else {
+        expr->traverse();
+    }
 
     typeCheck();
 }
