@@ -6,10 +6,17 @@ CXXFLAGS = -Wall -Wextra -Weffc++ -Wfloat-equal -Wshadow\
 	-Woverloaded-virtual -pedantic -g -fopenmp
 
 
-all: main.o parse.o lexer.yy.o
+all: ivancool docs
+
+.PHONY: docs
+docs:
+	@doxygen ./Doxyfile
+
+ivancool: main.o parse.o lexer.yy.o
 	$(CXX) $(CXXFLAGS) main.o parse.o lexer.yy.o -o ivancool
+
  
-main.o: main.cpp lexer.yy.hpp parse.hpp
+main.o: main.cpp lexer.yy.hpp parse.hpp environment.o ast.o
  
 parse.cpp: lemonfiles
  
@@ -20,7 +27,11 @@ lemonfiles: parse.y
 	lemon parse.y -s
 	mv parse.c parse.cpp
 	mv parse.h parse.hpp
- 
+
+ast.o: ast.h ast.cpp
+
+environment.o: environment.h environment.cpp
+
 lexer.o: lexer.yy.hpp lexer.yy.cpp
  
 lexer.yy.cpp: flexfiles
@@ -37,3 +48,4 @@ clean:
 	rm -f lexer.yy.cpp lexer.yy.hpp
 	rm -f parse.cpp parse.hpp parse.out
 	rm -f ivancool
+	rm -r html latex man

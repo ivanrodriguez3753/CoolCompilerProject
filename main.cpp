@@ -3,6 +3,7 @@
 #include <string>
 #include "parse.hpp"
 #include "lexer.yy.hpp"
+#include "ast.h"
 #include "omp.h"
 
 using namespace std;

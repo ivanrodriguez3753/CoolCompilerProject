@@ -3,7 +3,7 @@
  #include <cassert>
  #include <iostream>
 
- #include "syntaxTreeNodes.h"
+ #include "ast.h"
  using namespace std;
 }
 
