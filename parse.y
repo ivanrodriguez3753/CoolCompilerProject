@@ -4,36 +4,44 @@
  #include <iostream>
 
  #include "ast.h"
+ #include "ParserDriver.h"
+
+ #define YYSTYPE const char
  using namespace std;
+
 }
 
 %syntax_error
 {
-  *valid = false;
+
 }
 
 %token_type {const char*}
-%type program {_program*}
-%extra_argument {bool* valid}
+%type class {_class**}
+%type classList {list<_class*>*}
+%extra_argument {ParserDriver* drv}
 
-program ::= classList .
+program ::= classList(CL) .
 {
-    cout << "program rule\n";
-    new _program;
+    drv->_program__classList(CL);
+}
+
+program ::= ELSE FALSE IF FI IN INHERITS ISVOID LET LOOP POOL THEN WHILE CASE ESAC NEW OF NOT TRUE ID COLON LPAREN RPAREN LARROW DOT COMMA AT PLUS MINUS TIMES DIVIDE NEG LT LE RARROW EQ .
+{
 
 }
 
-classList ::= classList class .
+classList(CL1) ::= classList(CL2) class(C) .
 {
-    cout << "append class node\n";
+    drv->classList__classList_class(CL1, CL2, C);
 }
 
-classList ::= .
+classList(CL) ::= .
 {
-    cout << "spawn new classList node\n";
+    drv->classList(CL);
 }
 
-class ::= CLASS TYPE LBRACE RBRACE SEMI .
+class(C) ::= CLASS TYPE LBRACE RBRACE SEMI .
 {
-    cout << "found a class!\n";
+    drv->class__CLASS_TYPE_LBRACE_RBRACE_SEMI(C);
 }

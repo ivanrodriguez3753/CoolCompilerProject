@@ -5,15 +5,19 @@
 #include "lexer.yy.hpp"
 #include "ast.h"
 #include "omp.h"
+#include "ParserDriver.h"
+
 
 using namespace std;
+
  
 void* ParseAlloc(void* (*allocProc)(size_t));
-void Parse(void* parser, int token, const char* tokenInfo, bool* valid);
+void Parse(void* parser, int token, const char* tokenInfo, ParserDriver* info);
 void ParseFree(void* parser, void(*freeProc)(void*));
  
 void parse(const string& commandLine) {
     // Set up the scanner
+    ParserDriver drv;
     yyscan_t scanner;
     yylex_init(&scanner);
     YY_BUFFER_STATE bufferState = yy_scan_string(commandLine.c_str(), scanner);
@@ -22,26 +26,29 @@ void parse(const string& commandLine) {
     void* parse = ParseAlloc(malloc);
  
     int lexCode;
-    bool validParse = true;
     do {
         lexCode = yylex(scanner);
-        Parse(parse, lexCode, NULL, &validParse);
+        if(lexCode == TYPE) {
+            drv.id = yyget_text(scanner);
+        }
+        Parse(parse, lexCode, NULL, &drv);
     }
-    while (lexCode > 0 && validParse);
- 
-    if (-1 == lexCode) {
-        cerr << "The scanner encountered an error.\n";
-    }
+    while (lexCode > 0);
 
-    if (!validParse) {
-        cerr << "The parser encountered an error.\n";
+    cout << "traversing class list\n";
+    for(_class* klass : drv.ast->classList) {
+        cout << klass->id << endl;
     }
  
     // Cleanup the scanner and parser
     yy_delete_buffer(bufferState, scanner);
     yylex_destroy(scanner);
     ParseFree(parse, free);
+
+
 }
+
+
  
 int main() {
 //    int a = 3;
@@ -51,7 +58,11 @@ int main() {
 //        parse(commandLine);
 //    }
 
-    parse("class Main {}; class Main2 {}; class Main3 {};");
+    (parse("class Main {}; "
+          "class Main2 {}; "
+          "class Main3 {};")
+    );
+    //parse("class Main {}; class Main2 {}; class Main3 {};");
 
 //    cout << omp_get_num_threads() << endl;
 

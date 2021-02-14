@@ -2,11 +2,22 @@
 #define COOLCOMPILERPROJECT_AST_H
 
 #include "environment.h"
+#include <list>
+
+class node;
+class _symTable;
+class _program;
+class _class;
+
 
 class _node {
 
 };
 
+/**
+ * Nodes that have a corresponding record must have minimum information, so that the ast
+ * encompasses only the structure that we cannot encapsulate in the symbol table.
+ */
 class _symTable : public _node {
 protected:
     env* selfEnv;
@@ -15,14 +26,34 @@ public:
 };
 
 class  _program : public _symTable {
+private:
 public:
+    list<_class*> classList;
+
+//    _program() {}
+
+    _program(list<_class*> cL) : classList(cL) {
+
+    }
+
+
+
+
     globalEnv* getEnv() const override {
         return (globalEnv*)selfEnv;
     }
+
 };
 
 class _class : public _symTable {
+public:
+    const string id;
     const string superId;
+
+    _class(string id, string sId = "Object") : id(id), superId(sId) {
+
+    }
+
 
     classEnv* getEnv() const override {
         return (classEnv*)selfEnv;

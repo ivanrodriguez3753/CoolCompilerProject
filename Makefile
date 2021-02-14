@@ -1,5 +1,6 @@
 CXX = g++-10
 
+
 CXXFLAGS = -Wall -Wextra -Weffc++ -Wfloat-equal -Wshadow\
 	-Wpointer-arith -Wcast-align -Wstrict-overflow=5\
 	-Wwrite-strings -Wswitch-default -Wswitch-enum -Wparentheses\
@@ -13,7 +14,7 @@ docs:
 	@doxygen ./Doxyfile
 
 ivancool: main.o parse.o lexer.yy.o
-	$(CXX) $(CXXFLAGS) main.o parse.o lexer.yy.o -o ivancool
+	$(CXX) $(CXXFLAGS)  main.o parse.o lexer.yy.o -o ivancool
 
  
 main.o: main.cpp lexer.yy.hpp parse.hpp environment.o ast.o
