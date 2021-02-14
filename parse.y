@@ -18,7 +18,7 @@
 
 %token_type {const char*}
 %type class {_class**}
-%type classList {list<_class*>*}
+%type classList {vector<_class*>*}
 %extra_argument {ParserDriver* drv}
 
 program ::= classList(CL) .

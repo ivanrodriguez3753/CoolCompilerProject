@@ -10,10 +10,9 @@
 
 using namespace std;
 
- 
-void* ParseAlloc(void* (*allocProc)(size_t));
-void Parse(void* parser, int token, const char* tokenInfo, ParserDriver* info);
-void ParseFree(void* parser, void(*freeProc)(void*));
+//void* ParseAlloc(void* (*allocProc)(size_t));
+//void Parse(void* parser, int token, const char* tokenInfo, ParserDriver* info);
+//void ParseFree(void* parser, void(*freeProc)(void*));
  
 void parse(const string& commandLine) {
     // Set up the scanner

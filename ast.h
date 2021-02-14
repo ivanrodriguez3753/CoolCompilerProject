@@ -3,6 +3,7 @@
 
 #include "environment.h"
 #include <list>
+#include <vector>
 
 class node;
 class _symTable;
@@ -28,11 +29,11 @@ public:
 class  _program : public _symTable {
 private:
 public:
-    list<_class*> classList;
+    vector<_class*> classList;
 
 //    _program() {}
 
-    _program(list<_class*> cL) : classList(cL) {
+    _program(vector<_class*> cL) : classList(cL) {
 
     }
 
