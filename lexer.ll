@@ -47,7 +47,7 @@ f[aA][lL][sS][eE]					return FALSE;
 [oO][fF]			        		return OF;
 [nN][oO][tT]			        	return NOT;
 t[rR][uU][eE]			        	return TRUE;
-[0-9]+							    return 0;
+[0-9]+							    return INT;
 [A-Z][a-zA-Z0-9_]*					return TYPE;
 [a-z][a-zA-Z0-9_]*					return ID;
 ":"									return COLON;
