@@ -22,8 +22,9 @@
 %type classList {vector<_class*>*}
 %type featureList {pair<vector<_attr*>, vector<_method*>>*}
 %type formalsList {vector<pair<string, string>>*}
-%type moreFormals {vector<pair<string, string>>*}
+%type moreFormalsList {vector<pair<string, string>>*}
 %type formal {pair<string,string>*}
+%type firstFormal {pair<string,string>*}
 %type id {string*}
 %type type {string*}
 %type optionalInh{string*}
@@ -103,19 +104,24 @@ formalsList(FL) ::= .
     drv->formalsList(FL);
 }
 
-formalsList(FL) ::= formal(F) .
+formalsList(FL1) ::= formalsList(FL2) firstFormal(F) moreFormalsList(FL3) .
 {
-    drv->formalsList__formal(FL, F);
+    drv->formalsList__formalsList_firstFormal_moreFormalsList(FL1, FL2, F, FL3);
 }
 
-formalsList(FL) ::= formal(F) moreFormals(MF) .
+firstFormal(F1) ::= formal(F2) .
 {
-    drv->formalsList__formal_moreFormals(FL, F, MF);
+    drv->firstFormal__formal(F1, F2);
 }
 
-moreFormals(MF1) ::= moreFormals(MF2) COMMA formal(F) .
+moreFormalsList(FL1) ::= moreFormalsList(FL2) COMMA formal(F) .
 {
-    drv->moreFormals__moreFormals_COMMA_formal(MF1, MF2, F);
+    drv->moreFormalsList__moreFormalsList_COMMA_formal(FL1, FL2, F);
+}
+
+moreFormalsList(FL) ::= .
+{
+    drv->moreFormalsList(FL);
 }
 
 formal(F) ::= id(ID_) COLON type(T) .

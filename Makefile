@@ -7,16 +7,16 @@ CXXFLAGS = -Wall -Wextra -Weffc++ -Wfloat-equal -Wshadow\
 	-Woverloaded-virtual -pedantic -g
 
 
-all: ivancool docs
+all: ivancool
 
 .PHONY: docs
 docs:
 	@doxygen ./Doxyfile
 
-ivancool: main.o parse.o lexer.yy.o
-	$(CXX) $(CXXFLAGS)  main.o parse.o lexer.yy.o -o ivancool
+ivancool: main.o parse.o lexer.yy.o ast.o
+	$(CXX) $(CXXFLAGS)  main.o parse.o lexer.yy.o ast.o -o ivancool
 
- 
+
 main.o: main.cpp lexer.yy.hpp parse.hpp environment.o ast.o
  
 parse.cpp: lemonfiles

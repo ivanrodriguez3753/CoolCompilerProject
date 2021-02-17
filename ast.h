@@ -18,6 +18,18 @@ using namespace std;
 
 class _node {
 
+//    virtual void print(ostream& os) const = 0;
+public:
+    void print(ostream& os) const;
+    void prettyPrint(ostream& os, string prefix) const;
+
+protected:
+    const static string T;
+    const static string indent;
+
+
+//    const int encountered;
+//    const int lineNo;
 };
 
 /**
@@ -70,6 +82,8 @@ public:
         return nullptr;
     }
 
+    void prettyPrint(ostream&os, const string prefix) const;
+
 };
 
 class _class : public _env {
@@ -90,28 +104,34 @@ public:
     classRec* getSelfRec() const override {
         return (classRec*) selfRec;
     }
+
+    void prettyPrint(ostream& os, const string indentPrefix) const;
 };
 
 class _method : public _env {
 public:
 
-     _method(string i, string rT, vector<pair<string, string>>& f) : _env(i), returnType(rT), formals(f) {
-     }
+    _method(string i, string rT, vector<pair<string, string>> fL) : _env(i), returnType(rT), formalsList(fL) {
+    }
+
     /**
      * <id, type>
      */
-    vector<pair<string, string>> formals;
+    vector<pair<string, string>> formalsList;
     string returnType;
 
 
+    methodEnv *getSelfEnv() const override {
+        return (methodEnv *) selfEnv;
+    }
 
-    methodEnv* getSelfEnv() const override {
-        return (methodEnv*)selfEnv;
+    methodRec *getSelfRec() const override {
+        return (methodRec *) selfRec;
     }
-    methodRec* getSelfRec() const override {
-        return (methodRec*)selfRec;
-    }
+
+    void prettyPrint(ostream &os, const string indentPrefix) const;
 };
+
 class _attr : public _symTable {
 public:
     string type;
@@ -122,6 +142,8 @@ public:
     objRec* getSelfRec() const override {
         return (objRec*)selfRec;
     }
+    void prettyPrint(ostream &os, const string indentPrefix) const;
+
 };
 
 class _let : public _env {
@@ -140,6 +162,16 @@ class _case : public _env {
     letCaseRec* getSelfRec() const override {
         return (letCaseRec*)selfRec;
     }
+};
+
+class _formal : public _symTable {
+private:
+    string type;
+public:
+    _formal(string i, string t) : _symTable(i), type(t) {
+
+    }
+
 };
 
 

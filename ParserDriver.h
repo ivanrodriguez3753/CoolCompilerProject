@@ -8,6 +8,7 @@
 #include "parse.hpp"
 #include <queue>
 #include <stack>
+#include <vector>
 /**
  * This class interfaces with flex and lemon. It carries thread-safe global data, as well as methods implementing
  * procedures associated with a production and methods managing the AST.
@@ -31,10 +32,22 @@ public:
     ~ParserDriver() {}
 
     void parse(const string& fileName) {
-        yyscan_t scanner;
         yylex_init(&scanner);
         //TODO: open file
-        string fileContents = "class Main1{attr1 : Int; attr2 : Bool; method1() : ReturnType{}; }; class Main2{}; class Main3{};";
+        string fileContents =
+            "class Main1{"
+            "   attr1 : Int; "
+            "   attr2 : Bool; "
+            "   method1(arg1 : Int, arg2 : String) : ReturnType {"
+
+            "   };"
+            "}; "
+            "class Main2{"
+
+            "}; "
+            "class Main3{"
+            ""
+            "};";
         YY_BUFFER_STATE bufferState = yy_scan_string(fileContents.c_str(), scanner);
 
         //set up the parser
@@ -61,6 +74,8 @@ public:
     int ctr = 0;
 
 
+
+    int encountered = 0;
 
     /**
      * Q's for terminals that have information associated with them (bool is also used for differentiating between attr/method features
@@ -129,34 +144,39 @@ public:
         *ID_= stringQ.top(); stringQ.pop();
         *M = new _method(*ID_, *T, *FL);
     }
-    void formalsList(vector<pair<string,string>>*&FL) {
+
+    void formalsList(vector<pair<string,string>>*& FL) {
         FL = new vector<pair<string,string>>;
     }
-
-    void formalsList__formal(vector<pair<string,string>>*& FL, pair<string,string>*& F) {
-        (*FL).push_back(*F);
-    }
-    void formalsList__formal_moreFormals(vector<pair<string, string>>*& FL, pair<string,string>*& F, vector<pair<string,string>>*& MF) {
-        (*FL).push_back(*F);
-        for(pair<string, string> formal : *MF) {
-            (*FL).push_back(formal);
+    void formalsList__formalsList_firstFormal_moreFormalsList(vector<pair<string,string>>*& FL1, vector<pair<string,string>>*& FL2, pair<string,string>*& F, vector<pair<string,string>>*& FL3) {
+        FL1 = FL2;
+        (*FL1).push_back(*F);
+        for(pair<string,string> formal : *FL3) {
+            (*FL1).push_back(formal);
         }
     }
-    void moreFormals__moreFormals_COMMA_formal(vector<pair<string, string>>*& MF1, vector<pair<string,string>>*& MF2, pair<string,string>*& F) {
-        MF1 = MF2;
-        (*MF1).push_back(*F);
+    void firstFormal__formal(pair<string,string>*& F1, pair<string,string>*& F2) {
+        F1 = F2;
     }
-    void formal__id_COLON_type(pair<string,string>*& F, string*& ID_, string *& T) {
+    void moreFormalsList__moreFormalsList_COMMA_formal(vector<pair<string,string>>*& FL1, vector<pair<string,string>>*& FL2, pair<string,string>*& F){
+        FL1 = FL2;
+        (*FL1).push_back(*F);
+    }
+    void moreFormalsList(vector<pair<string,string>>*& FL) {
+        FL = new vector<pair<string,string>>;
+    }
+    void formal__id_COLON_type(pair<string,string>*& F, string*& ID_, string*& T) {
         F = new pair<string,string>;
-
+        *T = stringQ.top(); stringQ.pop();
+        *ID_= stringQ.top(); stringQ.pop();
+        (*F).second = *T;
+        (*F).first = *ID_;
     }
     void id(string*& ID_) {
         ID_ = new string;
-        //*ID_ = cTocpp;
     }
     void type(string*& T) {
         T = new string;
-        //*T = cTocpp;
     }
 
 
