@@ -2,7 +2,7 @@
 
 
 #include <iostream>
-#include "../lib/ParserDriver.h"
+#include <ParserDriver.h>
 
 
 using namespace std;
