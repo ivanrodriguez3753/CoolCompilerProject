@@ -6,6 +6,7 @@
 #define COOLCOMPILERPROJECT_PARSERDRIVER_H
 #include "lexer.yy.hpp"
 #include "parse.hpp"
+#include "ast.h"
 #include <queue>
 #include <stack>
 #include <vector>
@@ -23,6 +24,8 @@ union featureUnion{
 void* ParseAlloc(void* (*allocProc)(size_t));
 void Parse(void* parser, int token, const char* tokenInfo, ParserDriver* info);
 void ParseFree(void* parser, void(*freeProc)(void*));
+
+using namespace std;
 
 class ParserDriver {
 private:
