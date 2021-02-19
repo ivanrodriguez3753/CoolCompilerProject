@@ -38,20 +38,27 @@ public:
         yylex_init(&scanner);
         //TODO: open file
         string fileContents =
-            "class Main1{"
-            "   attr1 : Int; "
-            "   attr2 : Bool; "
-            "   method1(arg1 : Int, arg2 : String) : ReturnType {"
-
-            "   };"
-            "}; "
-            "class Main2{"
-
-            "}; "
-            "class Main3{"
-            ""
-            "};";
+            "class\n"
+            "Main1{\n"
+            "   attr1\n"
+            "       : Int;\n"
+            "   attr2\n"
+            "       : Bool;\n"
+            "   method1\n"
+            "      (arg1\n"
+            "            : Int, \n"
+            "       arg2\n"
+            "           : String)\n"
+            "       : ReturnType{\n"
+            "   };\n"
+            "}; \n"
+            "class Main2{\n"
+            "}; \n"
+            "class Main3{\n"
+            "};\n";
         YY_BUFFER_STATE bufferState = yy_scan_string(fileContents.c_str(), scanner);
+        yyset_lineno(1, scanner);
+
 
         //set up the parser
         void* parse = ParseAlloc(malloc);
@@ -62,9 +69,16 @@ public:
             Parse(parse, lexCode, NULL, this);
             if(lexCode == ID || lexCode == TYPE) {
                 stringQ.push(yyget_text(scanner));
+                lineNoStack.push(yyget_lineno(scanner));
             }
-
         } while (lexCode > 0);
+
+        cout << "BEGIN printing leftover lineNoStack!\n";
+        while(!lineNoStack.empty()) {
+            cout << lineNoStack.top() << endl;
+            lineNoStack.pop();
+        }
+        cout << "END printing leftover lineNoStack!\n";
 
         //clean up the scanner and parser
         yy_delete_buffer(bufferState, scanner);
@@ -87,10 +101,11 @@ public:
     queue<int> intQ;
     queue<bool> boolQ;
     stack<string> stringQ;
+    stack<int> lineNoStack;
 
 
     void program__classList(vector<_class*>*& CL) {
-        ast = new _program(*CL);
+        ast = new _program(0, *CL);
     }
     void classList__classList_class(vector<_class*>*& CL1, vector<_class*>*& CL2, _class**& C) {
         CL1 = CL2;
@@ -114,14 +129,19 @@ public:
     void class__CLASS_type_optionalInh_LBRACE_featureList_RBRACE_SEMI(_class**& C, string*& T, string*& SUPER_T, pair<vector<_attr*>, vector<_method*> >*& FL){
         *SUPER_T = stringQ.top(); stringQ.pop();
         *T = stringQ.top(); stringQ.pop();
+        int tl = lineNoStack.top(); lineNoStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+
 
         C = new _class*;
-        *C = new _class(*T, *SUPER_T, *FL);
+        *C = new _class(l, tl, *T, *SUPER_T, *FL);
 
     }
     void optionalInh(string*& T) {
         T = new string;
         stringQ.push("Object");
+        lineNoStack.push(0);
+
     }
     void featureList(pair<vector<_attr*>, vector<_method*>>*& FL) {
         FL = new pair<vector<_attr*>, vector<_method*>>;
@@ -130,7 +150,9 @@ public:
         A = new _attr*;
         *T = stringQ.top(); stringQ.pop();
         *ID_ = stringQ.top(); stringQ.pop();
-        *A = new _attr(*ID_, *T);
+        int tl = lineNoStack.top(); lineNoStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *A = new _attr(l, tl, *ID_, *T);
     }
     void feature__attr(featureUnion& F, _attr**& A) {
         F.attr = A;
@@ -141,39 +163,42 @@ public:
         boolQ.push(false);
     }
 
-    void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_RBRACE_SEMI(_method**& M, string*& ID_, vector<pair<string, string>>* FL, string*& T) {
+    void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_RBRACE_SEMI(_method**& M, string*& ID_, vector<_formal*>* FL, string*& T) {
         M = new _method*;
         *T = stringQ.top(); stringQ.pop();
         *ID_= stringQ.top(); stringQ.pop();
-        *M = new _method(*ID_, *T, *FL);
+        int tl = lineNoStack.top(); lineNoStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *M = new _method(l, tl, *ID_, *T, *FL);
     }
 
-    void formalsList(vector<pair<string,string>>*& FL) {
-        FL = new vector<pair<string,string>>;
+    void formalsList(vector<_formal*>*& FL) {
+        FL = new vector<_formal*>;
     }
-    void formalsList__formalsList_firstFormal_moreFormalsList(vector<pair<string,string>>*& FL1, vector<pair<string,string>>*& FL2, pair<string,string>*& F, vector<pair<string,string>>*& FL3) {
+    void formalsList__formalsList_firstFormal_moreFormalsList(vector<_formal*>*& FL1, vector<_formal*>*& FL2, _formal**& F, vector<_formal*>*& FL3) {
         FL1 = FL2;
         (*FL1).push_back(*F);
-        for(pair<string,string> formal : *FL3) {
+        for(_formal* formal : *FL3) {
             (*FL1).push_back(formal);
         }
     }
-    void firstFormal__formal(pair<string,string>*& F1, pair<string,string>*& F2) {
+    void firstFormal__formal(_formal**& F1, _formal**& F2) {
         F1 = F2;
     }
-    void moreFormalsList__moreFormalsList_COMMA_formal(vector<pair<string,string>>*& FL1, vector<pair<string,string>>*& FL2, pair<string,string>*& F){
+    void moreFormalsList__moreFormalsList_COMMA_formal(vector<_formal*>*& FL1, vector<_formal*>*& FL2, _formal**& F){
         FL1 = FL2;
         (*FL1).push_back(*F);
     }
-    void moreFormalsList(vector<pair<string,string>>*& FL) {
-        FL = new vector<pair<string,string>>;
+    void moreFormalsList(vector<_formal*>*& FL) {
+        FL = new vector<_formal*>;
     }
-    void formal__id_COLON_type(pair<string,string>*& F, string*& ID_, string*& T) {
-        F = new pair<string,string>;
+    void formal__id_COLON_type(_formal**& F, string*& ID_, string*& T) {
+        F = new _formal*;
         *T = stringQ.top(); stringQ.pop();
         *ID_= stringQ.top(); stringQ.pop();
-        (*F).second = *T;
-        (*F).first = *ID_;
+        int tl = lineNoStack.top(); lineNoStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *F = new _formal(l, tl, "", "");
     }
     void id(string*& ID_) {
         ID_ = new string;

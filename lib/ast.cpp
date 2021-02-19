@@ -8,7 +8,7 @@ void _node::print(ostream& os) const {
 
 const string _node::T = "├──";
 const string _node::indent = "|   ";
-void _node::prettyPrint(ostream& os, string indentPrefix) const {
+void _node::prettyPrint(ostream&os, string indentPrefix) const {
     //TODO
     cout << indentPrefix + T + "SHOULDN'T BE CALLED: PLACEHOLDER, MAKE PURE VIRTUAL LATER" << endl;
 }
@@ -47,8 +47,8 @@ void _attr::prettyPrint(ostream& os, const string indentPrefix) const {
 void _method::prettyPrint(ostream& os, const string indentPrefix) const {
     cout << indentPrefix + T + "METHOD: " + id + ", " + returnType << endl;
     cout << indentPrefix + indent + T + "FORMALS_LIST: " + to_string(formalsList.size()) + " formalsList" << endl;
-    for(pair<string,string> formal : formalsList) {
-        cout << indentPrefix + indent + indent + T + "FORMAL: " + formal.first + ", " + formal.second << endl;
+    for(_formal* formal : formalsList) {
+        cout << indentPrefix + indent + indent + T + "FORMAL: " + formal->id + ", " + formal->type << endl;
     }
     cout << indentPrefix + indent + T + "METHOD_BODY: XYZ EXPRESSION" << endl;
 }

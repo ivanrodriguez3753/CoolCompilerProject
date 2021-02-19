@@ -12,6 +12,7 @@ class _program;
 class _class;
 class _method;
 class _attr;
+class _formal;
 class letCaseEnv;
 
 using namespace std;
@@ -23,11 +24,12 @@ public:
     void print(ostream& os) const;
     void prettyPrint(ostream& os, string prefix) const;
 
+    _node(int l) : lineNo(l) {}
 protected:
     const static string T;
     const static string indent;
 
-
+    const int lineNo;
 //    const int encountered;
 //    const int lineNo;
 };
@@ -42,7 +44,7 @@ protected:
 public:
     string id;
 
-    _symTable(string i) : id(i) {}
+    _symTable(int l, string i) : _node(l), id(i) {}
 
     virtual rec* getSelfRec() const = 0;
 };
@@ -53,7 +55,7 @@ protected:
 
     virtual env* getSelfEnv() const = 0;
 
-    _env(string id) : _symTable(id) {}
+    _env(int l, string id) : _symTable(l, id) {}
 };
 
 class  _program : public _env {
@@ -61,9 +63,8 @@ private:
 public:
     vector<_class*> classList;
 
-//    _program() {}
 
-    _program(vector<_class*> cL) : _env("global"), classList(cL) {
+    _program(int l, vector<_class*> cL) : _env(l, "global"), classList(cL) {
     }
 
 
@@ -82,19 +83,20 @@ public:
         return nullptr;
     }
 
-    void prettyPrint(ostream&os, const string prefix) const;
+    void prettyPrint(ostream&os, string indentPrefix) const;
 
 };
 
 class _class : public _env {
 public:
     const string superId;
+    const int superLineNo;
 
     pair<vector<_attr*>, vector<_method*>> featureList;
 
     classRec* rec;
 
-    _class(string id, string sId, pair<vector<_attr*>, vector<_method*>> fL) : _env(id), superId(sId), featureList(fL) {
+    _class(int l, int sl, string id, string sId, pair<vector<_attr*>, vector<_method*>> fL) : _env(l, id), superId(sId), featureList(fL), superLineNo(sl) {
     }
 
 
@@ -111,14 +113,15 @@ public:
 class _method : public _env {
 public:
 
-    _method(string i, string rT, vector<pair<string, string>> fL) : _env(i), returnType(rT), formalsList(fL) {
+    _method(int l, int tl, string i, string rT, vector<_formal*> fL) : _env(l, i), returnType(rT), formalsList(fL), typeLineNo(tl) {
     }
 
     /**
      * <id, type>
      */
-    vector<pair<string, string>> formalsList;
+    vector<_formal*> formalsList;
     string returnType;
+    const int typeLineNo;
 
 
     methodEnv *getSelfEnv() const override {
@@ -134,9 +137,10 @@ public:
 
 class _attr : public _symTable {
 public:
-    string type;
+    const string type;
+    const int typeLineNo;
 
-    _attr(string i, string t) : _symTable(i), type(t) {
+    _attr(int l, int tl, string i, string t) : _symTable(l, i), type(t), typeLineNo(tl) {
     }
 
     objRec* getSelfRec() const override {
@@ -166,10 +170,16 @@ class _case : public _env {
 
 class _formal : public _symTable {
 private:
-    string type;
 public:
-    _formal(string i, string t) : _symTable(i), type(t) {
+    string type;
+    const int typeLineNo;
 
+    _formal(int l, int tl, string i, string t) : _symTable(l, i), type(t), typeLineNo(tl) {
+
+    }
+
+    letCaseRec* getSelfRec() const override {
+        return (letCaseRec*)selfRec;
     }
 
 };

@@ -21,10 +21,10 @@
 %type class {_class**}
 %type classList {vector<_class*>*}
 %type featureList {pair<vector<_attr*>, vector<_method*>>*}
-%type formalsList {vector<pair<string, string>>*}
-%type moreFormalsList {vector<pair<string, string>>*}
-%type formal {pair<string,string>*}
-%type firstFormal {pair<string,string>*}
+%type formalsList {vector<_formal*>*}
+%type moreFormalsList {vector<_formal*>*}
+%type formal {_formal**}
+%type firstFormal {_formal**}
 %type id {string*}
 %type type {string*}
 %type optionalInh{string*}
