@@ -88,6 +88,11 @@ public:
 
 
     _program* ast;
+
+    /**
+     * used to properly order features, because my implementation does not have a node type _feature such that both of
+     * _method, _attr <= _feature. Only needed for testing purposes
+     */
     int ctr = 0;
 
 

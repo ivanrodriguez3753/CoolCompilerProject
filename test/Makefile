@@ -37,7 +37,7 @@ check : all
 	./ivantest
 
 clean :
-	rm -rf ivantest *.o
+	rm -rf *.o
 
 
 
@@ -52,4 +52,4 @@ firstTest.o : $(TEST_DIR)/firstTest.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib -c $(TEST_DIR)/firstTest.cpp
 
 ivantest : firstTest.o gtest-all.o gtest_main.o
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib $^ -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib $^ -o ../build/$@
