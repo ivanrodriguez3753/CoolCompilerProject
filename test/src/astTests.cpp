@@ -23,5 +23,12 @@ TEST_P(astFixture, positiveCases) {
     ASSERT_EQ(actual.str(), expected.str());
 }
 INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
-    "bareMinimum.cl"
+    "bareMinimum.cl",
+    "classInherits.cl",
+    "singleAttrInit.cl",
+    "singleAttrNoInit.cl",
+    "methodOneFormal.cl",
+    "methodTwoFormals.cl",
+    "methodFiveFormals.cl",
+    "severalAttrAndMethods.cl"
 ));

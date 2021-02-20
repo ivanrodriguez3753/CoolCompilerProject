@@ -133,9 +133,6 @@ public:
     const int typeLineNo;
     _expr* body;
 
-    int encountered;
-
-
     methodEnv *getSelfEnv() const override {
         return (methodEnv *) selfEnv;
     }
@@ -154,7 +151,9 @@ public:
     const string type;
     const int typeLineNo;
 
-    _attr(int l, int tl, string i, string t) : _symTable(l, i), type(t), typeLineNo(tl) {
+    _expr* optInit;
+
+    _attr(int l, int tl, string i, string t, _expr* oI) : _symTable(l, i), type(t), typeLineNo(tl), optInit(oI) {
     }
 
     objRec* getSelfRec() const override {

@@ -28,6 +28,7 @@
 %type id {string*}
 %type type {string*}
 %type optionalInh{string*}
+%type optInit{_expr**}
 
 %type feature {featureUnion}
 %type attr {_attr**}
@@ -90,9 +91,9 @@ feature(F) ::= method(M) .
     drv->feature__method(F, M);
 }
 
-attr(A) ::= id(ID_) COLON type(T) SEMI .
+attr(A) ::= id(ID_) COLON type(T) optInit(E) SEMI  .
 {
-    drv->attr__id_COLON_type_SEMI(A, ID_, T);
+    drv->attr__id_COLON_type_optInit_SEMI(A, ID_, T, E);
 }
 
 method(M) ::= id(ID_) LPAREN formalsList(FL) RPAREN COLON type(T) LBRACE expr(E) RBRACE SEMI .
@@ -147,4 +148,14 @@ expr(E) ::= FALSE .
 expr(E) ::= TRUE .
 {
     drv->expr__TRUE(E);
+}
+
+optInit(E) ::= .
+{
+    drv->optInit(E);
+}
+
+optInit(E1) ::= LARROW expr(E2) .
+{
+    drv->optInit__LARROW_expr(E1, E2);
 }

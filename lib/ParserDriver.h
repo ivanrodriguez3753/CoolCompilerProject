@@ -68,12 +68,10 @@ public:
             }
         } while (lexCode > 0);
 
-        cout << "BEGIN printing leftover lineNoStack!\n";
         while(!lineNoStack.empty()) {
             cout << lineNoStack.top() << endl;
             lineNoStack.pop();
         }
-        cout << "END printing leftover lineNoStack!\n";
 
         //clean up the scanner and parser
         yy_delete_buffer(bufferState, scanner);
@@ -146,13 +144,13 @@ public:
     void featureList(pair<vector<_attr*>, vector<_method*>>*& FL) {
         FL = new pair<vector<_attr*>, vector<_method*>>;
     }
-    void attr__id_COLON_type_SEMI(_attr**& A, string*& ID_, string*& T) {
+    void attr__id_COLON_type_optInit_SEMI(_attr**& A, string*& ID_, string*& T, _expr**& E) {
         A = new _attr*;
         *T = stringQ.top(); stringQ.pop();
         *ID_ = stringQ.top(); stringQ.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
-        *A = new _attr(l, tl, *ID_, *T);
+        *A = new _attr(l, tl, *ID_, *T, *E);
 
         (*A)->encountered = encountered++;
         (*A)->isAttr = true;
@@ -203,7 +201,7 @@ public:
         *ID_= stringQ.top(); stringQ.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
-        *F = new _formal(l, tl, "", "");
+        *F = new _formal(l, tl, *ID_, *T);
     }
     void id(string*& ID_) {
         ID_ = new string;
@@ -226,6 +224,15 @@ public:
         *E = new _bool(l, true);
     }
 
+    void optInit(_expr**& E) {
+        E = new _expr*;
+        *E = nullptr;
+    }
+
+    void optInit__LARROW_expr(_expr**& E1, _expr**& E2) {
+        E1 = new _expr*;
+        *E1 = *E2;
+    }
 
 
 };

@@ -54,7 +54,7 @@ void _class::print(ostream &os) const {
         os << "no_inherits" << endl;
     } else {
         os << "inherits" << endl;
-        os << superId << endl << superLineNo << endl;
+        os << superLineNo << endl << superId << endl;
     }
 
     //sort features by encountered
@@ -82,10 +82,14 @@ void _attr::prettyPrint(ostream& os, const string indentPrefix) const {
 }
 
 void _attr::print(ostream &os) const {
-    //TODO: modify for attribute_init
-    os << "attribute_init" << endl;
-    os << typeLineNo << endl << type << endl;
+    if(optInit) os << "attribute_init" << endl;
+    else os << "attribute_no_init" << endl;
     os << lineNo << endl << id << endl;
+    os << typeLineNo << endl << type << endl;
+
+    if(optInit) {
+        optInit->print(os);
+    }
 }
 
 void _method::prettyPrint(ostream& os, const string indentPrefix) const {
@@ -116,8 +120,8 @@ void _formal::prettyPrint(ostream&os, const string indentPrefix) const {
 }
 
 void _formal::print(ostream &os) const {
-    os << typeLineNo << endl << type << endl;
     os << lineNo << endl << id << endl;
+    os << typeLineNo << endl << type << endl;
 }
 
 void _bool::prettyPrint(ostream &os, const string indentPrefix) const {
