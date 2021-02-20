@@ -51,5 +51,11 @@ gtest_main.o : $(FUSED_GTEST_H) $(GTEST_MAIN_CC)
 firstTest.o : $(TEST_DIR)/firstTest.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib -c $(TEST_DIR)/firstTest.cpp
 
-ivantest : firstTest.o gtest-all.o gtest_main.o
+astTests.o : $(TEST_DIR)/astTests.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib -c $(TEST_DIR)/astTests.cpp
+
+utility.o: $(TEST_DIR)/utility.cpp
+		$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib -c $(TEST_DIR)/utility.cpp
+
+ivantest : firstTest.o astTests.o utility.o gtest-all.o gtest_main.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I../lib -L../build -livanlib $^ -o ../build/$@

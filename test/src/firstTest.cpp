@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "utility.h"
 #include <ParserDriver.h>
 
 using namespace std;
