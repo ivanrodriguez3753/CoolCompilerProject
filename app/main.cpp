@@ -7,12 +7,9 @@
 
 using namespace std;
 
-int main() {
-	cout << "Hello world!\n";
-
-
+int main(int argc, char* argv[]) {
 
 	ParserDriver drv;
-    drv.parse("bareMinimum.cl");
+    drv.parse("../test/resources/CoolPrograms/bareMinimum.cl");
     drv.ast->prettyPrint(cout, "");
 }

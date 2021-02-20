@@ -63,7 +63,7 @@ public:
                 stringQ.push(yyget_text(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
             }
-            else if(lexCode == FALSE) {
+            else if(lexCode == FALSE || lexCode == TRUE) {
                 lineNoStack.push(yyget_lineno(scanner));
             }
         } while (lexCode > 0);
@@ -217,6 +217,13 @@ public:
         int l = lineNoStack.top(); lineNoStack.pop();
 
         *E = new _bool(l, false);
+    }
+
+    void expr__TRUE(_expr**& E) {
+        E = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E = new _bool(l, true);
     }
 
 
