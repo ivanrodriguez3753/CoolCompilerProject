@@ -27,9 +27,11 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "classInherits.cl",
     "singleAttrInit.cl",
     "singleAttrNoInit.cl",
+    "methodNoFormals.cl",
     "methodOneFormal.cl",
     "methodTwoFormals.cl",
     "methodFiveFormals.cl",
     "severalAttrAndMethods.cl",
-    "integerExpr.cl"
+    "integerExpr.cl",
+    "identifierExpr.cl"
 ));

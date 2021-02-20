@@ -226,4 +226,31 @@ public:
     void print(ostream& os) const override;
 };
 
+class _id : public _expr {
+public:
+    const string value;
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+
+
+    _id(int l, string v) : _expr(l), value(v) { }
+};
+
+class _dispatch : public _expr {
+public:
+    const string id;
+    vector<_expr*> argList;
+
+    _dispatch(int l, string i, vector<_expr*> aL) : _expr(l), id(i), argList(aL) {}
+};
+
+class _selfDispatch : public _dispatch {
+public:
+    _selfDispatch(int l, string i, vector<_expr*> aL) : _dispatch(l, i, aL) {}
+
+    void print(ostream& os) const override;
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+};
+
 #endif //COOLCOMPILERPROJECT_AST_H

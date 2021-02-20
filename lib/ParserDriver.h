@@ -60,7 +60,7 @@ public:
             lexCode = yylex(scanner);
             Parse(parse, lexCode, NULL, this);
             if(lexCode == ID || lexCode == TYPE) {
-                stringQ.push(yyget_text(scanner));
+                stringStack.push(yyget_text(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
             }
             else if(lexCode == FALSE || lexCode == TRUE) {
@@ -98,7 +98,7 @@ public:
      */
     stack<int> intStack;
     stack<bool> boolQ;
-    stack<string> stringQ;
+    stack<string> stringStack;
     stack<int> lineNoStack;
 
 
@@ -125,8 +125,8 @@ public:
         T1 = T2;
     }
     void class__CLASS_type_optionalInh_LBRACE_featureList_RBRACE_SEMI(_class**& C, string*& T, string*& SUPER_T, pair<vector<_attr*>, vector<_method*> >*& FL){
-        *SUPER_T = stringQ.top(); stringQ.pop();
-        *T = stringQ.top(); stringQ.pop();
+        *SUPER_T = stringStack.top(); stringStack.pop();
+        *T = stringStack.top(); stringStack.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
 
@@ -137,7 +137,7 @@ public:
     }
     void optionalInh(string*& T) {
         T = new string;
-        stringQ.push("Object");
+        stringStack.push("Object");
         lineNoStack.push(0);
 
     }
@@ -146,8 +146,8 @@ public:
     }
     void attr__id_COLON_type_optInit_SEMI(_attr**& A, string*& ID_, string*& T, _expr**& E) {
         A = new _attr*;
-        *T = stringQ.top(); stringQ.pop();
-        *ID_ = stringQ.top(); stringQ.pop();
+        *T = stringStack.top(); stringStack.pop();
+        *ID_ = stringStack.top(); stringStack.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
         *A = new _attr(l, tl, *ID_, *T, *E);
@@ -166,8 +166,8 @@ public:
 
     void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_expr_RBRACE_SEMI(_method**& M, string*& ID_, vector<_formal*>* FL, string*& T, _expr**& E) {
         M = new _method*;
-        *T = stringQ.top(); stringQ.pop();
-        *ID_= stringQ.top(); stringQ.pop();
+        *T = stringStack.top(); stringStack.pop();
+        *ID_= stringStack.top(); stringStack.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
         *M = new _method(l, tl, *ID_, *T, *FL, *E);
@@ -197,8 +197,8 @@ public:
     }
     void formal__id_COLON_type(_formal**& F, string*& ID_, string*& T) {
         F = new _formal*;
-        *T = stringQ.top(); stringQ.pop();
-        *ID_= stringQ.top(); stringQ.pop();
+        *T = stringStack.top(); stringStack.pop();
+        *ID_= stringStack.top(); stringStack.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
         *F = new _formal(l, tl, *ID_, *T);
@@ -240,6 +240,18 @@ public:
         int v = intStack.top(); intStack.pop();
 
         *E = new _int(l, v);
+    }
+
+    void expr__id(_expr**& E, string*& ID_) {
+        E = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *ID_ = stringStack.top(); stringStack.pop();
+
+        *E = new _id(l, *ID_);
+    }
+
+    void expr__id_LPAREN_argList__RPAREN(_expr**& E, string*& ID_, vector<_expr*>*& AL) {
+
     }
 
 

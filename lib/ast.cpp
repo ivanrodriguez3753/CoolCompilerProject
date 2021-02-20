@@ -139,3 +139,13 @@ void _int::print(ostream &os) const {
     os << "integer" << endl;
     os << value << endl;
 }
+
+void _selfDispatch::print(ostream &os) const {
+
+}
+
+void _id::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "identifier" << endl;
+    os << lineNo << endl << value << endl;
+}

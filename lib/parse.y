@@ -29,6 +29,7 @@
 %type type {string*}
 %type optionalInh{string*}
 %type optInit{_expr**}
+%type argList{vector<_expr*>*}
 
 %type feature {featureUnion}
 %type attr {_attr**}
@@ -155,6 +156,16 @@ expr(E) ::= INT .
     drv->expr__INT(E);
 }
 
+expr(E) ::= id(ID_) .
+{
+    drv->expr__id(E, ID_);
+}
+
+expr(E) ::= id(ID_) LPAREN argList(AL) RPAREN .
+{
+    drv->expr__id_LPAREN_argList__RPAREN(E, ID_, AL);
+}
+
 optInit(E) ::= .
 {
     drv->optInit(E);
@@ -163,4 +174,9 @@ optInit(E) ::= .
 optInit(E1) ::= LARROW expr(E2) .
 {
     drv->optInit__LARROW_expr(E1, E2);
+}
+
+argList(AL) ::= .
+{
+    AL;
 }
