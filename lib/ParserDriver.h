@@ -10,6 +10,8 @@
 #include <queue>
 #include <stack>
 #include <vector>
+#include <fstream>
+#include <sstream>
 /**
  * This class interfaces with flex and lemon. It carries thread-safe global data, as well as methods implementing
  * procedures associated with a production and methods managing the AST.
@@ -34,31 +36,21 @@ public:
     ParserDriver() {}
     ~ParserDriver() {}
 
-    void parse(const string& fileName) {
+    void parse(const string fileName) {
         yylex_init(&scanner);
-        //TODO: open file
-        string fileContents =
-            "class\n"
-            "Main1{\n"
-            "   attr1\n"
-            "       : Int;\n"
-            "   attr2\n"
-            "       : Bool;\n"
-            "   method1\n"
-            "      (arg1\n"
-            "            : Int, \n"
-            "       arg2\n"
-            "           : String)\n"
-            "       : ReturnType{\n"
-            "   };\n"
-            "}; \n"
-            "class Main2{\n"
-            "}; \n"
-            "class Main3{\n"
-            "};\n";
+        ifstream ifs(fileName);
+        if(!ifs.good()) {
+            cerr << "couldn't open file to parse!\n";
+            abort();
+        }
+        //TODO maybe this is wasteful but need a string
+        stringstream ss;
+        ss << ifs.rdbuf();
+        string fileContents = ss.str();
+        ifs.close();
+
         YY_BUFFER_STATE bufferState = yy_scan_string(fileContents.c_str(), scanner);
         yyset_lineno(1, scanner);
-
 
         //set up the parser
         void* parse = ParseAlloc(malloc);
@@ -69,6 +61,9 @@ public:
             Parse(parse, lexCode, NULL, this);
             if(lexCode == ID || lexCode == TYPE) {
                 stringQ.push(yyget_text(scanner));
+                lineNoStack.push(yyget_lineno(scanner));
+            }
+            else if(lexCode == FALSE) {
                 lineNoStack.push(yyget_lineno(scanner));
             }
         } while (lexCode > 0);
@@ -158,6 +153,9 @@ public:
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
         *A = new _attr(l, tl, *ID_, *T);
+
+        (*A)->encountered = encountered++;
+        (*A)->isAttr = true;
     }
     void feature__attr(featureUnion& F, _attr**& A) {
         F.attr = A;
@@ -168,13 +166,15 @@ public:
         boolQ.push(false);
     }
 
-    void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_RBRACE_SEMI(_method**& M, string*& ID_, vector<_formal*>* FL, string*& T) {
+    void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_expr_RBRACE_SEMI(_method**& M, string*& ID_, vector<_formal*>* FL, string*& T, _expr**& E) {
         M = new _method*;
         *T = stringQ.top(); stringQ.pop();
         *ID_= stringQ.top(); stringQ.pop();
         int tl = lineNoStack.top(); lineNoStack.pop();
         int l = lineNoStack.top(); lineNoStack.pop();
-        *M = new _method(l, tl, *ID_, *T, *FL);
+        *M = new _method(l, tl, *ID_, *T, *FL, *E);
+
+        (*M)->encountered = encountered++;
     }
 
     void formalsList(vector<_formal*>*& FL) {
@@ -210,6 +210,13 @@ public:
     }
     void type(string*& T) {
         T = new string;
+    }
+
+    void expr__FALSE(_expr**& E) {
+        E = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E = new _bool(l, false);
     }
 
 

@@ -13,6 +13,7 @@ class _class;
 class _method;
 class _attr;
 class _formal;
+class _expr;
 class letCaseEnv;
 
 using namespace std;
@@ -21,8 +22,8 @@ class _node {
 
 //    virtual void print(ostream& os) const = 0;
 public:
-    void print(ostream& os) const;
-    void prettyPrint(ostream& os, string prefix) const;
+    virtual void print(ostream& os) const = 0;
+    virtual void prettyPrint(ostream& os, string prefix) const = 0;
 
     _node(int l) : lineNo(l) {}
 protected:
@@ -83,8 +84,8 @@ public:
         return nullptr;
     }
 
-    void prettyPrint(ostream&os, string indentPrefix) const;
-
+    void prettyPrint(ostream&os, string indentPrefix) const override;
+    void print(ostream& os) const override;
 };
 
 class _class : public _env {
@@ -108,12 +109,20 @@ public:
     }
 
     void prettyPrint(ostream& os, const string indentPrefix) const;
+    void print(ostream& os) const override;
+
 };
 
-class _method : public _env {
+class _feature {
+public:
+    int encountered;
+    bool isAttr = false;
+};
+
+class _method : public _env, public _feature {
 public:
 
-    _method(int l, int tl, string i, string rT, vector<_formal*> fL) : _env(l, i), returnType(rT), formalsList(fL), typeLineNo(tl) {
+    _method(int l, int tl, string i, string rT, vector<_formal*> fL, _expr* b) : _env(l, i), returnType(rT), formalsList(fL), typeLineNo(tl), body(b) {
     }
 
     /**
@@ -122,6 +131,9 @@ public:
     vector<_formal*> formalsList;
     string returnType;
     const int typeLineNo;
+    _expr* body;
+
+    int encountered;
 
 
     methodEnv *getSelfEnv() const override {
@@ -133,9 +145,11 @@ public:
     }
 
     void prettyPrint(ostream &os, const string indentPrefix) const;
+    void print(ostream& os) const override;
+
 };
 
-class _attr : public _symTable {
+class _attr : public _symTable, public _feature {
 public:
     const string type;
     const int typeLineNo;
@@ -146,7 +160,9 @@ public:
     objRec* getSelfRec() const override {
         return (objRec*)selfRec;
     }
-    void prettyPrint(ostream &os, const string indentPrefix) const;
+    void prettyPrint(ostream &os, const string indentPrefix) const override;
+    void print(ostream& os) const override;
+
 
 };
 
@@ -182,7 +198,26 @@ public:
         return (letCaseRec*)selfRec;
     }
 
+    void prettyPrint(ostream &os, const string indentPrefix) const override;
+    void print(ostream& os) const override;
 };
 
+class _expr : public _node {
+public:
+    bool rootExpr = false;
+    bool initExpr = false;
+
+    _expr(int l) : _node(l) {}
+};
+
+class _bool : public _expr {
+public:
+    const bool value;
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override;
+    void print(ostream& os) const override;
+
+    _bool(int l, bool v) : _expr(l), value(v) {}
+};
 
 #endif //COOLCOMPILERPROJECT_AST_H

@@ -13,6 +13,6 @@ int main() {
 
 
 	ParserDriver drv;
-    drv.parse("dummystring");
+    drv.parse("bareMinimum.cl");
     drv.ast->prettyPrint(cout, "");
 }

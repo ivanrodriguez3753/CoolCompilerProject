@@ -32,6 +32,7 @@
 %type feature {featureUnion}
 %type attr {_attr**}
 %type method {_method**}
+%type expr {_expr**}
 %extra_argument {ParserDriver* drv}
 
 program ::= classList(CL) .
@@ -94,9 +95,9 @@ attr(A) ::= id(ID_) COLON type(T) SEMI .
     drv->attr__id_COLON_type_SEMI(A, ID_, T);
 }
 
-method(M) ::= id(ID_) LPAREN formalsList(FL) RPAREN COLON type(T) LBRACE RBRACE SEMI .
+method(M) ::= id(ID_) LPAREN formalsList(FL) RPAREN COLON type(T) LBRACE expr(E) RBRACE SEMI .
 {
-    drv->method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_RBRACE_SEMI(M, ID_, FL, T);
+    drv->method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_expr_RBRACE_SEMI(M, ID_, FL, T, E);
 }
 
 formalsList(FL) ::= .
@@ -136,4 +137,9 @@ id(ID_) ::= ID .
 type(T) ::= TYPE .
 {
     drv->type(T);
+}
+
+expr(E) ::= FALSE .
+{
+    drv->expr__FALSE(E);
 }
