@@ -1,0 +1,89 @@
+===========BEGIN REFERENCE COMPILER==============================
+CLASS:
+	1. Didn't define a Main class
+	    noMainClass.cl
+	2. Inherited from Int/Bool/String (report line number of Int/Bool/String)
+       inheritString.cl
+       inheritBool.cl
+       inheritInt.cl
+
+METHOD:
+	1. Didn't define a 0-param main method inside Main class
+	    parameter-less_main_Main.cl
+
+EXPRESSION:
+    1. All case types are distinct
+        caseRepeatTypeOnce.cl
+TYPECHECK (still under "EXPRESSION"): (these are formally defined in the Cool reference manual)
+    [Var] is trivially checked
+    [True], [False] have no hypotheses so they are trivially checked
+    [Int], [String] have hypotheses that are enforced by C++ types so they are trivially checked
+    [Sequence] is trivially checked
+    [Case] is trivially checked bc _case->exprType was assigned by using getLub()
+    [New] (doesn't need tests) trivially checked?
+    [Let-No-Init] is trivially checked
+	[Isvoid] is trivially checked
+	[Attr-No-Init] is trivially checked
+    2. [If]
+        if.cl
+    3. [Loop] (this is while loop construct)
+	    while.cl
+    4. [ASSIGN]
+        ASSIGN.cl
+    5. [Not] and [Neg]
+        not.cl
+        negate.cl
+    6. [Arith]
+        arithAll.cl
+        arithDivide.cl
+        arithMinus.cl
+        arithPlus.cl
+        arithTimes.cl
+    7. [Equal] and [LT] and [LTE]
+        equalBool.cl
+        equalInt.cl
+        equalString.cl
+        ltBool.cl
+        ltInt.cl
+        ltString.cl
+        lteBool.cl
+        lteInt.cl
+        lteString.cl
+    8. [Attr-Init]
+        attr-init.cl
+    9. [Dispatch]
+        dynamicDispatchNumArguments.cl
+        dynamicDispatchMethodNotFound.cl
+        dynamicDispatchParameterNonconformance.cl
+        selfDispatchMethodNotFound.cl
+        selfDispatchNumArguments.cl
+        selfDispatchParameterNonconformance.cl
+    10. [Static Dispatch]
+        staticDispatchMethodNotFound.cl
+        staticDispatchNumArguments.cl
+        staticDispatchParameterNonconformance.cl
+        staticDispatch@TypeNonconformance.c
+    11. [Let-Init]
+        let-init.cl
+    12. [Method] (not an expression but leaving it here anyway)
+        methodSELF_TYPEreturnType.cl
+        methodReturnType.cl
+===========END REFERENCE COMPILER==============================
+
+============BEGIN IVAN RULES===================================
+EXPRESSIONS:
+    Let:
+        1. Let introduces 0 identifiers (this is a parser error in the ref compiler)
+            let0identifiers.cl
+        2. Let introduces repeat identifier (within those already introduced in the same let)
+            letRepeatIdentifier.cl
+    Case:
+        3. At least one case
+            case0Cases.cl
+        4. All case types are distinct
+            caseRepeatTypeTwice.cl
+            caseRepeatTwoTypesTwice.cl
+    Block:
+        5. At least one subexpression (this is a parser error in the ref compiler)
+            block0Subexpressions.cl
+============END IVAN RULES=====================================
