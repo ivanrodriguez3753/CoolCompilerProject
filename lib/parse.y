@@ -143,3 +143,8 @@ expr(E) ::= FALSE .
 {
     drv->expr__FALSE(E);
 }
+
+expr(E) ::= TRUE .
+{
+    drv->expr__TRUE(E);
+}

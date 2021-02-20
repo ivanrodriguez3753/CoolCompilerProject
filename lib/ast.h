@@ -204,9 +204,6 @@ public:
 
 class _expr : public _node {
 public:
-    bool rootExpr = false;
-    bool initExpr = false;
-
     _expr(int l) : _node(l) {}
 };
 

@@ -219,6 +219,13 @@ public:
         *E = new _bool(l, false);
     }
 
+    void expr__TRUE(_expr**& E) {
+        E = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E = new _bool(l, true);
+    }
+
 
 
 };
