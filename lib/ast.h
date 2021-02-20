@@ -216,4 +216,14 @@ public:
     _bool(int l, bool v) : _expr(l), value(v) {}
 };
 
+class _int : public _expr {
+public:
+    const int value;
+
+    _int(int l, int v) : _expr(l), value(v) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
 #endif //COOLCOMPILERPROJECT_AST_H

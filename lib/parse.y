@@ -150,6 +150,11 @@ expr(E) ::= TRUE .
     drv->expr__TRUE(E);
 }
 
+expr(E) ::= INT .
+{
+    drv->expr__INT(E);
+}
+
 optInit(E) ::= .
 {
     drv->optInit(E);

@@ -30,5 +30,6 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "methodOneFormal.cl",
     "methodTwoFormals.cl",
     "methodFiveFormals.cl",
-    "severalAttrAndMethods.cl"
+    "severalAttrAndMethods.cl",
+    "integerExpr.cl"
 ));

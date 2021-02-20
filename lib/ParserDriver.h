@@ -66,12 +66,12 @@ public:
             else if(lexCode == FALSE || lexCode == TRUE) {
                 lineNoStack.push(yyget_lineno(scanner));
             }
-        } while (lexCode > 0);
+            else if(lexCode == INT) {
+                intStack.push(atoi(yyget_text(scanner)));
+                lineNoStack.push(yyget_lineno(scanner));
+            }
 
-        while(!lineNoStack.empty()) {
-            cout << lineNoStack.top() << endl;
-            lineNoStack.pop();
-        }
+        } while (lexCode > 0);
 
         //clean up the scanner and parser
         yy_delete_buffer(bufferState, scanner);
@@ -96,8 +96,8 @@ public:
      * Q's for terminals that have information associated with them (bool is also used for differentiating between attr/method features
      *
      */
-    queue<int> intQ;
-    queue<bool> boolQ;
+    stack<int> intStack;
+    stack<bool> boolQ;
     stack<string> stringQ;
     stack<int> lineNoStack;
 
@@ -111,7 +111,7 @@ public:
     }
     void featureList__featureList_feature(pair<vector<_attr*>, vector<_method*>>*& FL1, pair<vector<_attr*>,vector<_method*>>*& FL2, featureUnion& F) {
         FL1 = FL2;
-        if(boolQ.front()) { //attribute
+        if(boolQ.top()) { //attribute
             (*FL1).first.push_back(*(F.attr));
         } else { //method
             (*FL1).second.push_back(*(F.method));
@@ -232,6 +232,14 @@ public:
     void optInit__LARROW_expr(_expr**& E1, _expr**& E2) {
         E1 = new _expr*;
         *E1 = *E2;
+    }
+
+    void expr__INT(_expr**& E) {
+        E = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+        int v = intStack.top(); intStack.pop();
+
+        *E = new _int(l, v);
     }
 
 

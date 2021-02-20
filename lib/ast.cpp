@@ -133,3 +133,9 @@ void _bool::print(ostream& os) const {
     if(value) os << "true" << endl;
     else      os << "false" << endl;
 }
+
+void _int::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "integer" << endl;
+    os << value << endl;
+}
