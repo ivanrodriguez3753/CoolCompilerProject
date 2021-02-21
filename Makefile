@@ -4,7 +4,7 @@ test := test
 
 .PHONY: all $(app) $(lib) $(test)
 
-all: $(app) $(lib)
+all: $(app) $(lib) $(test)
 
 $(lib):
 	$(MAKE) --directory=$@

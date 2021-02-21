@@ -188,6 +188,17 @@ expr(E1) ::= expr(E2) AT type(T) DOT id(ID_) LPAREN argsList(AL) RPAREN .
 {
     drv->expr__expr_AT_type_DOT_id_LPAREN_argsList_RPAREN(E1, E2, T, ID_, AL);
 }
+
+expr(E1) ::= IF expr(E2) THEN expr(E3) ELSE expr(E4) FI .
+{
+    drv->expr__IF_expr_THEN_expr_ELSE_expr_FI(E1, E2, E3, E4);
+}
+
+expr(E1) ::= WHILE expr(E2) LOOP expr(E3) POOL .
+{
+    drv->expr__WHILE_expr_LOOP_expr_POOL(E1, E2, E3);
+}
+
 optInit(E) ::= .
 {
     drv->optInit(E);

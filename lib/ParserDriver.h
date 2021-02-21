@@ -63,7 +63,7 @@ public:
                 stringStack.push(yyget_text(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
             }
-            else if(lexCode == FALSE || lexCode == TRUE) {
+            else if(lexCode == FALSE || lexCode == TRUE || lexCode == IF || lexCode == WHILE) {
                 lineNoStack.push(yyget_lineno(scanner));
             }
             else if(lexCode == INT) {
@@ -73,7 +73,6 @@ public:
             else if(lexCode == STR) {
                 stringStack.push(yyget_extra(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
-                //cout << "$$$" << endl << yyget_extra(scanner) << endl << "$$$" << endl;
             }
 
         } while (lexCode > 0);
@@ -169,7 +168,7 @@ public:
         boolQ.push(false);
     }
 
-    void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_expr_RBRACE_SEMI(_method**& M, string*& ID_, vector<_formal*>* FL, string*& T, _expr**& E) {
+    void method__id_LPAREN_formalsList_RPAREN_COLON_type_LBRACE_expr_RBRACE_SEMI(_method**& M, string*& ID_, vector<_formal*>*& FL, string*& T, _expr**& E) {
         M = new _method*;
         *T = stringStack.top(); stringStack.pop();
         *ID_= stringStack.top(); stringStack.pop();
@@ -292,6 +291,19 @@ public:
         *E1 = new _staticDispatch(l, *ID_, *AL, *E2, *T, tL);
     }
 
+    void expr__IF_expr_THEN_expr_ELSE_expr_FI(_expr**& E1, _expr**& E2, _expr**& E3, _expr**& E4) {
+        E1 = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _if(l, *E2, *E3, *E4);
+    }
+
+    void expr__WHILE_expr_LOOP_expr_POOL(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _while(l, *E2, *E3);
+    }
 
     void argsList(vector<_expr*>*& AL) {
         AL = new vector<_expr*>;

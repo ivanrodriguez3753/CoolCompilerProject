@@ -275,6 +275,30 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
 };
 
+class _if : public _expr {
+public:
+    _expr* predicate;
+    _expr* tthen;
+    _expr* eelse;
+
+    _if(int l, _expr* p, _expr* t, _expr* e) : _expr(l), predicate(p), tthen(t), eelse(e) {}
+
+    void print(ostream& os) const override;
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+};
+
+class _while : public _expr {
+public:
+    _expr* predicate;
+    _expr* body;
+
+    _while(int l, _expr* p, _expr* b) : _expr(l), predicate(p), body(b) {}
+
+    void print(ostream& os) const override;
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+};
+
+
 class _string : public _expr {
 public:
     const string value;

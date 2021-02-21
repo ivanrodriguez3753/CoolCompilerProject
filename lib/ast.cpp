@@ -197,3 +197,20 @@ void _string::print(ostream &os) const {
     os << "string" << endl;
     os << value << endl;
 }
+
+void _if::print(ostream& os) const {
+    os << lineNo << endl;
+    os << "if" << endl;
+
+    predicate->print(os);
+    tthen->print(os);
+    eelse->print(os);
+}
+
+void _while::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "while" << endl;
+
+    predicate->print(os);
+    body->print(os);
+}

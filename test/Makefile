@@ -27,10 +27,7 @@ CPPFLAGS += -I$(FUSED_GTEST_DIR) -DGTEST_HAS_PTHREAD=0
 
 # Flags passed to the C++ compiler.
 CXX = clang++
-CXXFLAGS = -Wall -Wextra -Weffc++ -Wfloat-equal -Wshadow\
-	-Wpointer-arith -Wcast-align -Wstrict-overflow=5\
-	-Wwrite-strings -Wswitch-default -Wswitch-enum -Wparentheses\
-	-Woverloaded-virtual -Wl -pedantic -g -std=c++11
+CXXFLAGS = -g -std=c++11
 all : ivantest
 
 check : all
