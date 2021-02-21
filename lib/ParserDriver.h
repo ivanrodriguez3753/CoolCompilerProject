@@ -70,6 +70,11 @@ public:
                 intStack.push(atoi(yyget_text(scanner)));
                 lineNoStack.push(yyget_lineno(scanner));
             }
+            else if(lexCode == STR) {
+                stringStack.push(yyget_extra(scanner));
+                lineNoStack.push(yyget_lineno(scanner));
+                //cout << "$$$" << endl << yyget_extra(scanner) << endl << "$$$" << endl;
+            }
 
         } while (lexCode > 0);
 
@@ -209,6 +214,9 @@ public:
     void type(string*& T) {
         T = new string;
     }
+    void str(string*& S) {
+        S = new string;
+    }
 
     void expr__FALSE(_expr**& E) {
         E = new _expr*;
@@ -248,6 +256,13 @@ public:
         *ID_ = stringStack.top(); stringStack.pop();
 
         *E = new _id(l, *ID_);
+    }
+    void expr__str(_expr**& E, string*& S) {
+        E = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *S = stringStack.top(); stringStack.pop();
+
+        *E = new _string(l, *S);
     }
 
     void expr__id_LPAREN_argList__RPAREN(_expr**& E, string*& ID_, vector<_expr*>*& AL) {

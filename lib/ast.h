@@ -253,4 +253,15 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
 };
 
+class _string : public _expr {
+public:
+    const string value;
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+
+    _string(int l, string v) : _expr(l), value(v) {}
+
+};
+
 #endif //COOLCOMPILERPROJECT_AST_H

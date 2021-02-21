@@ -18,7 +18,7 @@ string comment = "";
 %x STRLIT INLINECMT BLOCKCMT
 
 %option noyywrap nounput noinput batch debug yylineno
-%option reentrant
+%option reentrant extra-type="const char*"
 
 %%
 
@@ -85,9 +85,11 @@ stringLiteral += string(yytext);}
                                     stringLiteral += '\t';}
 \"								    {
                                         lexeme = stringLiteral; //need to pass to the tokenizer but also reset it, so introduce "lexeme" as a temp
+                                        yyextra = lexeme.c_str();
+
                                         stringLiteral = "";
                                         BEGIN(0);
-                                        return 0;
+                                        return STR;
                                     }
 }
 

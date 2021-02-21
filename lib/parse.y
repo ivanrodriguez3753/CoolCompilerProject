@@ -27,6 +27,7 @@
 %type firstFormal {_formal**}
 %type id {string*}
 %type type {string*}
+%type str {string*}
 %type optionalInh{string*}
 %type optInit{_expr**}
 %type argList{vector<_expr*>*}
@@ -42,7 +43,7 @@ program ::= classList(CL) .
     drv->program__classList(CL);
 }
 
-program ::= ELSE FALSE IF FI IN INHERITS ISVOID LET LOOP POOL THEN WHILE CASE ESAC NEW OF NOT TRUE COLON LPAREN RPAREN LARROW DOT COMMA AT PLUS MINUS TIMES DIVIDE NEG LT LE RARROW EQ INT ID.
+program ::= ELSE FALSE IF FI IN INHERITS ISVOID LET LOOP POOL THEN WHILE CASE ESAC NEW OF NOT TRUE COLON LPAREN RPAREN LARROW DOT COMMA AT PLUS MINUS TIMES DIVIDE NEG LT LE RARROW EQ INT ID STR.
 {
 
 }
@@ -140,6 +141,10 @@ type(T) ::= TYPE .
 {
     drv->type(T);
 }
+str(S) ::= STR .
+{
+    drv->str(S);
+}
 
 expr(E) ::= FALSE .
 {
@@ -159,6 +164,11 @@ expr(E) ::= INT .
 expr(E) ::= id(ID_) .
 {
     drv->expr__id(E, ID_);
+}
+
+expr(E) ::= str(S) .
+{
+    drv->expr__str(E, S);
 }
 
 expr(E) ::= id(ID_) LPAREN argList(AL) RPAREN .

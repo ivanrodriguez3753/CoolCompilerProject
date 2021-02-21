@@ -149,3 +149,9 @@ void _id::print(ostream &os) const {
     os << "identifier" << endl;
     os << lineNo << endl << value << endl;
 }
+
+void _string::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "string" << endl;
+    os << value << endl;
+}
