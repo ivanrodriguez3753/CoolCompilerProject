@@ -52,5 +52,7 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "assignExpr.cl",
     "blockExprOneExpression.cl",
     "blockExprTwoExpressions.cl",
-    "blockExprFiveExpressions.cl"
+    "blockExprFiveExpressions.cl",
+    "newExpr.cl",
+    "isvoidExpr.cl"
 ));

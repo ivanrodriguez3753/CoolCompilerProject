@@ -329,4 +329,24 @@ public:
     _block(int l, vector<_expr*> b) : _expr(l), body(b) {}
 };
 
+class _new : public _expr {
+public:
+    const string id;
+    const int typeLineNo;
+
+    _new(int l, string i, int tL) : _expr(l), id(i), typeLineNo(tL) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
+class _isvoid : public _expr {
+public:
+    _expr* expr;
+
+    _isvoid(int l, _expr* e) : _expr(l), expr(e) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
 #endif //COOLCOMPILERPROJECT_AST_H

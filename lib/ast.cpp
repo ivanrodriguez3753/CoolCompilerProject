@@ -234,3 +234,18 @@ void _block::print(ostream &os) const {
         expr->print(os);
     }
 }
+
+void _new::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "new" << endl;
+
+    os << typeLineNo << endl;
+    os << id << endl;
+}
+
+void _isvoid::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "isvoid" << endl;
+
+    expr->print(os);
+}

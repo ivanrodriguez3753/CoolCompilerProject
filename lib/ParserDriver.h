@@ -63,7 +63,7 @@ public:
                 stringStack.push(yyget_text(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
             }
-            else if(lexCode == FALSE || lexCode == TRUE || lexCode == IF || lexCode == WHILE) {
+            else if(lexCode == FALSE || lexCode == TRUE || lexCode == IF || lexCode == WHILE || lexCode == ISVOID || lexCode == NEW) {
                 lineNoStack.push(yyget_lineno(scanner));
             }
             else if(lexCode == INT) {
@@ -320,6 +320,22 @@ public:
         E1 = new _expr*;
 
         *E1 = new _block(l, *EL);
+    }
+
+    void expr__NEW_type(_expr**& E, string*& T) {
+        E = new _expr*;
+        int tL = lineNoStack.top(); lineNoStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *T = stringStack.top(); stringStack.pop();
+
+        *E = new _new(l, *T, tL);
+    }
+
+    void expr__ISVOID_expr(_expr**& E1, _expr**& E2) {
+        E1 = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _isvoid(l, *E2);
     }
 
     void exprList__exprList_expr_SEMI(vector<_expr*>*& EL1, vector<_expr*>*& EL2, _expr**& E) {

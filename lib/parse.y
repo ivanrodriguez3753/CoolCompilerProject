@@ -221,6 +221,16 @@ expr(E1) ::= lbrace(l) exprList(EL) RBRACE .
     drv->expr__lbrace_exprList_RBRACE(E1, l, EL);
 }
 
+expr(E) ::= NEW type(T) .
+{
+    drv->expr__NEW_type(E, T);
+}
+
+expr(E1) ::= ISVOID expr(E2) .
+{
+    drv->expr__ISVOID_expr(E1, E2);
+}
+
 exprList(EL1) ::= exprList(EL2) expr(E) SEMI .
 {
     drv->exprList__exprList_expr_SEMI(EL1, EL2, E);
