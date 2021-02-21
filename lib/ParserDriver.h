@@ -274,6 +274,25 @@ public:
         *E = new _selfDispatch(l, *ID_, *AL);
     }
 
+    void expr__expr_DOT_id_LPAREN_argsList_RPAREN(_expr**& E1, _expr**& E2, string*& ID_, vector<_expr*>*& AL) {
+        E1 = new _expr*;
+        *ID_= stringStack.top(); stringStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _dynamicDispatch(l, *ID_, *AL, *E2);
+    }
+
+    void expr__expr_AT_type_DOT_id_LPAREN_argsList_RPAREN(_expr**& E1, _expr**& E2, string*& T, string*& ID_, vector<_expr*>*& AL) {
+        E1 = new _expr*;
+        *ID_= stringStack.top(); stringStack.pop();
+        *T = stringStack.top(); stringStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
+        int tL = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _staticDispatch(l, *ID_, *AL, *E2, *T, tL);
+    }
+
+
     void argsList(vector<_expr*>*& AL) {
         AL = new vector<_expr*>;
     }

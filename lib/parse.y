@@ -179,6 +179,15 @@ expr(E) ::= id(ID_) LPAREN argsList(AL) RPAREN .
     drv->expr__id_LPAREN_argsList__RPAREN(E, ID_, AL);
 }
 
+expr(E1) ::= expr(E2) DOT id(ID_) LPAREN argsList(AL) RPAREN .
+{
+    drv->expr__expr_DOT_id_LPAREN_argsList_RPAREN(E1, E2, ID_, AL);
+}
+
+expr(E1) ::= expr(E2) AT type(T) DOT id(ID_) LPAREN argsList(AL) RPAREN .
+{
+    drv->expr__expr_AT_type_DOT_id_LPAREN_argsList_RPAREN(E1, E2, T, ID_, AL);
+}
 optInit(E) ::= .
 {
     drv->optInit(E);

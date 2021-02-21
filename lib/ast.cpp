@@ -143,6 +143,40 @@ void _int::print(ostream &os) const {
 void _selfDispatch::print(ostream &os) const {
     os << lineNo << endl;
     os << "self_dispatch" << endl;
+
+    os << lineNo << endl;
+    os << id << endl;
+
+    os << argList.size() << endl;
+    for(_expr* expr : argList) {
+        expr->print(os);
+    }
+}
+
+void _dynamicDispatch::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "dynamic_dispatch" << endl;
+
+    caller->print(os);
+
+    os << lineNo << endl;
+    os << id << endl;
+
+    os << argList.size() << endl;
+    for(_expr* expr : argList) {
+        expr->print(os);
+    }
+}
+
+void _staticDispatch::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "static_dispatch" << endl;
+
+    caller->print(os);
+
+    os << typeLineNo << endl;
+    os << staticType << endl;
+
     os << lineNo << endl;
     os << id << endl;
 

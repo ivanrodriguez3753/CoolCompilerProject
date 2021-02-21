@@ -253,6 +253,28 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
 };
 
+class _dynamicDispatch : public _dispatch {
+public:
+    _expr* caller;
+
+    _dynamicDispatch(int l, string i, vector<_expr*> aL, _expr* c) : _dispatch(l, i, aL), caller(c) {}
+
+    void print(ostream& os) const override;
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+};
+
+class _staticDispatch : public _dispatch {
+public:
+    _expr* caller;
+    const string staticType;
+    int typeLineNo;
+
+    _staticDispatch(int l, string i, vector<_expr*> aL, _expr* c, string s, int tL) : _dispatch(l, i, aL), caller(c), staticType(s), typeLineNo(tL) {}
+
+    void print(ostream& os) const override;
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+};
+
 class _string : public _expr {
 public:
     const string value;

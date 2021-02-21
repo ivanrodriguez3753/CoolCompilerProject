@@ -38,5 +38,14 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "selfDispatchNoArgs.cl",
     "selfDispatchOneArg.cl",
     "selfDispatchTwoArgs.cl",
-    "selfDispatchFiveArgs.cl"
+    "selfDispatchFiveArgs.cl",
+    "dynamicDispatchNoArgs.cl",
+    "dynamicDispatchOneArg.cl",
+    "dynamicDispatchTwoArgs.cl",
+    "dynamicDispatchFiveArgs.cl",
+    "staticDispatchNoArgs.cl",
+    "staticDispatchOneArg.cl",
+    "staticDispatchTwoArgs.cl",
+    "staticDispatchFiveArgs.cl"
+
 ));
