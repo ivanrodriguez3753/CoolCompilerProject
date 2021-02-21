@@ -349,4 +349,12 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
 };
+
+class _arith : public _expr {
+    _expr* lhs;
+    const int OP;
+    _expr* rhs;
+
+    _arith(int line, _expr* left, int op, _expr* right) : _expr(line), lhs(left), OP(op), rhs(right) {}
+};
 #endif //COOLCOMPILERPROJECT_AST_H
