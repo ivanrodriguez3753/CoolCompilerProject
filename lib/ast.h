@@ -2,6 +2,7 @@
 #define COOLCOMPILERPROJECT_AST_H
 
 #include "environment.h"
+#include <string>
 #include <list>
 #include <vector>
 #include <iostream>
@@ -298,6 +299,16 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
 };
 
+class _assign : public _expr {
+public:
+    const string id;
+    _expr* rhs;
+
+    _assign(int l, string i, _expr* r) : _expr(l), id(i), rhs(r) {}
+
+    void print(ostream& os) const override;
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+};
 
 class _string : public _expr {
 public:

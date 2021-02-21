@@ -274,12 +274,12 @@ public:
     }
 
     void expr__expr_DOT_id_LPAREN_argsList_RPAREN(_expr**& E1, _expr**& E2, string*& ID_, vector<_expr*>*& AL) {
-        E1 = new _expr*;
-        *ID_= stringStack.top(); stringStack.pop();
-        int l = lineNoStack.top(); lineNoStack.pop();
+            E1 = new _expr*;
+            *ID_= stringStack.top(); stringStack.pop();
+            int l = lineNoStack.top(); lineNoStack.pop();
 
-        *E1 = new _dynamicDispatch(l, *ID_, *AL, *E2);
-    }
+            *E1 = new _dynamicDispatch(l, *ID_, *AL, *E2);
+        }
 
     void expr__expr_AT_type_DOT_id_LPAREN_argsList_RPAREN(_expr**& E1, _expr**& E2, string*& T, string*& ID_, vector<_expr*>*& AL) {
         E1 = new _expr*;
@@ -303,6 +303,14 @@ public:
         int l = lineNoStack.top(); lineNoStack.pop();
 
         *E1 = new _while(l, *E2, *E3);
+    }
+
+    void expr__id_LARROW_expr(_expr**& E1, string*& ID_, _expr**& E2) {
+        E1 = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+        *ID_ = stringStack.top(); stringStack.pop();
+
+        *E1 = new _assign(l, *ID_, *E2);
     }
 
     void argsList(vector<_expr*>*& AL) {

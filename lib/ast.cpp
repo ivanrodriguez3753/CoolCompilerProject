@@ -214,3 +214,13 @@ void _while::print(ostream &os) const {
     predicate->print(os);
     body->print(os);
 }
+
+void _assign::print(ostream& os) const {
+    os << lineNo << endl;
+    os << "assign" << endl;
+
+    os << lineNo << endl;
+    os << id << endl;
+
+    rhs->print(os);
+}

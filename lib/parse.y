@@ -41,6 +41,16 @@
 %type expr {_expr**}
 %extra_argument {ParserDriver* drv}
 
+%right LARROW .
+%right NOT .
+%nonassoc LE LT EQUALS .
+%left PLUS MINUS .
+%left TIMES DIVIDE .
+%left ISVOID .
+%left TILDE .
+%left AT .
+%left DOT .
+
 program ::= classList(CL) .
 {
     drv->program__classList(CL);
@@ -197,6 +207,11 @@ expr(E1) ::= IF expr(E2) THEN expr(E3) ELSE expr(E4) FI .
 expr(E1) ::= WHILE expr(E2) LOOP expr(E3) POOL .
 {
     drv->expr__WHILE_expr_LOOP_expr_POOL(E1, E2, E3);
+}
+
+expr(E1) ::= id(ID_) LARROW expr(E2) .
+{
+    drv->expr__id_LARROW_expr(E1, ID_, E2);
 }
 
 optInit(E) ::= .
