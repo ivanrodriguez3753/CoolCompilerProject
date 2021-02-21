@@ -224,3 +224,13 @@ void _assign::print(ostream& os) const {
 
     rhs->print(os);
 }
+
+void _block::print(ostream &os) const {
+    os << lineNo << endl; //just use line number of first expression
+    os << "block" << endl;
+
+    os << body.size() << endl;
+    for(_expr* expr : body) {
+        expr->print(os);
+    }
+}

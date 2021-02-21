@@ -20,9 +20,8 @@ class letCaseEnv;
 using namespace std;
 
 class _node {
-
-//    virtual void print(ostream& os) const = 0;
 public:
+
     virtual void print(ostream& os) const = 0;
     virtual void prettyPrint(ostream& os, string prefix) const = 0;
 
@@ -32,8 +31,7 @@ protected:
     const static string indent;
 
     const int lineNo;
-//    const int encountered;
-//    const int lineNo;
+
 };
 
 /**
@@ -319,6 +317,16 @@ public:
 
     _string(int l, string v) : _expr(l), value(v) {}
 
+};
+
+class _block : public _expr {
+public:
+    vector<_expr*> body;
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+
+    _block(int l, vector<_expr*> b) : _expr(l), body(b) {}
 };
 
 #endif //COOLCOMPILERPROJECT_AST_H

@@ -74,7 +74,9 @@ public:
                 stringStack.push(yyget_extra(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
             }
-
+            else if(lexCode == LBRACE) {
+                lastLBRACE_lineno = yyget_lineno(scanner);
+            }
         } while (lexCode > 0);
 
         //clean up the scanner and parser
@@ -105,6 +107,7 @@ public:
     stack<string> stringStack;
     stack<int> lineNoStack;
 
+    int lastLBRACE_lineno;
 
     void program__classList(vector<_class*>*& CL) {
         ast = new _program(0, *CL);
@@ -313,6 +316,21 @@ public:
         *E1 = new _assign(l, *ID_, *E2);
     }
 
+    void expr__lbrace_exprList_RBRACE(_expr**& E1, int& l, vector<_expr*>*& EL) {
+        E1 = new _expr*;
+
+        *E1 = new _block(l, *EL);
+    }
+
+    void exprList__exprList_expr_SEMI(vector<_expr*>*& EL1, vector<_expr*>*& EL2, _expr**& E) {
+        EL1 = EL2;
+        (*EL1).push_back(*E);
+    }
+
+    void exprList(vector<_expr*>*& EL) {
+        EL = new vector<_expr*>;
+    }
+
     void argsList(vector<_expr*>*& AL) {
         AL = new vector<_expr*>;
     }
@@ -336,6 +354,10 @@ public:
 
     void moreArgsList(vector<_expr*>*& AL) {
         AL = new vector<_expr*>;
+    }
+
+    void lbrace__LBRACE(int& l) {
+        l = lastLBRACE_lineno;
     }
 
 };

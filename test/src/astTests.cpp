@@ -49,5 +49,8 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "staticDispatchFiveArgs.cl",
     "ifExpression.cl",
     "whileExpression.cl",
-    "assignExpr.cl"
+    "assignExpr.cl",
+    "blockExprOneExpression.cl",
+    "blockExprTwoExpressions.cl",
+    "blockExprFiveExpressions.cl"
 ));

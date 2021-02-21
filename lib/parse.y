@@ -34,6 +34,8 @@
 %type optionalInh{string*}
 %type optInit{_expr**}
 %type argList{vector<_expr*>*}
+%type exprList{vector<_expr*>*}
+%type lbrace{int}
 
 %type feature {featureUnion}
 %type attr {_attr**}
@@ -214,6 +216,21 @@ expr(E1) ::= id(ID_) LARROW expr(E2) .
     drv->expr__id_LARROW_expr(E1, ID_, E2);
 }
 
+expr(E1) ::= lbrace(l) exprList(EL) RBRACE .
+{
+    drv->expr__lbrace_exprList_RBRACE(E1, l, EL);
+}
+
+exprList(EL1) ::= exprList(EL2) expr(E) SEMI .
+{
+    drv->exprList__exprList_expr_SEMI(EL1, EL2, E);
+}
+
+exprList(EL) ::= .
+{
+    drv->exprList(EL);
+}
+
 optInit(E) ::= .
 {
     drv->optInit(E);
@@ -247,4 +264,9 @@ moreArgsList(AL1) ::= moreArgsList(AL2) COMMA expr(E) .
 moreArgsList(AL) ::= .
 {
     drv->moreArgsList(AL);
+}
+
+lbrace(l) ::= LBRACE .
+{
+    drv->lbrace__LBRACE(l);
 }
