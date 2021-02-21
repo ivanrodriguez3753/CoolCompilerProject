@@ -25,6 +25,9 @@
 %type moreFormalsList {vector<_formal*>*}
 %type formal {_formal**}
 %type firstFormal {_formal**}
+%type argsList {vector<_expr*>*}
+%type moreArgsList {vector<_expr*>*}
+%type firstArg {_expr**}
 %type id {string*}
 %type type {string*}
 %type str {string*}
@@ -171,9 +174,9 @@ expr(E) ::= str(S) .
     drv->expr__str(E, S);
 }
 
-expr(E) ::= id(ID_) LPAREN argList(AL) RPAREN .
+expr(E) ::= id(ID_) LPAREN argsList(AL) RPAREN .
 {
-    drv->expr__id_LPAREN_argList__RPAREN(E, ID_, AL);
+    drv->expr__id_LPAREN_argsList__RPAREN(E, ID_, AL);
 }
 
 optInit(E) ::= .
@@ -186,7 +189,27 @@ optInit(E1) ::= LARROW expr(E2) .
     drv->optInit__LARROW_expr(E1, E2);
 }
 
-argList(AL) ::= .
+argsList(AL) ::= .
 {
-    AL;
+    drv->argsList(AL);
+}
+
+argsList(AL1) ::= argsList(AL2) firstArg(E) moreArgsList(AL3) .
+{
+    drv->argsList__argsList_firstArg_moreArgsList(AL1, AL2, E, AL3);
+}
+
+firstArg(E1) ::= expr(E2) .
+{
+    drv->firstArg__expr(E1, E2);
+}
+
+moreArgsList(AL1) ::= moreArgsList(AL2) COMMA expr(E) .
+{
+    drv->moreArgsList__moreArgsList_COMMA_expr(AL1, AL2, E);
+}
+
+moreArgsList(AL) ::= .
+{
+    drv->moreArgsList(AL);
 }

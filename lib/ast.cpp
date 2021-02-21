@@ -141,7 +141,15 @@ void _int::print(ostream &os) const {
 }
 
 void _selfDispatch::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "self_dispatch" << endl;
+    os << lineNo << endl;
+    os << id << endl;
 
+    os << argList.size() << endl;
+    for(_expr* expr : argList) {
+        expr->print(os);
+    }
 }
 
 void _id::print(ostream &os) const {

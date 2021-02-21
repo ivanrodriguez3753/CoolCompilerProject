@@ -265,10 +265,39 @@ public:
         *E = new _string(l, *S);
     }
 
-    void expr__id_LPAREN_argList__RPAREN(_expr**& E, string*& ID_, vector<_expr*>*& AL) {
+    void expr__id_LPAREN_argsList__RPAREN(_expr**& E, string*& ID_, vector<_expr*>*& AL) {
+        E = new _expr*;
+        *ID_= stringStack.top(); stringStack.pop();
+        int l = lineNoStack.top(); lineNoStack.pop();
 
+
+        *E = new _selfDispatch(l, *ID_, *AL);
     }
 
+    void argsList(vector<_expr*>*& AL) {
+        AL = new vector<_expr*>;
+    }
+
+    void argsList__argsList_firstArg_moreArgsList(vector<_expr*>*& AL1, vector<_expr*>*& AL2, _expr**& E, vector<_expr*>*& AL3) {
+        AL1 = AL2;
+        (*AL1).push_back(*E);
+        for(_expr* expr : *AL3) {
+            (*AL1).push_back(expr);
+        }
+    }
+
+    void firstArg__expr(_expr**& E1, _expr**& E2) {
+        E1 = E2;
+    }
+
+    void moreArgsList__moreArgsList_COMMA_expr(vector<_expr*>*& AL1, vector<_expr*>*& AL2, _expr**& E) {
+        AL1 = AL2;
+        (*AL1).push_back(*E);
+    }
+
+    void moreArgsList(vector<_expr*>*& AL) {
+        AL = new vector<_expr*>;
+    }
 
 };
 

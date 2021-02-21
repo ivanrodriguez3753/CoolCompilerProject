@@ -34,5 +34,9 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "severalAttrAndMethods.cl",
     "integerExpr.cl",
     "identifierExpr.cl",
-    "stringExpr.cl"
+    "stringExpr.cl",
+    "selfDispatchNoArgs.cl",
+    "selfDispatchOneArg.cl",
+    "selfDispatchTwoArgs.cl",
+    "selfDispatchFiveArgs.cl"
 ));
