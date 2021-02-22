@@ -58,7 +58,7 @@ program ::= classList(CL) .
     drv->program__classList(CL);
 }
 
-program ::= ELSE FALSE IF FI IN INHERITS ISVOID LET LOOP POOL THEN WHILE CASE ESAC NEW OF NOT TRUE COLON LPAREN RPAREN LARROW DOT COMMA AT PLUS MINUS TIMES DIVIDE NEG LT LE RARROW EQ INT ID STR.
+program ::= ELSE FALSE IF FI IN INHERITS ISVOID LET LOOP POOL THEN WHILE CASE ESAC NEW OF NOT TRUE COLON LPAREN RPAREN LARROW DOT COMMA AT PLUS MINUS TIMES DIVIDE NEG LT LE RARROW EQUALS INT ID STR.
 {
 
 }
@@ -249,6 +249,21 @@ expr(E1) ::= expr(E2) TIMES expr(E3) .
 expr(E1) ::= expr(E2) DIVIDE expr(E3) .
 {
     drv->expr__expr_DIVIDE_expr(E1, E2, E3);
+}
+
+expr(E1) ::= expr(E2) LT expr(E3) .
+{
+   drv->expr__expr_LT_expr(E1, E2, E3);
+}
+
+expr(E1) ::= expr(E2) LE expr(E3) .
+{
+    drv->expr__expr_LE_expr(E1, E2, E3);
+}
+
+expr(E1) ::= expr(E2) EQUALS expr(E3) .
+{
+    drv->expr__expr_EQUALS_expr(E1, E2, E3);
 }
 
 exprList(EL1) ::= exprList(EL2) expr(E) SEMI .

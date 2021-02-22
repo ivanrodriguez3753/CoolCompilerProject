@@ -362,6 +362,24 @@ public:
         *E1 = new _arith((*E2)->lineNo, *E2, '/', *E3);
     }
 
+    void  expr__expr_LT_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _relational((*E2)->lineNo, *E2, 0, *E3);
+    }
+
+    void  expr__expr_LE_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _relational((*E2)->lineNo, *E2, 1, *E3);
+    }
+
+    void  expr__expr_EQUALS_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _relational((*E2)->lineNo, *E2, 2, *E3);
+    }
+
     void exprList__exprList_expr_SEMI(vector<_expr*>*& EL1, vector<_expr*>*& EL2, _expr**& E) {
         EL1 = EL2;
         (*EL1).push_back(*E);

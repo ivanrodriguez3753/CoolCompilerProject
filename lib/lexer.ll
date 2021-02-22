@@ -68,7 +68,7 @@ t[rR][uU][eE]			        	return TRUE;
 "<"									return LT;
 "<="								return LE;
 "=>"                                return RARROW;
-"="								    return EQ;
+"="								    return EQUALS;
 \"									{BEGIN(STRLIT); }
 --                                  {BEGIN(INLINECMT);}
 \(\*                                {BEGIN(BLOCKCMT);}

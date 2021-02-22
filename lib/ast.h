@@ -354,10 +354,22 @@ class _arith : public _expr {
 
 public:
     _expr* lhs;
-    const char OP;
+    const int OP;
     _expr* rhs;
 
-    _arith(int line, _expr* left, int op, _expr* right) : _expr(line), lhs(left), OP(op), rhs(right) {}
+    _arith(int l, _expr* left, int op, _expr* right) : _expr(l), lhs(left), OP(op), rhs(right) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
+class _relational : public _expr {
+public:
+    _expr* lhs;
+    const int OP;
+    _expr* rhs;
+
+    _relational(int l, _expr* left, int op, _expr* right) : _expr(l), lhs(left), OP(op), rhs(right) {};
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
