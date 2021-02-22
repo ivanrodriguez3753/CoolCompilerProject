@@ -40,4 +40,5 @@ clean:
 	rm -f *.o
 	rm -f lexer.yy.cpp lexer.yy.hpp
 	rm -f parse.cpp parse.hpp parse.out
+	rm -f parse.c parse.h
 	rm -r ../build/libivanlib.a

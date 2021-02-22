@@ -41,6 +41,7 @@
 %type attr {_attr**}
 %type method {_method**}
 %type expr {_expr**}
+%type expr_root {_expr**}
 %extra_argument {ParserDriver* drv}
 
 %right LARROW .
@@ -186,17 +187,17 @@ expr(E) ::= str(S) .
     drv->expr__str(E, S);
 }
 
-expr(E) ::= id(ID_) LPAREN argsList(AL) RPAREN .
+expr_root(E) ::= id(ID_) LPAREN argsList(AL) RPAREN .
 {
     drv->expr__id_LPAREN_argsList__RPAREN(E, ID_, AL);
 }
 
-expr(E1) ::= expr(E2) DOT id(ID_) LPAREN argsList(AL) RPAREN .
+expr_root(E1) ::= expr(E2) DOT id(ID_) LPAREN argsList(AL) RPAREN .
 {
     drv->expr__expr_DOT_id_LPAREN_argsList_RPAREN(E1, E2, ID_, AL);
 }
 
-expr(E1) ::= expr(E2) AT type(T) DOT id(ID_) LPAREN argsList(AL) RPAREN .
+expr_root(E1) ::= expr(E2) AT type(T) DOT id(ID_) LPAREN argsList(AL) RPAREN .
 {
     drv->expr__expr_AT_type_DOT_id_LPAREN_argsList_RPAREN(E1, E2, T, ID_, AL);
 }
@@ -274,6 +275,16 @@ expr(E1) ::= NEG expr(E2) .
 expr(E1) ::= NOT expr(E2) .
 {
     drv->expr__NOT_expr(E1, E2);
+}
+
+expr_root(E1) ::= expr(E2) .
+{
+    E1 = E2;
+}
+
+expr(E1) ::= LPAREN expr_root(E2) RPAREN .
+{
+    E1 = E2;
 }
 
 exprList(EL1) ::= exprList(EL2) expr(E) SEMI .
