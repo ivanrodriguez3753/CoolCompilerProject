@@ -63,7 +63,7 @@ public:
                 stringStack.push(yyget_text(scanner));
                 lineNoStack.push(yyget_lineno(scanner));
             }
-            else if(lexCode == FALSE || lexCode == TRUE || lexCode == IF || lexCode == WHILE || lexCode == ISVOID || lexCode == NEW) {
+            else if(lexCode == FALSE || lexCode == TRUE || lexCode == IF || lexCode == WHILE || lexCode == ISVOID || lexCode == NEW || lexCode == NOT || lexCode == NEG) {
                 lineNoStack.push(yyget_lineno(scanner));
             }
             else if(lexCode == INT) {
@@ -378,6 +378,20 @@ public:
         E1 = new _expr*;
 
         *E1 = new _relational((*E2)->lineNo, *E2, 2, *E3);
+    }
+
+    void expr__NOT_expr(_expr**& E1, _expr**& E2) {
+        E1 = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _unary(l, *E2, 0);
+    }
+
+    void expr__NEG_expr(_expr**& E1, _expr**& E2) {
+        E1 = new _expr*;
+        int l = lineNoStack.top(); lineNoStack.pop();
+
+        *E1 = new _unary(l, *E2, 1);
     }
 
     void exprList__exprList_expr_SEMI(vector<_expr*>*& EL1, vector<_expr*>*& EL2, _expr**& E) {

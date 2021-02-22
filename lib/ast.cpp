@@ -270,3 +270,11 @@ void _relational::print(ostream& os) const {
     lhs->print(os);
     rhs->print(os);
 }
+
+void _unary::print(ostream& os) const {
+    os << lineNo << endl;
+    if(OP == 0) os << "not" << endl;
+    else if(OP == 1) os << "negate" << endl;
+
+    expr->print(os);
+}

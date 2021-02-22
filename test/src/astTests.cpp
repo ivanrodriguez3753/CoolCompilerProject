@@ -56,5 +56,6 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "newExpr.cl",
     "isvoidExpr.cl",
     "integerPlusMinusTimesDivideExpressions.cl",
-    "relationalExpr.cl"
+    "relationalExpr.cl",
+    "notNegateExpr.cl"
 ));

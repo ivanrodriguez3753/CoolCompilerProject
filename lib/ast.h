@@ -374,4 +374,15 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
 };
+
+class _unary : public _expr {
+public:
+    _expr* expr;
+    const int OP;
+
+    _unary(int l, _expr* e, int op) : _expr(l), expr(e), OP(op) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
 #endif //COOLCOMPILERPROJECT_AST_H

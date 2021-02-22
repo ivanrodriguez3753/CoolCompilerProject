@@ -49,7 +49,7 @@
 %left PLUS MINUS .
 %left TIMES DIVIDE .
 %left ISVOID .
-%left TILDE .
+%left NEG .
 %left AT .
 %left DOT .
 
@@ -264,6 +264,16 @@ expr(E1) ::= expr(E2) LE expr(E3) .
 expr(E1) ::= expr(E2) EQUALS expr(E3) .
 {
     drv->expr__expr_EQUALS_expr(E1, E2, E3);
+}
+
+expr(E1) ::= NEG expr(E2) .
+{
+    drv->expr__NEG_expr(E1, E2);
+}
+
+expr(E1) ::= NOT expr(E2) .
+{
+    drv->expr__NOT_expr(E1, E2);
 }
 
 exprList(EL1) ::= exprList(EL2) expr(E) SEMI .
