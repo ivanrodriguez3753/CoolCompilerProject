@@ -351,6 +351,7 @@ public:
 };
 
 class _arith : public _expr {
+
 public:
     _expr* lhs;
     const char OP;
