@@ -249,3 +249,14 @@ void _isvoid::print(ostream &os) const {
 
     expr->print(os);
 }
+
+void _arith::print(ostream &os) const {
+    os << lineNo << endl;
+    if(OP == '+') os << "plus" <<  endl;
+    else if(OP == '-') os << "minus" <<  endl;
+    else if(OP == '*') os << "times" <<  endl;
+    else if(OP == '/') os << "divide" <<  endl;
+
+    lhs->print(os);
+    rhs->print(os);
+}

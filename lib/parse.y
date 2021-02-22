@@ -231,6 +231,26 @@ expr(E1) ::= ISVOID expr(E2) .
     drv->expr__ISVOID_expr(E1, E2);
 }
 
+expr(E1) ::= expr(E2) PLUS expr(E3) .
+{
+    drv->expr__expr_PLUS_expr(E1, E2, E3);
+}
+
+expr(E1) ::= expr(E2) MINUS expr(E3) .
+{
+    drv->expr__expr_MINUS_expr(E1, E2, E3);
+}
+
+expr(E1) ::= expr(E2) TIMES expr(E3) .
+{
+    drv->expr__expr_TIMES_expr(E1, E2, E3);
+}
+
+expr(E1) ::= expr(E2) DIVIDE expr(E3) .
+{
+    drv->expr__expr_DIVIDE_expr(E1, E2, E3);
+}
+
 exprList(EL1) ::= exprList(EL2) expr(E) SEMI .
 {
     drv->exprList__exprList_expr_SEMI(EL1, EL2, E);

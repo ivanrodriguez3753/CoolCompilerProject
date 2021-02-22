@@ -21,6 +21,7 @@ using namespace std;
 
 class _node {
 public:
+    const int lineNo;
 
     virtual void print(ostream& os) const = 0;
     virtual void prettyPrint(ostream& os, string prefix) const = 0;
@@ -30,7 +31,6 @@ protected:
     const static string T;
     const static string indent;
 
-    const int lineNo;
 
 };
 
@@ -345,6 +345,18 @@ public:
     _expr* expr;
 
     _isvoid(int l, _expr* e) : _expr(l), expr(e) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
+class _arith : public _expr {
+public:
+    _expr* lhs;
+    const char OP;
+    _expr* rhs;
+
+    _arith(int line, _expr* left, int op, _expr* right) : _expr(line), lhs(left), OP(op), rhs(right) {}
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;

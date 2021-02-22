@@ -338,6 +338,30 @@ public:
         *E1 = new _isvoid(l, *E2);
     }
 
+    void  expr__expr_PLUS_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _arith((*E2)->lineNo, *E2, '+', *E3);
+    }
+
+    void  expr__expr_MINUS_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _arith((*E2)->lineNo, *E2, '-', *E3);
+    }
+
+    void  expr__expr_TIMES_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _arith((*E2)->lineNo, *E2, '*', *E3);
+    }
+
+    void  expr__expr_DIVIDE_expr(_expr**& E1, _expr**& E2, _expr**& E3) {
+        E1 = new _expr*;
+
+        *E1 = new _arith((*E2)->lineNo, *E2, '/', *E3);
+    }
+
     void exprList__exprList_expr_SEMI(vector<_expr*>*& EL1, vector<_expr*>*& EL2, _expr**& E) {
         EL1 = EL2;
         (*EL1).push_back(*E);
