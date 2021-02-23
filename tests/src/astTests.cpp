@@ -21,7 +21,6 @@ TEST_P(astFixture, positiveCases) {
     drv.ast->print(actual);
 
     ASSERT_EQ(actual.str(), expected.str());
-    cout << "Ran a test!\n";
 }
 INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "bareMinimum.cl",
@@ -59,5 +58,22 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "integerPlusMinusTimesDivideExpressions.cl",
     "relationalExpr.cl",
     "notNegateExpr.cl",
-    "parenthesizedExpr.cl"
+    "parenthesizedExpr.cl",
+    "letExprOneBindingNoInit.cl",
+    "letExprOneBindingInit.cl",
+    "letExprMultipleBindingsMixedInit.cl",
+    "caseExprOneCase.cl",
+    "caseExprManyCases.cl"
+));
+INSTANTIATE_TEST_SUITE_P(astFull, astFixture, testing::Values(
+    "CoolProgramsFull/arith.cl",
+    "CoolProgramsFull/atoi.cl",
+    "CoolProgramsFull/cells.cl",
+    "CoolProgramsFull/hello-world.cl",
+    "CoolProgramsFull/hs.cl",
+    "CoolProgramsFull/list.cl",
+    "CoolProgramsFull/new-complex.cl",
+    "CoolProgramsFull/primes.cl",
+    "CoolProgramsFull/print-cool.cl",
+    "CoolProgramsFull/sort-list.cl"
 ));

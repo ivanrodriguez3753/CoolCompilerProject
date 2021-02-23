@@ -158,7 +158,7 @@ void _selfDispatch::print(ostream &os) const {
 }
 
 void _dynamicDispatch::print(ostream &os) const {
-    os << lineNo << endl;
+    os << caller->lineNo << endl;
     os << "dynamic_dispatch" << endl;
 
     caller->print(os);
@@ -177,6 +177,7 @@ void _staticDispatch::print(ostream &os) const {
     os << "static_dispatch" << endl;
 
     caller->print(os);
+
 
     os << typeLineNo << endl;
     os << staticType << endl;
@@ -281,4 +282,47 @@ void _unary::print(ostream& os) const {
     else if(OP == 1) os << "negate" << endl;
 
     expr->print(os);
+}
+
+void _let::print(ostream& os) const {
+    os << lineNo << endl;
+    os << "let" << endl;
+
+    os << bindingList.size() << endl;
+    for(_letBinding* letBinding : bindingList) {
+        letBinding->print(os);
+    }
+
+    body->print(os);
+}
+
+void _letBinding::print(ostream& os) const {
+    if(!optInit) os << "let_binding_no_init" << endl;
+    else os << "let_binding_init" << endl;
+
+    os << lineNo << endl << id << endl;
+    os << type_lineno << endl << type << endl;
+
+    if(optInit) optInit->print(os);
+
+
+}
+
+void _caseElement::print(ostream &os) const {
+    os << lineNo << endl << id << endl;
+    os << type_lineno << endl << type << endl;
+
+    caseBranch->print(os);
+}
+
+void _case::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "case" << endl;
+
+    switchee->print(os);
+
+    os << caseList.size() << endl;
+    for(_caseElement* caseElement : caseList) {
+        caseElement->print(os);
+    }
 }

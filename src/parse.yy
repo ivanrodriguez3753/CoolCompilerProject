@@ -32,6 +32,7 @@
     class _method;
     class _attr;
     class _let;
+    class _letBinding;
     class _case;
     class _formal;
     class _expr;
@@ -52,6 +53,8 @@
     class _arith;
     class _relational;
     class _unary;
+    class _case;
+    class _caseElement;
 
     using namespace std;
 }
@@ -144,12 +147,13 @@
 %nterm <vector<_expr*>> moreExprList
 %nterm <_expr*> firstExpr
 %nterm <vector<_expr*>> blockExprList
-%nterm <int> firstBinding
-%nterm <int> binding
-%nterm <int> bindingList
-%nterm <int> moreBindingList
-%nterm <int> caseList
-%nterm <int> case
+%nterm <_letBinding*> firstBinding
+%nterm <_letBinding*> binding
+%nterm <vector<_letBinding*>> bindingList
+%nterm <vector<_letBinding*>> moreBindingList
+%nterm <vector<_caseElement*>> caseList
+%nterm <_case*> case
+%nterm <_caseElement*> caseElement
 
 
 
@@ -273,7 +277,7 @@ expr:
     }
 |   expr DOT IDENTIFIER LPAREN exprList RPAREN
     {
-        $$ = new _dynamicDispatch(@1.begin.line, $3, $5, $1);
+        $$ = new _dynamicDispatch(@3.begin.line, $3, $5, $1);
     }
 |   expr AT TYPE DOT IDENTIFIER LPAREN exprList RPAREN
     {
@@ -293,11 +297,11 @@ expr:
     }
 |   LET bindingList IN expr
     {
-
+        $$ = new _let(@1.begin.line, "let" + to_string(drv.encountered), $2, $4, drv.encountered++);
     }
 |   CASE expr OF caseList ESAC
     {
-
+        $$ = new _case(@1.begin.line, "case" + to_string(drv.encountered), $4, $2, drv.encountered++);
     }
 |   NEW TYPE
     {
@@ -371,20 +375,18 @@ expr:
 ;
 
 caseList:
-    caseList case
+    caseList caseElement
     {
-
+        $$ = $1;
+        $$.push_back($2);
     }
 |   %empty
-    {
-
-    }
 ;
 
-case:
+caseElement:
     IDENTIFIER COLON TYPE RARROW expr SEMI
     {
-
+        $$ = new _caseElement(@1.begin.line, $1, @3.begin.line, $3, $5);
     }
 ;
 
@@ -407,33 +409,35 @@ method:
 bindingList:
     bindingList firstBinding moreBindingList
     {
+        $$ = $1;
+        $$.push_back($2);
+        for(_letBinding* letBinding : $3) {
+            $$.push_back(letBinding);
+        }
     }
 |   %empty
-    {
-
-    }
 ;
 
 firstBinding:
     binding
     {
+        $$ = $1;
     }
 ;
 
 moreBindingList:
     moreBindingList COMMA binding
     {
-
+        $$ = $1;
+        $$.push_back($3);
     }
 |   %empty
-    {
-    }
 ;
 
 binding:
     IDENTIFIER COLON TYPE optInit
     {
-
+        $$ = new _letBinding(@1.begin.line, $1, @3.begin.line, $3, $4);
     }
 ;
 
