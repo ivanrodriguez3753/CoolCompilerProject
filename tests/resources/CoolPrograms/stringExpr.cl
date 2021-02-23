@@ -1,8 +1,5 @@
 class Main {
-    someMethod() : ReturnType {
-    {
-        "abc";
-        "firstLine\nsecondLine";
-    }
+    main() : Object {
+        "stringLiteral!!"
     };
 };

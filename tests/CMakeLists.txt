@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.17)
 project(CoolCompilerProjectTests)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_BINARY_DIR}/../src/lex.yy.cpp GENERATED)
 
@@ -10,10 +9,10 @@ message("hiiii")
 message(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(
     tests
-        src/lexerTests.cpp
     src/main.cpp
-    #insert .cpp test files here, like src/tests.cpp
-        src/parseTreeTests.cpp src/syntaxTreeTests.cpp src/semanticAnalyzerTests.cpp src/codeGenTests.cpp)
+    src/astTests.cpp
+    src/utility.h src/utility.cpp
+)
 
 target_include_directories(
     tests
@@ -38,7 +37,7 @@ target_include_directories(tests
 add_dependencies(tests CoolCompilerProject)
 
 #Link against Google Test library
-target_link_libraries(tests gmock_main gmock gtest MyLibrary)
+target_link_libraries(tests gmock_main gmock gtest MyLibrary stdc++)
 target_link_directories(tests PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../src)
 
 #Build Google Test library

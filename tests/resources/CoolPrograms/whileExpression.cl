@@ -1,8 +1,5 @@
 class Main {
     main() : Object {
-    {
-        false;
-        false;
-    }
+        while false loop false pool
     };
 };

@@ -1,4 +1,4 @@
-class Main inherits IO{
+class Main {
     main() : Object {
         true
     };

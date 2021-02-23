@@ -1,5 +1,6 @@
 class Main {
-    method() : ReturnType {
-        new Abcd
+    main() : Object {
+        new
+        Object
     };
 };

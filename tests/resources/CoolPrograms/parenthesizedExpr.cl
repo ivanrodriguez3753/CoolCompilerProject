@@ -1,5 +1,5 @@
 class Main {
-    someMethod() : ReturnType {
-        (false)
+    main() : Object {
+        ( false )
     };
 };

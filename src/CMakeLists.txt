@@ -1,25 +1,18 @@
 #https://cmake.org/pipermail/cmake/2002-September/003028.html
-
-
 cmake_minimum_required(VERSION 3.17)
 project(CoolCompilerProjectSource)
 
 set(CMAKE_CXX_STANDARD 11)
-#set(CMAKE_C_STANDARD 99)
-
-message(${CMAKE_CXX_COMPILER_VERSION})
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
-
 if(BISON_FOUND)
     message("I found bison!!")
     message("Checking bison version")
     message(${BISON_VERSION})
 
-    BISON_TARGET(parser parse.yy ${CMAKE_CURRENT_BINARY_DIR}/parser.cc)
+    BISON_TARGET(parser parse.yy ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp)
 endif()
-
 if(FLEX_FOUND)
     message("i found flex!!")
     #correctly using gnu flex instead of apple flex
@@ -31,14 +24,14 @@ if(FLEX_FOUND)
     #errors when including in another source file. This is because C and C++ linkage get messy and I couldn't figure out
     #the extern stuff. So just generate C code, name it with .cpp extension so FLEX_TARGET uses g++, and make sure that
     #the .l file has %option header-file="lex.yy.h" or whatever you want to call it
-    FLEX_TARGET(lexer lex.ll ${CMAKE_CURRENT_BINARY_DIR}/lexer.cc)
+    FLEX_TARGET(lexer lex.ll ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
 endif()
 
 add_flex_bison_dependency(lexer parser)
 
-add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp parseTreeNodes.h parseTreeNodes.cpp syntaxTreeNodes.h syntaxTreeNodes.cpp Environment.h Environment.cpp type.h type.cpp codegen.h codegen.cpp)
-add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp parseTreeNodes.h parseTreeNodes.cpp syntaxTreeNodes.h syntaxTreeNodes.cpp Environment.cpp Environment.h type.h type.cpp codegen.h codegen.cpp)
-target_link_libraries(CoolCompilerProject MyLibrary)
+add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp)
+add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp)
+target_link_libraries(CoolCompilerProject MyLibrary stdc++)
 
 target_include_directories(CoolCompilerProject
     PUBLIC

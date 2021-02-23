@@ -9,9 +9,9 @@
 
 #include <map>
 #include <string>
-#include "parser.hh"
-#include "syntaxTreeNodes.h"
-#include <Environment.h>
+#include "ast.h"
+#include "parser.hpp"
+#include "environment.h"
 
 
 //give Flex the prototype of yylex we want...
@@ -23,6 +23,10 @@ using namespace std;
 
 class ParserDriver {
 public:
+    int encountered = 0;
+
+    _program* ast;
+
     ParserDriver();
     int result;
 
@@ -42,17 +46,9 @@ public:
     //Token's location used by scanner
     yy::location location;
 
-    void postorderTraversal(ostream& out);
-    void prettyPrintTree(ostream& out);
-
-    _program* buildSyntaxTree(programNode* root);
-    _node* buildSyntaxNode(node* current);
-
-
+    void printHi() {cout << "hiiii\n";}
     friend class _node;
 private:
-    void postorderRecurs(node* current, ostream& out);
-    void prettyPrintRecurs(node* current, const string& prefix, ostream& out);
 };
 
 extern map<string, string> tokenReqTranslation;

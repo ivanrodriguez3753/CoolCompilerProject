@@ -1,5 +1,6 @@
 class Main {
     main() : Bool {
-        isvoid false
+        isvoid
+        false
     };
 };

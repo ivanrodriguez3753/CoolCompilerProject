@@ -1,8 +1,8 @@
 class Main {
+
     main() : Object {
-    {
-        false;
-        false;
-    }
+        false
     };
+
+    someName : Bool;
 };

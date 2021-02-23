@@ -12,8 +12,8 @@
     string comment = "";
 
     //include driver and parser to get the set of defined tokens
+    #include "parser.hpp"
     #include "ParserDriver.hh"
-    #include "parser.hh"
 %}
 
  /*some flex states/start conditions for weird stuff like string literals and comments */

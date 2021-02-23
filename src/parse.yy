@@ -17,39 +17,43 @@
 
     #include <string>
     #include <list>
+    #include <vector>
+
+
 
     class ParserDriver;
-    class programNode;
-    class classNode;
-    class classListNode;
-    class optionalInhNode;
-    class featureListNode;
-    class featureNode;
-    class fieldNode;
-    class exprNode;
-    class optionalInitNode;
-    class booleanNode;
-    class methodNode;
-    class formalNode;
-    class formalsListNode;
-    class boolExprNode;
-    class exprListNode;
-    class ifExprNode;
-    class whileExprNode;
-    class blockExprNode;
-    class letExprNode;
-    class bindingListNode;
-    class bindingNode;
-    class caseExprNode;
-    class caseListNode;
-    class caseNode;
-    class arithExprNode;
-    class relExprNode;
-    class unaryExprNode;
-    class termExprNode;
-    class identifierExprNode;
-    class intExprNode;
-    class stringExprNode;
+
+    class _node;
+    class _symTable;
+    class _env;
+    class _program;
+    class _class;
+    class _feature;
+    class _method;
+    class _attr;
+    class _let;
+    class _case;
+    class _formal;
+    class _expr;
+    class _bool;
+    class _int;
+    class _id;
+    class _dispatch;
+    class _selfDispatch;
+    class _dynamicDispatch;
+    class _staticDispatch;
+    class _if;
+    class _while;
+    class _assign;
+    class _string;
+    class _block;
+    class _new;
+    class _isvoid;
+    class _arith;
+    class _relational;
+    class _unary;
+
+    using namespace std;
 }
 
 //ParserDriver is passed by ref to parser and scanner. Provides simple but effective pure interface without globals
@@ -68,9 +72,9 @@
 //This will be output in the *.cc file, it needs detailed knowledge about the driver
 %code {
     #include "ParserDriver.hh"
-    #include "parseTreeNodes.h"
-    #include "Environment.h"
+    #include "ast.h"
     #include <iostream>
+
 }
 
 //prefix tokens with TOK to avoid name clashes in generated files
@@ -122,37 +126,36 @@
 %token <bool> FALSE "false"
 %token <std::string> TYPE "type"
 
-//%nterm < std::list<classNode *>* > classlist
-%nterm <programNode*> program
-%nterm <classListNode*> classList
-%nterm <classNode*> class
-%nterm <featureListNode*> featureList
-%nterm <featureNode*> feature
-%nterm <optionalInhNode*> optionalInh
-%nterm <fieldNode*> field
-%nterm <methodNode*> method
-%nterm <exprNode*> expr
-%nterm <optionalInitNode*> optionalInit
-%nterm <formalsListNode*> formalsList
-%nterm <formalNode*> formal
-%nterm <formalNode*> firstFormal
-%nterm <formalsListNode*> moreFormalsList
-%nterm <exprListNode*> exprList
-%nterm <exprListNode*> moreExprList
-%nterm <exprNode*> firstExpr
-%nterm <exprListNode*> blockExprList
-%nterm <bindingNode*> firstBinding
-%nterm <bindingNode*> binding
-%nterm <bindingListNode*> bindingList
-%nterm <bindingListNode*> moreBindingList
-%nterm <caseListNode*> caseList
-%nterm <caseNode*> case
+%nterm <_program*> program
+%nterm <vector<_class*>> classList
+%nterm <_class*> class
+%nterm <pair<vector<_attr*>, vector<_method*>>> featureList
+%nterm <pair<_feature*, bool>> feature
+%nterm <pair<string, int>> optionalInh
+%nterm <_attr*> attr
+%nterm <_method*> method
+%nterm <_expr*> expr
+%nterm <_expr*> optInit
+%nterm <vector<_formal*>> formalsList
+%nterm <_formal*> formal
+%nterm <_formal*> firstFormal
+%nterm <vector<_formal*>> moreFormalsList
+%nterm <vector<_expr*>> exprList
+%nterm <vector<_expr*>> moreExprList
+%nterm <_expr*> firstExpr
+%nterm <vector<_expr*>> blockExprList
+%nterm <int> firstBinding
+%nterm <int> binding
+%nterm <int> bindingList
+%nterm <int> moreBindingList
+%nterm <int> caseList
+%nterm <int> case
 
 
 
 //don't need %destructor during error recovery, memory will be reclaimed by regular destructors
 //all values are printed using their operator<<
-%printer {yyo << $$;} <*>;
+//%printer {yyo << $$;} <*>;
 
 //from the reference manual:
 
@@ -183,17 +186,12 @@
 //start grammar
 %%
 
-
 %start program;
 program:
     classList
     {
-        //this should be the only rule that doesn't use $$ =
-        //instead it uses the global rootIVAN which is the root of the parse tree
-        rootIVAN = new programNode{"program",
-                                   "program",
-                                   $1};
-        rootIVAN->lineNo = @$.begin.line;
+        $$ = new _program(0, $1);
+        drv.ast = $$;
     }
 ;
 
@@ -201,522 +199,241 @@ classList:
     classList class
     {
         $$ = $1;
-        $1->classList.push_back($2);
-        $1->children->push_back($2);
-
+        $$.push_back($2);
     }
 |   %empty
-	{
-        $$ = new classListNode{"classList"};
-        $$->lineNo = @$.begin.line;
-	}
-
 ;
-
 
 class:
     CLASS TYPE optionalInh LBRACE featureList RBRACE SEMI
     {
-        string productionBody = "no_inherits";
-        if($3 != nullptr) {
-            productionBody = "inherits";
-        }
-
-        $$ = new classNode{"classNode",
-                           productionBody,
-                           new terminalNode{"class"},
-                           new wordNode{"type", $2},
-                           $3,
-                           new terminalNode{"lbrace"},
-                           $5,
-                           new terminalNode{"rbrace"},
-                           new terminalNode{"semi"}
-                           };
-       $$->lineNo = @$.begin.line;
-       $$->TYPE->lineNo = @2.begin.line;
-
+        $$ = new _class(@2.begin.line, $3.second, $2, $3.first, $5);
     }
 ;
 
 optionalInh:
     %empty
     {
-        $$ = nullptr;
+        $$ = make_pair("Object", 0);
     }
 |   INHERITS TYPE
     {
-        $$ = new optionalInhNode{"optionalInhNode",
-                                 new terminalNode{"inherits"},
-                                 new wordNode{"type", $2}};
-        $$->lineNo = @$.begin.line;
-        $$->TYPE->lineNo = @2.begin.line;
-
+        $$ = make_pair($2, @2.begin.line);
     }
 ;
 
-
 featureList:
-	%empty
-	{
-	    $$ = new featureListNode{"featureList"};
-        $$->lineNo = @$.begin.line;
-	}
-|   featureList feature
+	featureList feature
     {
         $$ = $1;
-        $1->featureList.push_back($2);
-        $1->children->push_back($2);
+        if($2.second) $$.first.push_back((_attr*)($2.first)); //attribute
+        else $$.second.push_back((_method*)($2.first)); //method
     }
+|   %empty
 ;
 
 feature:
-    field
+    attr
     {
-        $$ = $1;
+        $$ = make_pair($1, true);
     }
 |   method
     {
-        $$ = $1;
+        $$ = make_pair($1, false);
     }
 ;
 
 
-field:
-    IDENTIFIER COLON TYPE optionalInit SEMI
+attr:
+    IDENTIFIER COLON TYPE optInit SEMI
     {
-        string productionBody = "attribute_no_init";
-        if($4 != nullptr) {
-            productionBody = "attribute_init";
-        }
-        $$ = new fieldNode{"fieldNode",
-                           productionBody,
-                           new wordNode{"identifier", $1},
-                           new terminalNode{"colon"},
-                           new wordNode{"type", $3},
-                           $4,
-                           new terminalNode{"semi"}};
-        $$->lineNo = @$.begin.line;
-        $$->IDENTIFIER->lineNo = @1.begin.line;
-        $$->TYPE->lineNo = @3.begin.line;
+        $$ = new _attr(@1.begin.line, @3.begin.line, $1, $3, $4, drv.encountered++);
     }
 ;
 
-optionalInit:
-    %empty
+optInit:
+    LARROW expr
+    {
+        $$ = $2;
+    }
+|   %empty
     {
         $$ = nullptr;
-    }
-|   LARROW expr
-    {
-        $$ = new optionalInitNode{"optionalInit",
-                                  new terminalNode{"larrow"},
-                                  $2};
-        $$->lineNo = @$.begin.line;
     }
 ;
 
 expr:
     IDENTIFIER LARROW expr
     {
-        $$ = new assignExprNode{"expr",
-                                "assign",
-                                new wordNode{"identifier", $1},
-                                new terminalNode{"larrow"},
-                                $3};
-        $$->lineNo = @$.begin.line;
-        ((assignExprNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
+        $$ = new _assign(@1.begin.line, $1, $3);
     }
 |   IDENTIFIER LPAREN exprList RPAREN
     {
-        $$ = new selfDispatchNode{"expr",
-                                  "self_dispatch",
-                                  new wordNode{"identifier", $1},
-                                  new terminalNode{"lparen"},
-                                  $3,
-                                  new terminalNode{"rparen"}};
-        $$->lineNo = @$.begin.line;
-        ((selfDispatchNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
+        $$ = new _selfDispatch(@1.begin.line, $1, $3);
     }
 |   expr DOT IDENTIFIER LPAREN exprList RPAREN
     {
-        $$ = new dynamicDispatchNode{"expr",
-                                     "dynamic_dispatch",
-                                     $1,
-                                     new terminalNode{"dot"},
-                                     new wordNode{"identifier", $3},
-                                     new terminalNode{"lparen"},
-                                     $5,
-                                     new terminalNode{"rparen"}};
-        $$->lineNo = @$.begin.line;
-        ((dynamicDispatchNode*)$$)->IDENTIFIER->lineNo = @3.begin.line;
+        $$ = new _dynamicDispatch(@1.begin.line, $3, $5, $1);
     }
 |   expr AT TYPE DOT IDENTIFIER LPAREN exprList RPAREN
     {
-        $$ = new staticDispatchNode{"expr",
-                                    "static_dispatch",
-                                    $1,
-                                    new terminalNode{"at"},
-                                    new wordNode{"type", $3},
-                                    new terminalNode{"dot"},
-                                    new wordNode{"identifier", $5},
-                                    new terminalNode{"lparen"},
-                                    $7,
-                                    new terminalNode{"rparen"}};
-        $$->lineNo = @$.begin.line;
-        ((staticDispatchNode*)$$)->TYPE->lineNo = @3.begin.line;
-        ((staticDispatchNode*)$$)->IDENTIFIER->lineNo = @5.begin.line;
-
+        $$ = new _staticDispatch(@1.begin.line, $5, $7, $1, $3, @3.begin.line);
     }
 |   IF expr THEN expr ELSE expr FI
     {
-        $$ = new ifExprNode{"expr",
-                            "if",
-                            new terminalNode{"if"},
-                            $2,
-                            new terminalNode{"then"},
-                            $4,
-                            new terminalNode{"else"},
-                            $6,
-                            new terminalNode{"fi"}
-                            };
-        $$->lineNo = @$.begin.line;
+        $$ = new _if(@1.begin.line, $2, $4, $6);
     }
 |   WHILE expr LOOP expr POOL
     {
-        $$ = new whileExprNode{"expr",
-                               "while",
-                               new terminalNode{"while"},
-                               $2,
-                               new terminalNode{"loop"},
-                               $4,
-                               new terminalNode{"pool"}
-                              };
-        $$->lineNo = @$.begin.line;
+        $$ = new _while(@1.begin.line, $2, $4);
     }
 |   LBRACE blockExprList RBRACE
     {
-        $$ = new blockExprNode{"expr",
-                               "block",
-                               new terminalNode{"lbrace"},
-                               $2,
-                               new terminalNode{"rbrace"}
-                              };
-        $$->lineNo = @$.begin.line;
+        $$ = new _block(@1.begin.line, $2);
     }
 |   LET bindingList IN expr
     {
-        $$ = new letExprNode{"expr",
-                             "let",
-                             new terminalNode{"let"},
-                             $2,
-                             new terminalNode{"in"},
-                             $4
-                            };
-        $$->lineNo = @$.begin.line;
+
     }
 |   CASE expr OF caseList ESAC
     {
-        $$ = new caseExprNode{"expr",
-                              "case",
-                              new terminalNode{"case"},
-                              $2,
-                              new terminalNode{"of"},
-                              $4,
-                              new terminalNode{"esac"}
-                             };
-        $$->lineNo = @$.begin.line;
+
     }
 |   NEW TYPE
     {
-        $$ = new newExprNode{"expr",
-                             "new",
-                             new terminalNode{"new"},
-                             new wordNode{"type", $2}
-                            };
-        $$->lineNo = @$.begin.line;
-        ((newExprNode*)$$)->TYPE->lineNo = @2.begin.line;
+        $$ = new _new(@1.begin.line, $2, @2.begin.line);
     }
 |   ISVOID expr
     {
-        $$ = new isvoidExprNode{"expr",
-                                "isvoid",
-                                new terminalNode{"isvoid"},
-                                $2
-                               };
-        $$->lineNo = @$.begin.line;
+        $$ = new _isvoid(@1.begin.line, $2);
     }
 |   expr PLUS expr
     {
-        $$ = new arithExprNode{"expr",
-                               "plus",
-                              $1,
-                              new terminalNode{"plus"},
-                              $3
-                             };
-        $$->lineNo = @$.begin.line;
+        $$ = new _arith(@1.begin.line, $1, _arith::OPS::PLUS, $3);
     }
 |   expr MINUS expr
     {
-        $$ = new arithExprNode{"expr",
-                               "minus",
-                              $1,
-                              new terminalNode{"minus"},
-                              $3
-                             };
-        $$->lineNo = @$.begin.line;
+        $$ = new _arith(@1.begin.line, $1, _arith::OPS::MINUS, $3);
     }
 |   expr TIMES expr
     {
-        $$ = new arithExprNode{"expr",
-                               "times",
-                              $1,
-                              new terminalNode{"times"},
-                              $3
-                             };
-        $$->lineNo = @$.begin.line;
+        $$ = new _arith(@1.begin.line, $1, _arith::OPS::TIMES, $3);
     }
 |   expr DIVIDE expr
     {
-        $$ = new arithExprNode{"expr",
-                               "divide",
-                              $1,
-                              new terminalNode{"divide"},
-                              $3
-                             };
-        $$->lineNo = @$.begin.line;
+        $$ = new _arith(@1.begin.line, $1, _arith::OPS::DIVIDE, $3);
     }
 |   TILDE expr
     {
-        $$ = new unaryExprNode{"expr",
-                               "negate",
-                               new terminalNode{"tilde"},
-                               $2
-                              };
-        $$->lineNo = @$.begin.line;
+        $$ = new _unary(@1.begin.line, $2, _unary::OPS::NEG);
     }
 |   NOT expr
     {
-        $$ = new unaryExprNode{"expr",
-                               "not",
-                               new terminalNode{"not"},
-                               $2
-                              };
-        $$->lineNo = @$.begin.line;
+        $$ = new _unary(@1.begin.line, $2, _unary::OPS::NOT);
     }
 |   expr LT expr
     {
-        $$ = new relExprNode{"expr",
-                             "lt",
-                             $1,
-                             new terminalNode{"lt"},
-                             $3
-                            };
-        $$->lineNo = @$.begin.line;
+        $$ = new _relational(@1.begin.line, $1, _relational::OPS::LT, $3);
     }
 |   expr LE expr
     {
-        $$ = new relExprNode{"expr",
-                             "le",
-                             $1,
-                             new terminalNode{"le"},
-                             $3
-                            };
-        $$->lineNo = @$.begin.line;
+        $$ = new _relational(@1.begin.line, $1, _relational::OPS::LE, $3);
+
     }
 |   expr EQUALS expr
     {
-        $$ = new relExprNode{"expr",
-                             "eq",
-                             $1,
-                             new terminalNode{"equals"},
-                             $3
-                            };
-        $$->lineNo = @$.begin.line;
+        $$ = new _relational(@1.begin.line, $1, _relational::OPS::EQUALS, $3);
     }
 |   LPAREN expr RPAREN
     {
-        $$ = new termExprNode{"expr",
-                              "termExpr", //this is not in the list of possible syntax nodes, it'll just pass through and become an expression
-                              new terminalNode{"lparen"},
-                              $2,
-                              new terminalNode{"rparen"}
-                             };
-        $$->lineNo = @$.begin.line;
+        $$ = $2;
     }
 |   IDENTIFIER
     {
-        $$ = new identifierExprNode{"expr",
-                                    "identifier",
-                                    new wordNode{"identifier", $1}
-                                   };
-        $$->lineNo = @$.begin.line;
-        ((identifierExprNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
+        $$ = new _id(@1.begin.line, $1);
     }
 |   INTEGER
     {
-        $$ = new intExprNode{"expr",
-                             "integer",
-                             new integerNode{"integer", $1}
-                            };
-        $$->lineNo = @$.begin.line;
+        $$ = new _int(@1.begin.line, $1);
     }
 |   STRING
     {
-        $$ = new stringExprNode{"expr",
-                                "string",
-                                new wordNode{"string", $1}
-                               };
-        $$->lineNo = @$.begin.line;
+        $$ = new _string(@1.begin.line, $1);
     }
 |   TRUE
     {
-        $$ = new boolExprNode{"expr",
-                              "true",
-                              new booleanNode{"true", $1}
-                             };
-        $$->lineNo = @$.begin.line;
-
+        $$ = new _bool(@1.begin.line, true);
     }
 |   FALSE
     {
-        $$ = new boolExprNode{"expr",
-                              "false",
-                              new booleanNode{"false", $1}};
-        $$->lineNo = @$.begin.line;
+        $$ = new _bool(@1.begin.line, false);
     }
 ;
 
 caseList:
     caseList case
     {
-        $$ = $1;
-        $$->caseList.push_back($2);
-        $$->children->push_back($2);
+
     }
 |   %empty
     {
-        $$ = new caseListNode{"expr"};
-        $$->lineNo = @$.begin.line;
+
     }
 ;
 
 case:
     IDENTIFIER COLON TYPE RARROW expr SEMI
     {
-        $$ = new caseNode{"expr",
-                          "caseElement",
-                          new wordNode{"identifier", $1},
-                          new terminalNode{"colon"},
-                          new wordNode{"type", $3},
-                          new terminalNode{"rarrow"},
-                          $5,
-                          new terminalNode{"semi"}
-                          };
-        $$->lineNo = @$.begin.line;
-        ((caseNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
-        ((caseNode*)$$)->TYPE->lineNo = @3.begin.line;
+
     }
 ;
 
 blockExprList:
-    %empty
-    {
-        $$ = new exprListNode{"exprList"};
-        $$->lineNo = @$.begin.line;
-    }
-|   blockExprList expr SEMI
+    blockExprList expr SEMI
     {
         $$ = $1;
-        $$->exprList.push_back($2);
-        $$->children->push_back($2);
-        $$->children->push_back(new terminalNode{"semi"});
+        $$.push_back($2);
     }
+|   %empty
 ;
-
-
 
 method:
     IDENTIFIER LPAREN formalsList RPAREN COLON TYPE LBRACE expr RBRACE SEMI
     {
-        $$ = new methodNode{"method",
-                            "method",
-                            new wordNode{"identifier", $1},
-                            new terminalNode{"lparen"},
-                            $3,
-                            new terminalNode{"rparen"},
-                            new terminalNode{"colon"},
-                            new wordNode{"type", $6},
-                            new terminalNode{"lbrace"},
-                            $8,
-                            new terminalNode{"rbrace"},
-                            new terminalNode{"semi"}};
-        $$->IDENTIFIER->lineNo = @1.begin.line;
-        $$->TYPE->lineNo = @6.begin.line;
-
+        $$ = new _method(@1.begin.line, @6.begin.line, $1, $6, $3, $8, drv.encountered++);
     }
 ;
 
 bindingList:
     bindingList firstBinding moreBindingList
     {
-        $$ = $1;
-        $$->bindingList.push_back($2);
-        $$->children->push_back($2);
-        if($3 != nullptr) {
-            for(auto child : *$3->children) { //push back bindings and commas
-                $$->children->push_back(child);
-            }
-            for(auto binding : $3->bindingList) {//push only bindings
-                $$->bindingList.push_back(binding);
-            }
-        }
     }
 |   %empty
     {
-        $$ = new bindingListNode{"bindingList"};
-        $$->lineNo = @$.begin.line;
+
     }
 ;
 
 firstBinding:
     binding
     {
-        $$ = $1;
     }
 ;
 
 moreBindingList:
     moreBindingList COMMA binding
     {
-        $$ = $1;
-        $$->bindingList.push_back($3);
-        $$->children->push_back(new terminalNode{"comma"});
-        $$->children->push_back($3);
+
     }
 |   %empty
     {
-        $$ = new bindingListNode{"bindingList"};
-        $$->lineNo = @$.begin.line;
     }
 ;
 
 binding:
-    IDENTIFIER COLON TYPE optionalInit
+    IDENTIFIER COLON TYPE optInit
     {
-        string productionBody = "let_binding_no_init";
-        if($4 != nullptr) {
-            productionBody = "let_binding_init";
-        }
-        $$ = new bindingNode{"expr",
-                             productionBody,
-                             new wordNode{"identifier", $1},
-                             new terminalNode{"colon"},
-                             new wordNode{"type", $3},
-                             $4
-                            };
-        $$->lineNo = @$.begin.line;
-        ((bindingNode*)$$)->IDENTIFIER->lineNo = @1.begin.line;
-        ((bindingNode*)$$)->TYPE->lineNo = @3.begin.line;
+
     }
 ;
 
@@ -724,22 +441,12 @@ exprList:
     exprList firstExpr moreExprList
     {
         $$ = $1;
-        $$->exprList.push_back($2);
-        $$->children->push_back($2);
-        if($3 != nullptr) {
-            for(auto child : *$3->children) { //push back COMMAs and exprs
-                $$->children->push_back(child);
-            }
-            for(auto expr : $3->exprList) {//push only exprs
-                $$->exprList.push_back(expr);
-            }
+        $$.push_back($2);
+        for(_expr* expr : $3) {
+            $$.push_back(expr);
         }
     }
 |   %empty
-    {
-        $$ = new exprListNode{"exprList"};
-        $$->lineNo = @$.begin.line;
-    }
 ;
 
 firstExpr:
@@ -753,38 +460,21 @@ moreExprList:
     moreExprList COMMA expr
     {
         $$ = $1;
-        $$->exprList.push_back($3);
-        $$->children->push_back(new terminalNode{"comma"});
-        $$->children->push_back($3);
+        $$.push_back($3);
     }
 |   %empty
-    {
-        $$ = new exprListNode{"exprList"};
-        $$->lineNo = @$.begin.line;
-    }
 ;
-
 
 formalsList:
     formalsList firstFormal moreFormalsList
     {
         $$ = $1;
-        $$->formalsList.push_back($2);
-        $$->children->push_back($2);
-        if($3 != nullptr) {
-            for(auto child : *$3->children) { //push COMMAs and formals
-                $$->children->push_back(child);
-            }
-            for(auto formal : $3->formalsList) {//push only formals
-                $$->formalsList.push_back(formal);
-            }
+        $$.push_back($2);
+        for(_formal* formal : $3) {
+            $$.push_back(formal);
         }
     }
 |   %empty
-    {
-        $$ = new formalsListNode{"formalsList"};
-        $$->lineNo = @$.begin.line;
-    }
 ;
 
 firstFormal:
@@ -797,28 +487,14 @@ moreFormalsList:
     moreFormalsList COMMA formal
     {
         $$ = $1;
-        $$->formalsList.push_back($3);
-        $$->children->push_back(new terminalNode{"comma"});
-        $$->children->push_back($3);
+        $$.push_back($3);
     }
 |   %empty
-    {
-        $$ = new formalsListNode{"formalsList"};
-        $$->lineNo = @$.begin.line;
-    }
 ;
-
-
 formal:
     IDENTIFIER COLON TYPE
     {
-        $$ = new formalNode{"formal",
-                            "formal",
-                            new wordNode{"identifier", $1},
-                            new terminalNode{"colon"},
-                            new wordNode{"type", $3}};
-        $$->IDENTIFIER->lineNo = @1.begin.line;
-        $$->TYPE->lineNo = @3.begin.line;
+        $$ = new _formal(@1.begin.line, @3.begin.line, $1, $3);
     }
 ;
 
