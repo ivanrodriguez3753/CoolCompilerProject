@@ -15,7 +15,9 @@ class _method;
 class _attr;
 class _formal;
 class _expr;
-class letCaseEnv;
+class _case;
+class _caseElement;
+
 
 using namespace std;
 
@@ -30,7 +32,6 @@ public:
 protected:
     const static string T;
     const static string indent;
-
 
 };
 
@@ -114,14 +115,14 @@ public:
 
 class _feature {
 public:
-    int encountered;
-    bool isAttr = false;
+    const int encountered;
+    _feature(int e) : encountered(e) {}
 };
 
 class _method : public _env, public _feature {
 public:
 
-    _method(int l, int tl, string i, string rT, vector<_formal*> fL, _expr* b) : _env(l, i), returnType(rT), formalsList(fL), typeLineNo(tl), body(b) {
+    _method(int l, int tl, string i, string rT, vector<_formal*> fL, _expr* b, int e) : _env(l, i), returnType(rT), formalsList(fL), typeLineNo(tl), body(b),_feature(e) {
     }
 
     /**
@@ -152,7 +153,7 @@ public:
 
     _expr* optInit;
 
-    _attr(int l, int tl, string i, string t, _expr* oI) : _symTable(l, i), type(t), typeLineNo(tl), optInit(oI) {
+    _attr(int l, int tl, string i, string t, _expr* oI, int e) : _symTable(l, i), type(t), typeLineNo(tl), optInit(oI), _feature(e) {
     }
 
     objRec* getSelfRec() const override {
@@ -164,23 +165,26 @@ public:
 
 };
 
-class _let : public _env {
-    letCaseEnv* getSelfEnv() const override {
-        return (letCaseEnv*)selfEnv;
+class _letBinding : public _symTable {
+public:
+    const string type;
+    const int type_lineno;
+
+    _expr* optInit;
+
+    _letBinding(int l, string i, int tL, string t, _expr* oI) : _symTable(l, i), type_lineno(tL), type(t), optInit(oI) {}
+
+    objRec* getSelfRec() const override {
+        return (objRec*)selfRec;
     }
-    letCaseRec* getSelfRec() const override {
-        return (letCaseRec*)selfRec;
-    }
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
 };
 
-class _case : public _env {
-    letCaseEnv* getSelfEnv() const override {
-        return (letCaseEnv*)selfEnv;
-    }
-    letCaseRec* getSelfRec() const override {
-        return (letCaseRec*)selfRec;
-    }
-};
+
+
+
+
 
 class _formal : public _symTable {
 private:
@@ -203,6 +207,8 @@ public:
 class _expr : public _node {
 public:
     _expr(int l) : _node(l) {}
+
+    bool isDecorated = false;
 };
 
 class _bool : public _expr {
@@ -213,6 +219,62 @@ public:
     void print(ostream& os) const override;
 
     _bool(int l, bool v) : _expr(l), value(v) {}
+};
+
+class _let : public _expr, _env {
+public:
+    int encountered;
+    int lineNo;
+
+    _expr* body;
+
+    vector<_letBinding*> bindingList;
+
+    _let(int l, string i, vector<_letBinding*> bL, _expr* b, int e) : _env(l, i), _expr(l), lineNo(l), bindingList(bL), body(b), encountered(e) {}
+
+    letCaseEnv* getSelfEnv() const override {
+        return (letCaseEnv*)selfEnv;
+    }
+    letCaseRec* getSelfRec() const override {
+        return (letCaseRec*)selfRec;
+    }
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
+class _case : public _expr, _env {
+public:
+    int encountered;
+    int lineNo;
+    _expr* switchee;
+    vector<_caseElement*> caseList;
+
+    _case(int l, string i, vector<_caseElement*> cL, _expr* s, int e) : _env(l, i), _expr(l), lineNo(l), caseList(cL), switchee(s), encountered(e) {}
+
+    letCaseEnv* getSelfEnv() const override {
+        return (letCaseEnv*)selfEnv;
+    }
+    letCaseRec* getSelfRec() const override {
+        return (letCaseRec*)selfRec;
+    }
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
+class _caseElement : public _symTable {
+public:
+    const string type;
+    const int type_lineno;
+
+    _expr* caseBranch;
+
+    _caseElement(int l, string i, int tL, string t, _expr* cb) : _symTable(l, i), type_lineno(tL), type(t), caseBranch(cb) {}
+
+    objRec* getSelfRec() const override {
+        return (objRec*)selfRec;
+    }
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
 };
 
 class _int : public _expr {
@@ -353,6 +415,10 @@ public:
 class _arith : public _expr {
 
 public:
+    enum OPS {
+        PLUS, MINUS, TIMES, DIVIDE
+    };
+
     _expr* lhs;
     const int OP;
     _expr* rhs;
@@ -365,6 +431,10 @@ public:
 
 class _relational : public _expr {
 public:
+    enum OPS{
+        LT, LE, EQUALS
+    };
+
     _expr* lhs;
     const int OP;
     _expr* rhs;
@@ -377,6 +447,10 @@ public:
 
 class _unary : public _expr {
 public:
+    enum OPS{
+        NOT, NEG
+    };
+
     _expr* expr;
     const int OP;
 

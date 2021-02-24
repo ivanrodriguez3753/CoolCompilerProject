@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include "utility.h"
-#include <ParserDriver.h>
+#include "ParserDriver.hh"
 
 
 using namespace std;
@@ -35,18 +35,18 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "integerExpr.cl",
     "identifierExpr.cl",
     "stringExpr.cl",
-//    "selfDispatchNoArgs.cl",
-//    "selfDispatchOneArg.cl",
-//    "selfDispatchTwoArgs.cl",
-//    "selfDispatchFiveArgs.cl",
-//    "dynamicDispatchNoArgs.cl",
-//    "dynamicDispatchOneArg.cl",
-//    "dynamicDispatchTwoArgs.cl",
-//    "dynamicDispatchFiveArgs.cl",
-//    "staticDispatchNoArgs.cl",
-//    "staticDispatchOneArg.cl",
-//    "staticDispatchTwoArgs.cl",
-//    "staticDispatchFiveArgs.cl",
+    "selfDispatchNoArgs.cl",
+    "selfDispatchOneArg.cl",
+    "selfDispatchTwoArgs.cl",
+    "selfDispatchFiveArgs.cl",
+    "dynamicDispatchNoArgs.cl",
+    "dynamicDispatchOneArg.cl",
+    "dynamicDispatchTwoArgs.cl",
+    "dynamicDispatchFiveArgs.cl",
+    "staticDispatchNoArgs.cl",
+    "staticDispatchOneArg.cl",
+    "staticDispatchTwoArgs.cl",
+    "staticDispatchFiveArgs.cl",
     "ifExpression.cl",
     "whileExpression.cl",
     "assignExpr.cl",
@@ -58,5 +58,22 @@ INSTANTIATE_TEST_SUITE_P(positiveAst, astFixture, testing::Values(
     "integerPlusMinusTimesDivideExpressions.cl",
     "relationalExpr.cl",
     "notNegateExpr.cl",
-    "parenthesizedExpr.cl"
+    "parenthesizedExpr.cl",
+    "letExprOneBindingNoInit.cl",
+    "letExprOneBindingInit.cl",
+    "letExprMultipleBindingsMixedInit.cl",
+    "caseExprOneCase.cl",
+    "caseExprManyCases.cl"
+));
+INSTANTIATE_TEST_SUITE_P(astFull, astFixture, testing::Values(
+    "CoolProgramsFull/arith.cl",
+    "CoolProgramsFull/atoi.cl",
+    "CoolProgramsFull/cells.cl",
+    "CoolProgramsFull/hello-world.cl",
+    "CoolProgramsFull/hs.cl",
+    "CoolProgramsFull/list.cl",
+    "CoolProgramsFull/new-complex.cl",
+    "CoolProgramsFull/primes.cl",
+    "CoolProgramsFull/print-cool.cl",
+    "CoolProgramsFull/sort-list.cl"
 ));

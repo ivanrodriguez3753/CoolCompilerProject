@@ -57,21 +57,25 @@ void _class::print(ostream &os) const {
         os << superLineNo << endl << superId << endl;
     }
 
-    //sort features by encountered
-    vector<_feature*> features;
-    features.insert(features.begin(), featureList.first.begin(), featureList.first.end());
-    features.insert(features.end(), featureList.second.begin(), featureList.second.end());
-    sort(features.begin(), features.end(), [](const _feature* lhs, const _feature* rhs) {
-        return lhs->encountered < rhs->encountered;
+    //sort features by encountered, but keep information about whether we are attr/method
+    vector<pair<_feature*, bool>> features;
+    for(_attr* attr : featureList.first) {
+        features.push_back(make_pair(attr, true));
+    }
+    for(_method* method : featureList.second) {
+        features.push_back(make_pair(method, false));
+    }
+    sort(features.begin(), features.end(), [](const pair<_feature*, bool> lhs, const pair<_feature*, bool> rhs) {
+        return lhs.first->encountered < rhs.first->encountered;
     });
 
     os << features.size() << endl;
-    for(_feature* feature : features) {
-        if(feature->isAttr) {
-            ((_attr*)(feature))->print(os);
+    for(pair<_feature*, bool> feature : features) {
+        if(feature.second) {
+            ((_attr*)(feature.first))->print(os);
         }
         else {
-            ((_method*)(feature))->print(os);
+            ((_method*)(feature.first))->print(os);
         }
     }
 }
@@ -154,7 +158,7 @@ void _selfDispatch::print(ostream &os) const {
 }
 
 void _dynamicDispatch::print(ostream &os) const {
-    os << lineNo << endl;
+    os << caller->lineNo << endl;
     os << "dynamic_dispatch" << endl;
 
     caller->print(os);
@@ -173,6 +177,7 @@ void _staticDispatch::print(ostream &os) const {
     os << "static_dispatch" << endl;
 
     caller->print(os);
+
 
     os << typeLineNo << endl;
     os << staticType << endl;
@@ -252,10 +257,10 @@ void _isvoid::print(ostream &os) const {
 
 void _arith::print(ostream &os) const {
     os << lineNo << endl;
-    if(OP == '+') os << "plus" <<  endl;
-    else if(OP == '-') os << "minus" <<  endl;
-    else if(OP == '*') os << "times" <<  endl;
-    else if(OP == '/') os << "divide" <<  endl;
+    if(OP == OPS::PLUS) os << "plus" <<  endl;
+    else if(OP == OPS::MINUS) os << "minus" <<  endl;
+    else if(OP == OPS::TIMES) os << "times" <<  endl;
+    else if(OP == OPS::DIVIDE) os << "divide" <<  endl;
 
     lhs->print(os);
     rhs->print(os);
@@ -263,9 +268,9 @@ void _arith::print(ostream &os) const {
 
 void _relational::print(ostream& os) const {
     os << lineNo << endl;
-    if(OP == 0) os << "lt" << endl;
-    else if(OP == 1) os << "le" << endl;
-    else if(OP == 2) os << "eq" << endl;
+    if(OP == OPS::LT) os << "lt" << endl;
+    else if(OP == OPS::LE) os << "le" << endl;
+    else if(OP == OPS::EQUALS) os << "eq" << endl;
 
     lhs->print(os);
     rhs->print(os);
@@ -277,4 +282,47 @@ void _unary::print(ostream& os) const {
     else if(OP == 1) os << "negate" << endl;
 
     expr->print(os);
+}
+
+void _let::print(ostream& os) const {
+    os << lineNo << endl;
+    os << "let" << endl;
+
+    os << bindingList.size() << endl;
+    for(_letBinding* letBinding : bindingList) {
+        letBinding->print(os);
+    }
+
+    body->print(os);
+}
+
+void _letBinding::print(ostream& os) const {
+    if(!optInit) os << "let_binding_no_init" << endl;
+    else os << "let_binding_init" << endl;
+
+    os << lineNo << endl << id << endl;
+    os << type_lineno << endl << type << endl;
+
+    if(optInit) optInit->print(os);
+
+
+}
+
+void _caseElement::print(ostream &os) const {
+    os << lineNo << endl << id << endl;
+    os << type_lineno << endl << type << endl;
+
+    caseBranch->print(os);
+}
+
+void _case::print(ostream &os) const {
+    os << lineNo << endl;
+    os << "case" << endl;
+
+    switchee->print(os);
+
+    os << caseList.size() << endl;
+    for(_caseElement* caseElement : caseList) {
+        caseElement->print(os);
+    }
 }

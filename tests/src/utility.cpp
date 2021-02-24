@@ -4,7 +4,7 @@
 
 
 using namespace std;
-const string buildToResourcesPath = "../test/resources/";
+const string buildToResourcesPath = "../../tests/resources/";
 
 //TODO: enumerate later but compilerStage is one of "--parse", "--type", "full"
 void generateReference(ostream& o, const string fileName, const string compilerStage) {
