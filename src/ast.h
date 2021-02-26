@@ -2,6 +2,7 @@
 #define COOLCOMPILERPROJECT_AST_H
 
 #include "environment.h"
+#include "ParserDriver.hh"
 #include <string>
 #include <list>
 #include <vector>
@@ -18,6 +19,8 @@ class _expr;
 class _case;
 class _caseElement;
 
+class ParserDriver;
+
 
 using namespace std;
 
@@ -27,7 +30,7 @@ public:
 
     virtual void print(ostream& os) const = 0;
     virtual void prettyPrint(ostream& os, string prefix) const = 0;
-    virtual void decorate(env* env){std::cout << "should not have been called!\n"; exit(0);} //TODO: make pure virtual once everything is done being implemented
+    virtual void decorate(ParserDriver& drv){std::cout << "should not have been called!\n"; exit(0);} //TODO: make pure virtual once everything is done being implemented
 
     _node(int l) : lineNo(l) {}
 protected:
@@ -69,7 +72,7 @@ public:
     _program(int l, vector<_class*> cL) : _env(l, "global"), classList(cL) {
     }
 
-    void decorate(env* env) override;
+    void decorate(ParserDriver& drv) override;
     void decorateInternals(env* env);
 
 
@@ -113,7 +116,7 @@ public:
 
     void prettyPrint(ostream& os, const string indentPrefix) const;
     void print(ostream& os) const override;
-    void decorate(env* env) override;
+    void decorate(ParserDriver& drv) override;
 };
 
 class _feature {
@@ -146,7 +149,7 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const;
     void print(ostream& os) const override;
-    void decorate(env* env) override;
+    void decorate(ParserDriver& drv) override;
 
 };
 
@@ -183,6 +186,8 @@ public:
     }
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 
@@ -223,7 +228,7 @@ public:
      * but we sometimes want to skip prev links all the way back up to the globalEnv.
      * @param methodEnv
      */
-    virtual void decorate(env* env) {std::cout << "should not have been called!\n"; exit(0);}
+    virtual void decorate(ParserDriver& drv) {std::cout << "should not have been called!\n"; exit(0);}
 
 };
 
@@ -234,7 +239,7 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override;
     void print(ostream& os) const override;
 
-    void decorate(env* env);
+    void decorate(ParserDriver& drv);
 
     _bool(int l, bool v) : _expr(l), value(v) {}
 };
@@ -258,6 +263,8 @@ public:
     }
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _case : public _expr, _env {
@@ -277,6 +284,8 @@ public:
     }
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _caseElement : public _symTable {
@@ -293,6 +302,8 @@ public:
     }
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _int : public _expr {
@@ -303,6 +314,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _id : public _expr {
@@ -386,6 +399,7 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void decorate(ParserDriver& drv) override;
 };
 
 class _string : public _expr {
@@ -405,6 +419,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 
     _block(int l, vector<_expr*> b) : _expr(l), body(b) {}
 };

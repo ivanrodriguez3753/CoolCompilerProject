@@ -1,5 +1,7 @@
 #include "ast.h"
 #include <algorithm>
+#include <set>
+#include "ParserDriver.hh"
 
 
 
@@ -141,6 +143,7 @@ void _bool::print(ostream& os) const {
 
 void _int::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "integer" << endl;
     os << value << endl;
 }
@@ -223,6 +226,7 @@ void _while::print(ostream &os) const {
 
 void _assign::print(ostream& os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "assign" << endl;
 
     os << lineNo << endl;
@@ -233,6 +237,7 @@ void _assign::print(ostream& os) const {
 
 void _block::print(ostream &os) const {
     os << lineNo << endl; //just use line number of first expression
+    if(isDecorated) os << type << endl;
     os << "block" << endl;
 
     os << body.size() << endl;
@@ -287,6 +292,7 @@ void _unary::print(ostream& os) const {
 
 void _let::print(ostream& os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "let" << endl;
 
     os << bindingList.size() << endl;
@@ -318,6 +324,7 @@ void _caseElement::print(ostream &os) const {
 
 void _case::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "case" << endl;
 
     switchee->print(os);
@@ -347,28 +354,88 @@ void _program::decorateInternals(env* env) {
     }
 }
 
-void _program::decorate(env* env) {
+void _program::decorate(ParserDriver& drv) {
     for(_class* klass : classList) {
-        klass->decorate(((globalEnv*)env)->getRec(klass->id)->link);
+        drv.currentClass = drv.env->getRec(klass->id)->link;
+        klass->decorate(drv);
     }
 }
 
-void _class::decorate(env* env) {
+void _class::decorate(ParserDriver& drv) {
     for(_attr* attr : featureList.first) {
         if(attr->optInit) {
-            attr->optInit->decorate(env);
+            attr->optInit->decorate(drv);
         }
     }
     for(_method* method : featureList.second) {
-        method->body->decorate(((classEnv*)(env))->getMethodRec(method->id)->link);
+        method->body->decorate(drv);
     }
 }
 
-void _method::decorate(env* env) {
-    body->decorate((methodEnv*)env);
+void _method::decorate(ParserDriver& drv) {
+    body->decorate(drv);
 }
 
-void _bool::decorate(env* env) {
+void _bool::decorate(ParserDriver& drv) {
     type = "Bool";
     isDecorated = true;
+}
+
+void _assign::decorate(ParserDriver& drv) {
+    rhs->decorate(drv);
+    type = rhs->type;
+    isDecorated = true;
+}
+
+void _let::decorate(ParserDriver& drv) {
+    for(_letBinding* binding : bindingList) {
+        binding->decorate(drv);
+    }
+
+    body->decorate(drv);
+
+    type = body->type;
+    isDecorated = true;
+}
+
+void _letBinding::decorate(ParserDriver& drv) {
+    if(optInit) optInit->decorate(drv);
+}
+
+void _int::decorate(ParserDriver& drv) {
+    type = "Int";
+    isDecorated = true;
+}
+
+void _block::decorate(ParserDriver& drv) {
+    for(_expr* expr : body) {
+        expr->decorate(drv);
+    }
+
+    type = body.back()->type;
+    isDecorated = true;
+}
+
+void _case::decorate(ParserDriver& drv) {
+    switchee->decorate(drv);
+
+    set<string> choices;
+    for(_caseElement* caseElem : caseList){
+        choices.insert(caseElem->type);
+        caseElem->decorate(drv);
+    }
+
+    //resolve SELF_TYPE branch, if any
+    set<string>::iterator selfTypeIt = choices.find("SELF_TYPE");
+    if(selfTypeIt != choices.end()) {
+        choices.erase(selfTypeIt);
+        choices.insert(drv.currentClass->id);
+    }
+
+    type = drv.computeLub(choices);
+    isDecorated = true;
+}
+
+void _caseElement::decorate(ParserDriver& drv) {
+    caseBranch->decorate(drv);
 }

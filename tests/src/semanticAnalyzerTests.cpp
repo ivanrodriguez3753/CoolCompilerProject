@@ -23,7 +23,7 @@ TEST_P(semanticAnalyzerFixture, positive) {
     drv.populateClassImplementationMaps();
 
     drv.internalsAst->decorateInternals(drv.env);
-    drv.ast->decorate(drv.env);
+    drv.ast->decorate(drv);
 
     drv.printClassMap(actual);
     drv.printImplementationMap(actual);
@@ -39,7 +39,26 @@ TEST_P(semanticAnalyzerFixture, positive) {
 INSTANTIATE_TEST_SUITE_P(positiveSemanticAnalyzer, semanticAnalyzerFixture, testing::Values(
     "bareMinimum.cl",
     "classMapNoInitializations.cl",
-    "classMapNoInitializationsWith2Inheritance.cl"
+    "classMapNoInitializationsWith2Inheritance.cl",
+    "letExprOneBindingNoInit.cl",
+    "letExprOneBindingInit.cl",
+    "letExprMultipleBindingsMixedInit.cl",
+    "blockExprFiveExpressions.cl",
+    "assignExpr.cl",
+    "assignTricky.cl",
+    "caseExprOneCase.cl"
+//    "caseExprManyCases.cl"
+//    "ifExpression.cl",
+//    "ifWhileExpressions.cl",
+//    "isvoidExpr.cl",
+//    "staticDispatchExpr.cl",
+//    "staticDispatchExpr2.cl",
+//    "selfDispatchExpr.cl",
+//    "dynamicDispatchExpr.cl",
+//    "SELF_TYPE.cl",
+//    "identifierExpr.cl",
+//    "classMapNoInitializations.cl",
+//    "assignMismatchButConforms.cl"
 ));
 //INSTANTIATE_TEST_SUITE_P(semanticAnalyzerFull, semanticAnalyzerFixture, testing::Values(
 //    "CoolProgramsFull/arith.cl",

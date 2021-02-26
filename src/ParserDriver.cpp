@@ -97,10 +97,9 @@ void ParserDriver::buildEnvs() {
 
 /**
  * helper method that populates the entry in class/implementation maps corresponding to klass
- * @param graph
  * @param klass
  */
-void ParserDriver::populateMaps(map<string, set<string>>& graph, string klass) {
+void ParserDriver::populateMaps(string klass) {
     set<string> attrsAlreadyAdded;
 
     set<pair<objRec*, int>>& attrs = classMap[klass];
@@ -144,8 +143,6 @@ void ParserDriver::populateMaps(map<string, set<string>>& graph, string klass) {
 }
 
 void ParserDriver::populateClassImplementationMaps() {
-    //build a quick graph. first is node, second is node's data which children
-    map<string, set<string>> graph;
     map<string, bool> visited;
 
 
@@ -153,9 +150,9 @@ void ParserDriver::populateClassImplementationMaps() {
     classListFull.insert(classListFull.end(), internalsAst->classList.begin(), internalsAst->classList.end());
 
     for(_class* klass : classListFull) {
-        graph.insert({klass->id, set<string>()});
+        inherGraph.insert({klass->id, {klass->superId, set<string>()}});
         //note that [] creates an entry if it doesn't exist
-        graph[klass->superId].insert(klass->id);
+        inherGraph[klass->superId].second.insert(klass->id);
         visited[klass->id] = false;
     } visited["Object"] = false;
 
@@ -165,10 +162,10 @@ void ParserDriver::populateClassImplementationMaps() {
     while(!S.empty()) {
         string v = S.top(); S.pop();
         bool& isVisited = visited.at(v);
-        set<string>& children = graph.at(v);
+        set<string>& children = inherGraph.at(v).second;
         if(!isVisited) {
             isVisited = true;
-            populateMaps(graph, v);
+            populateMaps(v);
             for(string child : children) {
                 S.push(child);
             }
@@ -256,4 +253,46 @@ void ParserDriver::printParentMap(ostream& os) {
         os << classIt->first << endl;
         os << ((classRec*)(classIt->second))->parent << endl;
     }
+}
+
+/**
+ * This method assumes that all SELF_TYPEs have been resolved to the containing class
+ * @param s
+ * @return
+ */
+string ParserDriver::computeLub(set<string> s) {
+    if(!s.size()) {
+        cerr << "should not have been called with an empty set\n";
+        abort();
+    }
+    else if(s.size() == 1) return *(s.begin());
+
+    map<string, vector<string>> inheritancePaths;
+    for(string klass : s) {
+        vector<string>& currentPath = inheritancePaths[klass];
+        string currentParent = inherGraph.at(klass).first;
+        while(currentParent != "Object") {
+            currentPath.push_back(currentParent);
+            currentParent = inherGraph.at(currentParent).first;
+        }
+    }
+
+    //reverse all paths because we read them bottom up, also note the shortestPath
+    int shortestPath = inheritancePaths.begin()->second.size();
+    for(map<string, vector<string>>::iterator it = inheritancePaths.begin(); it != inheritancePaths.end(); it++) {
+        reverse(it->second.begin(), it->second.end());
+        if(it->second.size() < shortestPath) {
+            shortestPath = it->second.size();
+        }
+    }
+
+    if(shortestPath == 0) {
+        return "Object";
+    }
+    else {
+        //get an arbitrary path and return the node that is shortestPath - 1 steps down from Object
+        const vector<string>& somePath = (*(inheritancePaths.begin())).second;
+        return somePath[shortestPath - 1];
+    }
+
 }

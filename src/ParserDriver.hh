@@ -26,6 +26,8 @@ class ParserDriver {
 public:
     int encountered = 0;
 
+    classEnv* currentClass;
+
     _program* bisonProduct;
 
     _program* ast;
@@ -40,6 +42,10 @@ public:
      */
     map<string, map<string, pair<methodRec*, int>>> implementationMap;
 
+    /**
+     * <key, <parent, children> >
+     */
+    map<string, pair<string, set<string>>> inherGraph;
 
     ParserDriver();
     /**
@@ -49,11 +55,13 @@ public:
     void buildEnvs();
     void buildInternalsAst();
     void populateClassImplementationMaps();
-    void populateMaps(map<string, set<string>>& graph, string klass); //helper method
+    void populateMaps(string klass); //helper method
 
     void printClassMap(ostream& os);
     void printImplementationMap(ostream& os);
     void printParentMap(ostream& os);
+
+    string computeLub(set<string> s);
 
     int result;
 
@@ -70,14 +78,13 @@ public:
     void scan_begin();
     void scan_end();
 
-    void scan_string();
-
     bool trace_scanning;
 
     //Token's location used by scanner
     yy::location location;
 
-    void printHi() {cout << "hiiii\n";}
+
+
     friend class _node;
 private:
 };
