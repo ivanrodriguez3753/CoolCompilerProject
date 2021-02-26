@@ -11,6 +11,7 @@ add_executable(
     tests
     src/main.cpp
     src/astTests.cpp
+    src/semanticAnalyzerTests.cpp
     src/utility.h src/utility.cpp
 )
 

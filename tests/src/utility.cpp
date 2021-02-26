@@ -29,3 +29,8 @@ void generateReference(ostream& o, const string fileName, const string compilerS
     o << ifsRef.rdbuf();
     ifsRef.close();
 };
+
+void writeMyOutputToCoolPrograms(string actualOutput, string fileName) {
+    ofstream ofs(buildToResourcesPath + "CoolPrograms/" + fileName);
+    ofs << actualOutput;
+}

@@ -134,6 +134,7 @@ void _bool::prettyPrint(ostream &os, const string indentPrefix) const {
 
 void _bool::print(ostream& os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     if(value) os << "true" << endl;
     else      os << "false" << endl;
 }
@@ -325,4 +326,49 @@ void _case::print(ostream &os) const {
     for(_caseElement* caseElement : caseList) {
         caseElement->print(os);
     }
+}
+
+void _internal::print(ostream &os) const {
+    os << lineNo << endl;
+    if(isDecorated) os << type << endl;
+    os << "internal" << endl;
+    os << classDotMethod << endl;
+}
+
+void _program::decorateInternals(env* env) {
+    //for every method, delete the _expr* body then new up an _internal _expr
+    for(_class* klass : classList) {
+        for(_method* method : klass->featureList.second) {
+            delete method->body;
+            method->body = new _internal(klass->id + '.' + method->id);
+            method->body->type = method->returnType;
+            method->body->isDecorated = true;
+        }
+    }
+}
+
+void _program::decorate(env* env) {
+    for(_class* klass : classList) {
+        klass->decorate(((globalEnv*)env)->getRec(klass->id)->link);
+    }
+}
+
+void _class::decorate(env* env) {
+    for(_attr* attr : featureList.first) {
+        if(attr->optInit) {
+            attr->optInit->decorate(env);
+        }
+    }
+    for(_method* method : featureList.second) {
+        method->body->decorate(((classEnv*)(env))->getMethodRec(method->id)->link);
+    }
+}
+
+void _method::decorate(env* env) {
+    body->decorate((methodEnv*)env);
+}
+
+void _bool::decorate(env* env) {
+    type = "Bool";
+    isDecorated = true;
 }

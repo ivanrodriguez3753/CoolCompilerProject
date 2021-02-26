@@ -56,6 +56,9 @@
     class _case;
     class _caseElement;
 
+    class environment;
+    class methodEnv;
+
     using namespace std;
 }
 
@@ -76,8 +79,10 @@
 %code {
     #include "ParserDriver.hh"
     #include "ast.h"
+    #include "environment.h"
     #include <iostream>
 
+    environment* lastEnv;
 }
 
 //prefix tokens with TOK to avoid name clashes in generated files
@@ -195,7 +200,7 @@ program:
     classList
     {
         $$ = new _program(0, $1);
-        drv.ast = $$;
+        drv.bisonProduct = $$;
     }
 ;
 

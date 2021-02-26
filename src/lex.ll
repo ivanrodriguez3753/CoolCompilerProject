@@ -170,3 +170,9 @@ ParserDriver::scan_end ()
 {
   fclose (yyin);
 }
+
+void
+ParserDriver::scan_string ()
+{
+    yy_scan_string(basicClassesSource.c_str());
+}

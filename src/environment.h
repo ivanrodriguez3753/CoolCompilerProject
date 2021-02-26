@@ -17,15 +17,28 @@ class classEnv;
 class methodEnv;
 class letCaseEnv;
 
+class _symTable;
+class _class;
+class _method;
+class _let;
+
 /**
  * Base class for all record types
  */
 class rec {
-    string id;
+protected:
+    const int lineno;
+    rec(_symTable* node, int l) : treeNode(node), lineno(l) {}
+
+public:
+    _symTable* treeNode;
 };
 
 class classRec : public rec{
 public:
+    classRec(_class* node, int l, string p, int numA, int numM, classEnv* link) : rec((_symTable*)node, l), parent(p), numAttr(numA), numMethods(numM), link(link) {}
+    const string parent;
+
     classEnv* link;
 
     const int numAttr;
@@ -34,19 +47,23 @@ public:
 };
 class methodRec : public rec {
 public:
+    methodRec(_method* node, int l, int nA, methodEnv* link) : rec((_symTable*)node, l), numArgs(nA), link(link) {}
     methodEnv* link;
 
     const int numArgs;
+    int localOffset;
 };
 class letCaseRec : public rec {
 public:
     letCaseEnv* link;
     const int numLocals;
+
+    letCaseRec(_let* node, int l, int nL, letCaseEnv* link) : rec((_symTable*)node, l), numLocals(nL), link(link) {}
 };
 
 class objRec : public rec {
 public:
-
+    objRec(_symTable* node, int l, int o) : rec(node, l), localOffset(o) {}
     /**
      * Used for offsetting off sp[i >= firstAttrOffset] for attributes,
      * fp[i >= 0] for method arguments, or fp[i < 0] for local variables.
@@ -57,9 +74,13 @@ public:
 
 
 class env {
-protected:
+public:
+    string id;
+
     map<string, rec*> symTable;
     env* prev;
+
+    env(env* p, string i) : prev(p), id(i) {}
 public:
     virtual rec* getRec(const string& key) const = 0;
 };
@@ -69,20 +90,29 @@ public:
     classRec* getRec(const string& key) const override {
         return (classRec*)symTable.at(key);
     }
+    globalEnv(env* p, string i) : env(p, i) {}
 };
 class classEnv : public env {
 public:
-    methodRec* getRec(const string& key) const override {
-        return (methodRec*)symTable.at(key);
+    classEnv(env* p, string i) : env(p, i) {}
+    methodRec* getMethodRec(const string& key) const {
+        return (methodRec*)methodsSymTable.at(key);
     }
+    objRec* getRec(const string& key) const override {
+        return (objRec*)symTable.at(key);
+    }
+    map<string, methodRec*> methodsSymTable;
 
 };
 class methodEnv : public env {
+public:
+    methodEnv(env* p, string i) : env(p, i) {}
     objRec* getRec(const string& key) const override {
         return (objRec*)symTable.at(key);
     }
 };
 class letCaseEnv : public env {
+    letCaseEnv(env* p, string i) : env(p, i) {}
     objRec* getRec(const string& key) const override {
 
     }

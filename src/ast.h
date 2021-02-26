@@ -27,6 +27,7 @@ public:
 
     virtual void print(ostream& os) const = 0;
     virtual void prettyPrint(ostream& os, string prefix) const = 0;
+    virtual void decorate(env* env){std::cout << "should not have been called!\n"; exit(0);} //TODO: make pure virtual once everything is done being implemented
 
     _node(int l) : lineNo(l) {}
 protected:
@@ -68,6 +69,8 @@ public:
     _program(int l, vector<_class*> cL) : _env(l, "global"), classList(cL) {
     }
 
+    void decorate(env* env) override;
+    void decorateInternals(env* env);
 
 
 
@@ -110,7 +113,7 @@ public:
 
     void prettyPrint(ostream& os, const string indentPrefix) const;
     void print(ostream& os) const override;
-
+    void decorate(env* env) override;
 };
 
 class _feature {
@@ -143,6 +146,7 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const;
     void print(ostream& os) const override;
+    void decorate(env* env) override;
 
 };
 
@@ -207,8 +211,20 @@ public:
 class _expr : public _node {
 public:
     _expr(int l) : _node(l) {}
-
+    virtual ~_expr() = default;
+    /**
+     * this is the static type of the expression.
+     */
+    string type;
     bool isDecorated = false;
+
+    /**
+     * most nested, nontrivial environment layer is the method. letCase env have arbitrary depth,
+     * but we sometimes want to skip prev links all the way back up to the globalEnv.
+     * @param methodEnv
+     */
+    virtual void decorate(env* env) {std::cout << "should not have been called!\n"; exit(0);}
+
 };
 
 class _bool : public _expr {
@@ -217,6 +233,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override;
     void print(ostream& os) const override;
+
+    void decorate(env* env);
 
     _bool(int l, bool v) : _expr(l), value(v) {}
 };
@@ -455,6 +473,16 @@ public:
     const int OP;
 
     _unary(int l, _expr* e, int op) : _expr(l), expr(e), OP(op) {}
+
+    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void print(ostream& os) const override;
+};
+
+class _internal : public _expr {
+public:
+    const string classDotMethod;
+
+    _internal(string s) : _expr(0), classDotMethod(s) {}
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
