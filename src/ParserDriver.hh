@@ -59,7 +59,6 @@ public:
 
     //main routine is calling the parser
     int parse(const std::string& f);
-    int parseBasicClasses(const std::string& source);
 
 
         //name of file being parsed
@@ -77,54 +76,6 @@ public:
 
     //Token's location used by scanner
     yy::location location;
-
-    //TODO put this in a file
-    string basicClassesSource = "--the contents of the methods are ignored, it just has to be parse-able\n"
-                                "--order the methods alphabetically so that they print like the ref compiler \n"
-                                "--wants them to print\n"
-                                "class Object inherits Object {\n"
-                                "\tabort() : Object {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\tcopy() : SELF_TYPE {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\ttype_name() : String {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\t\n"
-                                "};\n"
-                                "\n"
-                                "class IO {\n"
-                                "\tin_int() : Int {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\tin_string() : String {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\tout_int(x : Int) : SELF_TYPE {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\tout_string(x : String) : SELF_TYPE {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "};\n"
-                                "\n"
-                                "class Int {};\n"
-                                "\n"
-                                "class String {\n"
-                                "\tconcat(s : String) : String {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\tlength() : Int {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "\tsubstr(i : Int, l : Int) : String {\n"
-                                "\t\tfalse\n"
-                                "\t};\n"
-                                "};\n"
-                                "\n"
-                                "class Bool {};";
 
     void printHi() {cout << "hiiii\n";}
     friend class _node;

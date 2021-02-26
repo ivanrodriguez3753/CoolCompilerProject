@@ -37,7 +37,9 @@ TEST_P(semanticAnalyzerFixture, positive) {
     ASSERT_EQ(actual.str(), expected.str());
 }
 INSTANTIATE_TEST_SUITE_P(positiveSemanticAnalyzer, semanticAnalyzerFixture, testing::Values(
-    "bareMinimum.cl"
+    "bareMinimum.cl",
+    "classMapNoInitializations.cl",
+    "classMapNoInitializationsWith2Inheritance.cl"
 ));
 //INSTANTIATE_TEST_SUITE_P(semanticAnalyzerFull, semanticAnalyzerFixture, testing::Values(
 //    "CoolProgramsFull/arith.cl",

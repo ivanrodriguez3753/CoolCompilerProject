@@ -19,20 +19,41 @@ int ParserDriver::parse(const std::string& f) {
 
     return res;
 }
-int ParserDriver::parseBasicClasses(const string &source) {
-    location.initialize();
-    scan_string();
-    yy::parser parse(*this);
-    int res = parse();
-    scan_end();
 
-    return res;
-}
-
+/**
+ * hard code the internalsAst
+ */
 void ParserDriver::buildInternalsAst() {
-    parseBasicClasses(basicClassesSource);
-
-    internalsAst = bisonProduct;
+    internalsAst =
+    new _program(0, vector<_class*>{
+        new _class(0, 0, "Object", "Object", pair<vector<_attr*>, vector<_method*>>{
+            vector<_attr*>(),
+            vector<_method*>{
+                new _method(0, 0, "abort", "Object", {}, new _internal("Object.abort"), encountered++),
+                new _method(0, 0, "copy", "SELF_TYPE", {}, new _internal("Object.copy"), encountered++),
+                new _method(0, 0, "type_name", "String", {}, new _internal("Object.type_name"), encountered++)
+            }
+        }),
+        new _class(0, 0, "IO", "Object", pair<vector<_attr*>, vector<_method*>>{
+                vector<_attr*>(),
+                vector<_method*>{
+                        new _method(0, 0, "in_int", "Int", {}, new _internal("IO.in_int"), encountered++),
+                        new _method(0, 0, "in_string", "String", {}, new _internal("IO.in_string"), encountered++),
+                        new _method(0, 0, "out_int", "SELF_TYPE", {new _formal(0, 0, "x", "Int")}, new _internal("IO.out_int"), encountered++),
+                        new _method(0, 0, "out_string", "SELF_TYPE", {new _formal(0,0, "x", "String")}, new _internal("IO.out_string"), encountered++)
+                }
+        }),
+        new _class(0, 0, "String", "Object", pair<vector<_attr*>, vector<_method*>>{
+                vector<_attr*>(),
+                vector<_method*>{
+                        new _method(0, 0, "concat", "String", {new _formal(0, 0, "s", "String")}, new _internal("String.concat"), encountered++),
+                        new _method(0, 0, "length", "Int", {}, new _internal("String.length"), encountered++),
+                        new _method(0, 0, "substr", "String", {new _formal(0, 0, "i", "Int"), new _formal(0, 0, "l", "Int")}, new _internal("String.substr"), encountered++)
+                }
+        }),
+        new _class(0, 0, "Int", "Object", {}),
+        new _class(0, 0, "Bool", "Object", {})
+    });
 }
 
 
