@@ -150,6 +150,7 @@ void _int::print(ostream &os) const {
 
 void _selfDispatch::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "self_dispatch" << endl;
 
     os << lineNo << endl;
@@ -159,6 +160,15 @@ void _selfDispatch::print(ostream &os) const {
     for(_expr* expr : argList) {
         expr->print(os);
     }
+}
+
+void _selfDispatch::decorate(ParserDriver &drv) {
+    for(_expr* arg : argList) {
+        arg->decorate(drv);
+    }
+
+    type = drv.implementationMap.at(drv.currentClassEnv->id).at(id).first->returnType;
+    isDecorated = true;
 }
 
 void _dynamicDispatch::print(ostream &os) const {
@@ -174,6 +184,10 @@ void _dynamicDispatch::print(ostream &os) const {
     for(_expr* expr : argList) {
         expr->print(os);
     }
+}
+
+void _dynamicDispatch::decorate(ParserDriver &drv) {
+
 }
 
 void _staticDispatch::print(ostream &os) const {
@@ -195,10 +209,51 @@ void _staticDispatch::print(ostream &os) const {
     }
 }
 
+void _staticDispatch::decorate(ParserDriver &drv) {
+    for(_expr* arg : argList) {
+        arg->decorate(drv);
+    }
+}
+
 void _id::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "identifier" << endl;
     os << lineNo << endl << value << endl;
+}
+
+
+/**
+ * always check letCaseEnv, then methodEnv, then classEnv
+ * @param drv
+ */
+void _id::decorate(ParserDriver &drv) {
+    objRec* obj;
+
+
+    bool foundId = false;
+
+    letCaseEnv *letCaseCurrent = drv.top;
+    while ((letCaseCurrent != nullptr) && !foundId) {
+        obj = letCaseCurrent->getRec(value);
+        if(obj) foundId = true;
+        letCaseCurrent = letCaseCurrent->prevLetCase;
+    }
+
+    //method parameters (methodEnv)
+    if(!foundId) {
+        obj = drv.currentMethodEnv->getRec(value);
+        if(obj) foundId = true;
+    }
+
+    //attributes (classEnv)
+    if(!foundId) {
+        obj = drv.currentClassEnv->getRec(value);
+        if(obj) foundId = true;
+    }
+
+    type = obj->staticType;
+    isDecorated = true;
 }
 
 void _string::print(ostream &os) const {
@@ -207,8 +262,14 @@ void _string::print(ostream &os) const {
     os << value << endl;
 }
 
+void _string::decorate(ParserDriver &drv) {
+    type = "String";
+    isDecorated = true;
+}
+
 void _if::print(ostream& os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "if" << endl;
 
     predicate->print(os);
@@ -216,12 +277,36 @@ void _if::print(ostream& os) const {
     eelse->print(os);
 }
 
+void _if::decorate(ParserDriver &drv) {
+    predicate->decorate(drv);
+    tthen->decorate(drv);
+    eelse->decorate(drv);
+
+    set<string> staticTypes{tthen->type, eelse->type};
+    if(staticTypes.find("SELF_TYPE") != staticTypes.end()) {
+        staticTypes.erase("SELF_TYPE");
+        staticTypes.insert(drv.currentClassEnv->id); //resolved SELF_TYPE
+    }
+
+    type = drv.computeLub(staticTypes);
+    isDecorated = true;
+}
+
 void _while::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "while" << endl;
 
     predicate->print(os);
     body->print(os);
+}
+
+void _while::decorate(ParserDriver &drv) {
+    predicate->decorate(drv);
+    body->decorate(drv);
+
+    type = "Object"; //defined in the Cool Reference Manual
+    isDecorated = true;
 }
 
 void _assign::print(ostream& os) const {
@@ -248,17 +333,31 @@ void _block::print(ostream &os) const {
 
 void _new::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "new" << endl;
 
     os << typeLineNo << endl;
     os << id << endl;
 }
 
+void _new::decorate(ParserDriver &drv) {
+    type = id;
+    isDecorated = true;
+}
+
 void _isvoid::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "isvoid" << endl;
 
     expr->print(os);
+}
+
+void _isvoid::decorate(ParserDriver &drv) {
+    expr->decorate(drv);
+
+    type = "Bool";
+    isDecorated = true;
 }
 
 void _arith::print(ostream &os) const {
@@ -272,6 +371,11 @@ void _arith::print(ostream &os) const {
     rhs->print(os);
 }
 
+void _arith::decorate(ParserDriver &drv) {
+    type = "Int";
+    isDecorated = true;
+}
+
 void _relational::print(ostream& os) const {
     os << lineNo << endl;
     if(OP == OPS::LT) os << "lt" << endl;
@@ -282,12 +386,24 @@ void _relational::print(ostream& os) const {
     rhs->print(os);
 }
 
+void _relational::decorate(ParserDriver &drv) {
+    type = "Bool";
+    isDecorated = true;
+}
+
 void _unary::print(ostream& os) const {
     os << lineNo << endl;
     if(OP == 0) os << "not" << endl;
     else if(OP == 1) os << "negate" << endl;
 
     expr->print(os);
+}
+
+void _unary::decorate(ParserDriver &drv) {
+    if(OP == OPS::NEG) type = "Int";
+    else if(OP == OPS::NOT) type = "Bool";
+
+    isDecorated = true;
 }
 
 void _let::print(ostream& os) const {
@@ -342,6 +458,10 @@ void _internal::print(ostream &os) const {
     os << classDotMethod << endl;
 }
 
+void _internal::decorate(ParserDriver &drv) {
+    //taken care of in _program::decorateInternals
+}
+
 void _program::decorateInternals(env* env) {
     //for every method, delete the _expr* body then new up an _internal _expr
     for(_class* klass : classList) {
@@ -356,8 +476,9 @@ void _program::decorateInternals(env* env) {
 
 void _program::decorate(ParserDriver& drv) {
     for(_class* klass : classList) {
-        drv.currentClass = drv.env->getRec(klass->id)->link;
+        drv.currentClassEnv = drv.env->getRec(klass->id)->link;
         klass->decorate(drv);
+        drv.currentClassEnv = nullptr;
     }
 }
 
@@ -368,7 +489,9 @@ void _class::decorate(ParserDriver& drv) {
         }
     }
     for(_method* method : featureList.second) {
+        drv.currentMethodEnv = drv.currentClassEnv->getMethodRec(method->id)->link;
         method->body->decorate(drv);
+        drv.currentMethodEnv = nullptr;
     }
 }
 
@@ -388,11 +511,18 @@ void _assign::decorate(ParserDriver& drv) {
 }
 
 void _let::decorate(ParserDriver& drv) {
+    letCaseEnv* letEnv = drv.buildLetEnv(this);
+
+    //traverse the initializers, at the current scope
     for(_letBinding* binding : bindingList) {
-        binding->decorate(drv);
+        if(binding->optInit) binding->optInit->decorate(drv);
     }
 
+    //traversing the body, which is the first block that can use the new identifiers,
+    //needs to be done with the proper context. so set drv.top to the letCaseEnv we just created
+    drv.top = letEnv;
     body->decorate(drv);
+    drv.top = drv.top->prevLetCase;
 
     type = body->type;
     isDecorated = true;
@@ -417,19 +547,25 @@ void _block::decorate(ParserDriver& drv) {
 }
 
 void _case::decorate(ParserDriver& drv) {
+    vector<letCaseEnv*> caseEnvs = drv.buildCaseEnvs(this);
+
     switchee->decorate(drv);
 
     set<string> choices;
-    for(_caseElement* caseElem : caseList){
+    for(int i = 0; i < caseList.size(); ++i) {
+        _caseElement* caseElem = caseList[i];
         choices.insert(caseElem->type);
+
+        drv.top = caseEnvs[i];
         caseElem->decorate(drv);
+        drv.top = drv.top->prevLetCase;
     }
 
     //resolve SELF_TYPE branch, if any
     set<string>::iterator selfTypeIt = choices.find("SELF_TYPE");
     if(selfTypeIt != choices.end()) {
         choices.erase(selfTypeIt);
-        choices.insert(drv.currentClass->id);
+        choices.insert(drv.currentClassEnv->id);
     }
 
     type = drv.computeLub(choices);

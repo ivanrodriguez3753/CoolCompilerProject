@@ -47,11 +47,13 @@ public:
 };
 class methodRec : public rec {
 public:
-    methodRec(_method* node, int l, int nA, methodEnv* link) : rec((_symTable*)node, l), numArgs(nA), link(link) {}
+    methodRec(_method* node, int l, int nA, methodEnv* link, int e, string rt) : rec((_symTable*)node, l), numArgs(nA), link(link), encountered(e), returnType(rt) { }
     methodEnv* link;
 
     const int numArgs;
     int localOffset;
+    const string returnType;
+    int encountered;
 };
 class letCaseRec : public rec {
 public:
@@ -63,12 +65,13 @@ public:
 
 class objRec : public rec {
 public:
-    objRec(_symTable* node, int l, int o) : rec(node, l), localOffset(o) {}
+    objRec(_symTable* node, int l, int o, string t) : rec(node, l), localOffset(o), staticType(t) {}
     /**
      * Used for offsetting off sp[i >= firstAttrOffset] for attributes,
      * fp[i >= 0] for method arguments, or fp[i < 0] for local variables.
      */
     const int localOffset; //self offset for attributes, fp[i >= 0] for method arguments, fp[i < 0] for local variables
+    const string staticType;
 };
 
 
@@ -88,6 +91,9 @@ public:
 class globalEnv : public env {
 public:
     classRec* getRec(const string& key) const override {
+        if(symTable.find(key) == symTable.end()) {
+            return nullptr;
+        }
         return (classRec*)symTable.at(key);
     }
     globalEnv(env* p, string i) : env(p, i) {}
@@ -99,6 +105,9 @@ public:
         return (methodRec*)methodsSymTable.at(key);
     }
     objRec* getRec(const string& key) const override {
+        if(symTable.find(key) == symTable.end()) {
+            return nullptr;
+        }
         return (objRec*)symTable.at(key);
     }
     map<string, methodRec*> methodsSymTable;
@@ -108,14 +117,23 @@ class methodEnv : public env {
 public:
     methodEnv(env* p, string i) : env(p, i) {}
     objRec* getRec(const string& key) const override {
+        if(symTable.find(key) == symTable.end()) {
+            return nullptr;
+        }
         return (objRec*)symTable.at(key);
     }
 };
 class letCaseEnv : public env {
-    letCaseEnv(env* p, string i) : env(p, i) {}
+public:
+    letCaseEnv* prevLetCase;
+    letCaseEnv(letCaseEnv* p, string i) : env((env*)p, i), prevLetCase(p) {}
     objRec* getRec(const string& key) const override {
-
+        if(symTable.find(key) == symTable.end()) {
+            return nullptr;
+        }
+        return (objRec*)symTable.at(key);
     }
+    map<string, letCaseRec*> letCaseSymTable;
 };
 
 

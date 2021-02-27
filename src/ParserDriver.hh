@@ -26,13 +26,20 @@ class ParserDriver {
 public:
     int encountered = 0;
 
-    classEnv* currentClass;
+    classEnv* currentClassEnv;
+    methodEnv* currentMethodEnv;
 
     _program* bisonProduct;
 
     _program* ast;
     _program* internalsAst;
     globalEnv* env;
+
+    /**
+     * points to the current letCaseEnv
+     */
+    letCaseEnv* top;
+    int letCaseCounter = 0;
 
     map<string, set<pair<objRec*, int>>> classMap;
 
@@ -53,6 +60,8 @@ public:
      * TODO: can do this as part of the ast construction, maybe? but it would be bottom up
      */
     void buildEnvs();
+    letCaseEnv* buildLetEnv(_let* letNode);
+    vector<letCaseEnv*> buildCaseEnvs(_case* caseNode);
     void buildInternalsAst();
     void populateClassImplementationMaps();
     void populateMaps(string klass); //helper method

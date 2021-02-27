@@ -81,7 +81,7 @@ void ParserDriver::buildEnvs() {
         for(int i = 0; i < attrs.size(); ++i) {
             _attr* attr = attrs[i];
 
-            class_env->symTable.insert({attr->id, new objRec(attr, attr->lineNo, i)});
+            class_env->symTable.insert({attr->id, new objRec(attr, attr->lineNo, i, attr->type)});
         }
         vector<_method*>& methods = klass->featureList.second;
         for(int i = 0; i < methods.size(); ++i) {
@@ -90,7 +90,7 @@ void ParserDriver::buildEnvs() {
             methodEnv* method_env = new methodEnv(class_env, method->id);
 
             class_env->methodsSymTable.insert({method->id,
-                new methodRec(method, method->lineNo, method->formalsList.size(), method_env)});
+                new methodRec(method, method->lineNo, method->formalsList.size(), method_env, i, method->returnType)});
         }
     }
 }
@@ -130,7 +130,14 @@ void ParserDriver::populateMaps(string klass) {
         }
 
         //methods
-        for(map<string, methodRec*>::iterator it = curClassEnv->methodsSymTable.begin(); it != curClassEnv->methodsSymTable.end(); it++) {
+        //map has them in ascending alphabetical order, but we want to iterate in the order we encountered
+        vector<pair<string, methodRec*>> orderedMethods(curClassEnv->methodsSymTable.begin(), curClassEnv->methodsSymTable.end());
+        sort(orderedMethods.begin(), orderedMethods.end(), [](const pair<string, methodRec*> lhs, const pair<string, methodRec*> rhs) {
+            return lhs.second->encountered < rhs.second->encountered;
+        });
+
+
+        for(vector<pair<string, methodRec*>>::iterator it = orderedMethods.begin(); it != orderedMethods.end(); it++) {
             if(methods.find(it->first) == methods.end()) { //did not find this method in the map
                 methods.insert({it->first, {it->second, methodCounter++}});
             }
@@ -149,9 +156,12 @@ void ParserDriver::populateClassImplementationMaps() {
     vector<_class*> classListFull = ast->classList;
     classListFull.insert(classListFull.end(), internalsAst->classList.begin(), internalsAst->classList.end());
 
+    //initialize
     for(_class* klass : classListFull) {
         inherGraph.insert({klass->id, {klass->superId, set<string>()}});
-        //note that [] creates an entry if it doesn't exist
+    }
+    //populate
+    for(_class* klass : classListFull) {
         inherGraph[klass->superId].second.insert(klass->id);
         visited[klass->id] = false;
     } visited["Object"] = false;
@@ -274,6 +284,7 @@ string ParserDriver::computeLub(set<string> s) {
         while(currentParent != "Object") {
             currentPath.push_back(currentParent);
             currentParent = inherGraph.at(currentParent).first;
+
         }
     }
 
@@ -294,5 +305,25 @@ string ParserDriver::computeLub(set<string> s) {
         const vector<string>& somePath = (*(inheritancePaths.begin())).second;
         return somePath[shortestPath - 1];
     }
+
+}
+
+letCaseEnv* ParserDriver::buildLetEnv(_let* letNode) {
+    letCaseEnv* returnThis = new letCaseEnv(top, "let" + to_string(encountered));
+    for(int i = 0; i < letNode->bindingList.size(); ++i) {
+        returnThis->symTable.insert({letNode->bindingList[i]->id, new objRec(letNode->bindingList[i], letNode->bindingList[i]->lineNo, i, letNode->bindingList[i]->type)});
+    }
+    return returnThis;
+}
+
+vector<letCaseEnv*> ParserDriver::buildCaseEnvs(_case* caseNode) {
+    vector<letCaseEnv*> returnThis;
+    for(int i = 0; i < caseNode->caseList.size(); ++i) {
+        returnThis.push_back(
+            new letCaseEnv(top, "case" + to_string(encountered) + '_' + to_string(i)));
+        _caseElement* caseElem = caseNode->caseList[i];
+        returnThis[i]->symTable.insert({caseElem->id, new objRec(caseElem, caseElem->lineNo, i, caseElem->type)});
+    }
+    return returnThis;
 
 }

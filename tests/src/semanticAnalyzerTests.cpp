@@ -7,7 +7,9 @@ using namespace std;
 
 class semanticAnalyzerFixture : public testing::TestWithParam<string> {
 protected:
-    ParserDriver drv;
+    //TODO: find out why only an instance ParserDriver is working instead of one with the fixture
+    //ParserDriver drv
+
     const string TYPE = "--type";
 
     stringstream expected, actual;
@@ -15,8 +17,14 @@ protected:
     void SetUp() override {
         generateReference(expected, GetParam(), TYPE);
     }
+    void TearDown() override {
+
+    }
 };
 TEST_P(semanticAnalyzerFixture, positive) {
+    //TODO: find out why only an instance ParserDriver is working instead of one with the fixture
+    ParserDriver drv;
+
     drv.parse(buildToResourcesPath + "CoolPrograms/" + GetParam());
     drv.buildInternalsAst();
     drv.buildEnvs();
@@ -43,21 +51,27 @@ INSTANTIATE_TEST_SUITE_P(positiveSemanticAnalyzer, semanticAnalyzerFixture, test
     "letExprOneBindingNoInit.cl",
     "letExprOneBindingInit.cl",
     "letExprMultipleBindingsMixedInit.cl",
+    "letExprTricky.cl",
     "blockExprFiveExpressions.cl",
     "assignExpr.cl",
     "assignTricky.cl",
-    "caseExprOneCase.cl"
-//    "caseExprManyCases.cl"
-//    "ifExpression.cl",
-//    "ifWhileExpressions.cl",
-//    "isvoidExpr.cl",
-//    "staticDispatchExpr.cl",
+    "newExpr.cl",
+    "caseExprOneCase.cl",
+    "caseExprManyCases.cl",
+    "caseExprTricky.cl",
+    "ifExpression.cl",
+    "whileExpression.cl",
+    "isvoidExpr.cl",
+    "identifierExpr.cl",
+    "selfDispatchNoArgs.cl",
+    "selfDispatchOneArg.cl",
+    "selfDispatchTwoArgs.cl",
+    "selfDispatchFiveArgs.cl"
+//    "staticDispatchExpr.cl"
 //    "staticDispatchExpr2.cl",
-//    "selfDispatchExpr.cl",
 //    "dynamicDispatchExpr.cl",
 //    "SELF_TYPE.cl",
-//    "identifierExpr.cl",
-//    "classMapNoInitializations.cl",
+
 //    "assignMismatchButConforms.cl"
 ));
 //INSTANTIATE_TEST_SUITE_P(semanticAnalyzerFull, semanticAnalyzerFixture, testing::Values(

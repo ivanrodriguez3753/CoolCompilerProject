@@ -228,7 +228,7 @@ public:
      * but we sometimes want to skip prev links all the way back up to the globalEnv.
      * @param methodEnv
      */
-    virtual void decorate(ParserDriver& drv) {std::cout << "should not have been called!\n"; exit(0);}
+    virtual void decorate(ParserDriver& drv) = 0;
 
 };
 
@@ -239,7 +239,7 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override;
     void print(ostream& os) const override;
 
-    void decorate(ParserDriver& drv);
+    void decorate(ParserDriver& drv) override;
 
     _bool(int l, bool v) : _expr(l), value(v) {}
 };
@@ -325,8 +325,9 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
 
-
     _id(int l, string v) : _expr(l), value(v) { }
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _dispatch : public _expr {
@@ -335,6 +336,7 @@ public:
     vector<_expr*> argList;
 
     _dispatch(int l, string i, vector<_expr*> aL) : _expr(l), id(i), argList(aL) {}
+
 };
 
 class _selfDispatch : public _dispatch {
@@ -343,6 +345,9 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
+
+    void decorate(ParserDriver& drv) override;
+
 };
 
 class _dynamicDispatch : public _dispatch {
@@ -353,6 +358,9 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
+
+    void decorate(ParserDriver& drv) override;
+
 };
 
 class _staticDispatch : public _dispatch {
@@ -365,6 +373,9 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
+
+    void decorate(ParserDriver& drv) override;
+
 };
 
 class _if : public _expr {
@@ -377,6 +388,9 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
+
+    void decorate(ParserDriver& drv) override;
+
 };
 
 class _while : public _expr {
@@ -388,6 +402,9 @@ public:
 
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
+
+    void decorate(ParserDriver& drv) override;
+
 };
 
 class _assign : public _expr {
@@ -411,6 +428,7 @@ public:
 
     _string(int l, string v) : _expr(l), value(v) {}
 
+    void decorate(ParserDriver& drv) override;
 };
 
 class _block : public _expr {
@@ -434,6 +452,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _isvoid : public _expr {
@@ -444,6 +464,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _arith : public _expr {
@@ -461,6 +483,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _relational : public _expr {
@@ -477,6 +501,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _unary : public _expr {
@@ -492,6 +518,8 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 
 class _internal : public _expr {
@@ -502,5 +530,7 @@ public:
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
+
+    void decorate(ParserDriver& drv) override;
 };
 #endif //COOLCOMPILERPROJECT_AST_H
