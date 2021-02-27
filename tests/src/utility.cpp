@@ -30,7 +30,7 @@ void generateReference(ostream& o, const string fileName, const string compilerS
     ifsRef.close();
 };
 
-void writeMyOutputToCoolPrograms(string actualOutput, string fileName) {
+void writeMyOutputToCoolProgramsDir(string actualOutput, string fileName) {
     ofstream ofs(buildToResourcesPath + "CoolPrograms/" + fileName);
     ofs << actualOutput;
 }

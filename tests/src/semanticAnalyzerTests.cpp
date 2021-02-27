@@ -40,7 +40,7 @@ TEST_P(semanticAnalyzerFixture, positive) {
     drv.ast->print(actual);
 
 
-    writeMyOutputToCoolPrograms(actual.str(), GetParam() + "-type-ivan");
+    writeMyOutputToCoolProgramsDir(actual.str(), GetParam() + "-type-ivan");
 
     ASSERT_EQ(actual.str(), expected.str());
 }
@@ -66,23 +66,29 @@ INSTANTIATE_TEST_SUITE_P(positiveSemanticAnalyzer, semanticAnalyzerFixture, test
     "selfDispatchNoArgs.cl",
     "selfDispatchOneArg.cl",
     "selfDispatchTwoArgs.cl",
-    "selfDispatchFiveArgs.cl"
-//    "staticDispatchExpr.cl"
-//    "staticDispatchExpr2.cl",
-//    "dynamicDispatchExpr.cl",
+    "selfDispatchFiveArgs.cl",
+    "staticDispatchNoArgs.cl",
+    "staticDispatchOneArg.cl",
+    "staticDispatchTwoArgs.cl",
+    "staticDispatchFiveArgs.cl",
+    "dynamicDispatchNoArgs.cl",
+    "dynamicDispatchOneArg.cl",
+    "dynamicDispatchTwoArgs.cl",
+    "dynamicDispatchFiveArgs.cl"
+
 //    "SELF_TYPE.cl",
 
 //    "assignMismatchButConforms.cl"
 ));
-//INSTANTIATE_TEST_SUITE_P(semanticAnalyzerFull, semanticAnalyzerFixture, testing::Values(
-//    "CoolProgramsFull/arith.cl",
-//    "CoolProgramsFull/atoi.cl",
-//    "CoolProgramsFull/cells.cl",
-//    "CoolProgramsFull/hello-world.cl",
-//    "CoolProgramsFull/hs.cl",
-//    "CoolProgramsFull/list.cl",
-//    "CoolProgramsFull/new-complex.cl",
-//    "CoolProgramsFull/primes.cl",
-//    "CoolProgramsFull/print-cool.cl",
-//    "CoolProgramsFull/sort-list.cl"
-//));
+INSTANTIATE_TEST_SUITE_P(semanticAnalyzerFull, semanticAnalyzerFixture, testing::Values(
+    "CoolProgramsFull/arith.cl",
+    "CoolProgramsFull/atoi.cl",
+    "CoolProgramsFull/cells.cl",
+    "CoolProgramsFull/hello-world.cl",
+    "CoolProgramsFull/list.cl",
+    "CoolProgramsFull/new-complex.cl",
+    "CoolProgramsFull/primes.cl",
+    "CoolProgramsFull/print-cool.cl",
+    "CoolProgramsFull/sort-list.cl",
+    "CoolProgramsFull/hs.cl"
+));

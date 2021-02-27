@@ -101,6 +101,12 @@ public:
 
     pair<vector<_attr*>, vector<_method*>> featureList;
 
+    /**
+     * traversing the _attr->optInit expression is more convenient if we have a _method* context, but we don't want
+     * this on the symbol table.
+     */
+    methodEnv* assemblyConstructorEnv;
+
     classRec* rec;
 
     _class(int l, int sl, string id, string sId, pair<vector<_attr*>, vector<_method*>> fL) : _env(l, id), superId(sId), featureList(fL), superLineNo(sl) {
@@ -117,6 +123,7 @@ public:
     void prettyPrint(ostream& os, const string indentPrefix) const;
     void print(ostream& os) const override;
     void decorate(ParserDriver& drv) override;
+    void decorateAttrInitExprs(ParserDriver& drv);
 };
 
 class _feature {

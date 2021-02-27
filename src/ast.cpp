@@ -167,12 +167,14 @@ void _selfDispatch::decorate(ParserDriver &drv) {
         arg->decorate(drv);
     }
 
+    //SELF_TYPE resolution isn't needed since only implementationMap expects resolved SELF_TYPEs
     type = drv.implementationMap.at(drv.currentClassEnv->id).at(id).first->returnType;
     isDecorated = true;
 }
 
 void _dynamicDispatch::print(ostream &os) const {
     os << caller->lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "dynamic_dispatch" << endl;
 
     caller->print(os);
@@ -187,11 +189,31 @@ void _dynamicDispatch::print(ostream &os) const {
 }
 
 void _dynamicDispatch::decorate(ParserDriver &drv) {
+    for(_expr* arg : argList) {
+        arg->decorate(drv);
+    }
+    caller->decorate(drv);
 
+    string trueType;
+
+    string callerType = caller->type;
+    string callerTypeResolved = callerType;
+    //resolve the caller's type, in case it is SELF_TYPE
+    if(callerTypeResolved == "SELF_TYPE") callerTypeResolved = drv.currentClassEnv->id;
+
+    string methodReturnType = drv.implementationMap.at(callerTypeResolved).at(id).first->returnType;
+    if(methodReturnType == "SELF_TYPE") {
+        type = callerType; //we want to be able to return SELF_TYPE. we just needed to resolve to search implementationMap
+    }
+    else if(methodReturnType != "SELF_TYPE") {//TODO document this section. using else if to be clear, but after documentation just use else
+        type = methodReturnType;
+    }
+    isDecorated = true;
 }
 
 void _staticDispatch::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "static_dispatch" << endl;
 
     caller->print(os);
@@ -213,6 +235,14 @@ void _staticDispatch::decorate(ParserDriver &drv) {
     for(_expr* arg : argList) {
         arg->decorate(drv);
     }
+
+    caller->decorate(drv);
+
+    //resolve SELF_TYPE if necessary (someExpr@SELF_TYPE.methodName())
+    string resolvedAtType = staticType;
+    if(resolvedAtType == "SELF_TYPE") resolvedAtType = drv.currentClassEnv->id;
+    type = drv.implementationMap.at(resolvedAtType).at(id).first->returnType;
+    isDecorated = true;
 }
 
 void _id::print(ostream &os) const {
@@ -241,15 +271,31 @@ void _id::decorate(ParserDriver &drv) {
     }
 
     //method parameters (methodEnv)
-    if(!foundId) {
+    if(!foundId) { //don't search method parameters if we are initializing attributes
         obj = drv.currentMethodEnv->getRec(value);
         if(obj) foundId = true;
     }
 
-    //attributes (classEnv)
+    //attributes (classEnv, and all parents classEnv's)
     if(!foundId) {
-        obj = drv.currentClassEnv->getRec(value);
-        if(obj) foundId = true;
+
+        classEnv* localCurrentClassEnv = drv.currentClassEnv;
+        while(localCurrentClassEnv != nullptr) {
+            obj = localCurrentClassEnv->getRec(value);
+            if(obj) {
+                foundId = true;
+                break;
+            }
+            //update localCurrentClassEnv as to traverse the inheritance chain
+            //need to go all the way up, but Object doesn't have attributes so we don't need to check it
+            string nextParent = drv.env->getRec(localCurrentClassEnv->id)->parent;
+            if(nextParent != "Object") {
+                localCurrentClassEnv = drv.env->getRec(nextParent)->link;
+            }
+            else {
+                localCurrentClassEnv = nullptr;
+            }
+        }
     }
 
     type = obj->staticType;
@@ -258,6 +304,7 @@ void _id::decorate(ParserDriver &drv) {
 
 void _string::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
     os << "string" << endl;
     os << value << endl;
 }
@@ -283,10 +330,6 @@ void _if::decorate(ParserDriver &drv) {
     eelse->decorate(drv);
 
     set<string> staticTypes{tthen->type, eelse->type};
-    if(staticTypes.find("SELF_TYPE") != staticTypes.end()) {
-        staticTypes.erase("SELF_TYPE");
-        staticTypes.insert(drv.currentClassEnv->id); //resolved SELF_TYPE
-    }
 
     type = drv.computeLub(staticTypes);
     isDecorated = true;
@@ -362,6 +405,8 @@ void _isvoid::decorate(ParserDriver &drv) {
 
 void _arith::print(ostream &os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
+
     if(OP == OPS::PLUS) os << "plus" <<  endl;
     else if(OP == OPS::MINUS) os << "minus" <<  endl;
     else if(OP == OPS::TIMES) os << "times" <<  endl;
@@ -372,12 +417,17 @@ void _arith::print(ostream &os) const {
 }
 
 void _arith::decorate(ParserDriver &drv) {
+    lhs->decorate(drv);
+    rhs->decorate(drv);
+
     type = "Int";
     isDecorated = true;
 }
 
 void _relational::print(ostream& os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
+
     if(OP == OPS::LT) os << "lt" << endl;
     else if(OP == OPS::LE) os << "le" << endl;
     else if(OP == OPS::EQUALS) os << "eq" << endl;
@@ -387,12 +437,17 @@ void _relational::print(ostream& os) const {
 }
 
 void _relational::decorate(ParserDriver &drv) {
+    lhs->decorate(drv);
+    rhs->decorate(drv);
+
     type = "Bool";
     isDecorated = true;
 }
 
 void _unary::print(ostream& os) const {
     os << lineNo << endl;
+    if(isDecorated) os << type << endl;
+
     if(OP == 0) os << "not" << endl;
     else if(OP == 1) os << "negate" << endl;
 
@@ -400,6 +455,8 @@ void _unary::print(ostream& os) const {
 }
 
 void _unary::decorate(ParserDriver &drv) {
+    expr->decorate(drv);
+
     if(OP == OPS::NEG) type = "Int";
     else if(OP == OPS::NOT) type = "Bool";
 
@@ -409,8 +466,8 @@ void _unary::decorate(ParserDriver &drv) {
 void _let::print(ostream& os) const {
     os << lineNo << endl;
     if(isDecorated) os << type << endl;
-    os << "let" << endl;
 
+    os << "let" << endl;
     os << bindingList.size() << endl;
     for(_letBinding* letBinding : bindingList) {
         letBinding->print(os);
@@ -483,11 +540,27 @@ void _program::decorate(ParserDriver& drv) {
 }
 
 void _class::decorate(ParserDriver& drv) {
-    for(_attr* attr : featureList.first) {
-        if(attr->optInit) {
-            attr->optInit->decorate(drv);
-        }
+    assemblyConstructorEnv = new methodEnv(nullptr, "");
+
+    //TODO use class map for this instead of traversing links
+    //set up all attributes including inherited attributes.
+    classEnv* currentTraverseInh = drv.currentClassEnv;
+    while(currentTraverseInh != nullptr) {
+        assemblyConstructorEnv->symTable.insert(currentTraverseInh->symTable.begin(), currentTraverseInh->symTable.end());
+
+        //update currentTraverseInh
+        string nextParent = drv.env->getRec(currentTraverseInh->id)->parent;
+        if(nextParent != "Object") currentTraverseInh = drv.env->getRec(nextParent)->link;
+        else currentTraverseInh = nullptr;
     }
+
+    assemblyConstructorEnv->symTable.insert({"self", new objRec(nullptr, 0, -1, "SELF_TYPE")});
+    //the 0 and -1 parameters are more or less unimportant
+
+    drv.currentMethodEnv = assemblyConstructorEnv;
+    decorateAttrInitExprs(drv);
+    drv.currentMethodEnv = nullptr;
+
     for(_method* method : featureList.second) {
         drv.currentMethodEnv = drv.currentClassEnv->getMethodRec(method->id)->link;
         method->body->decorate(drv);
@@ -554,21 +627,18 @@ void _case::decorate(ParserDriver& drv) {
     set<string> choices;
     for(int i = 0; i < caseList.size(); ++i) {
         _caseElement* caseElem = caseList[i];
-        choices.insert(caseElem->type);
 
         drv.top = caseEnvs[i];
         caseElem->decorate(drv);
+
+        choices.insert(caseElem->caseBranch->type);
+
         drv.top = drv.top->prevLetCase;
     }
 
-    //resolve SELF_TYPE branch, if any
-    set<string>::iterator selfTypeIt = choices.find("SELF_TYPE");
-    if(selfTypeIt != choices.end()) {
-        choices.erase(selfTypeIt);
-        choices.insert(drv.currentClassEnv->id);
-    }
 
     type = drv.computeLub(choices);
+
     isDecorated = true;
 }
 

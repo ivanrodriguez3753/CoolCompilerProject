@@ -20,5 +20,5 @@ extern const string buildToResourcesPath;
  * @return
  */
 void generateReference(ostream& expected, const string fileName, const string compilerStage);
-void writeMyOutputToCoolPrograms(string actualOutput, string fileName);
+void writeMyOutputToCoolProgramsDir(string actualOutput, string fileName);
 #endif //COOLCOMPILERPROJECT_UTILITY_H

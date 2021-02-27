@@ -26,8 +26,8 @@ class ParserDriver {
 public:
     int encountered = 0;
 
-    classEnv* currentClassEnv;
-    methodEnv* currentMethodEnv;
+    classEnv* currentClassEnv = nullptr;
+    methodEnv* currentMethodEnv = nullptr;
 
     _program* bisonProduct;
 
@@ -38,10 +38,10 @@ public:
     /**
      * points to the current letCaseEnv
      */
-    letCaseEnv* top;
+    letCaseEnv* top = nullptr;
     int letCaseCounter = 0;
 
-    map<string, set<pair<objRec*, int>>> classMap;
+    map<string, map<string, pair<objRec*, int>>> classMap;
 
     /**
      * methodRec* has info about defining class, and int is the position. Don't change the position if the child overrides

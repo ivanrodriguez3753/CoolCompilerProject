@@ -92,6 +92,13 @@ void ParserDriver::buildEnvs() {
             class_env->methodsSymTable.insert({method->id,
                 new methodRec(method, method->lineNo, method->formalsList.size(), method_env, i, method->returnType)});
         }
+        int formalCtr = 0;
+        for(auto method : class_env->methodsSymTable) {
+            method.second->link->symTable.insert({"self", new objRec(nullptr, 0, -1, "SELF_TYPE")}); //TODO: set offset to a negative but investigate what needs to be done so that self is in the symTable for each method but doesn't affect other things
+            for(auto formal : ((_method*)(method.second->treeNode))->formalsList) {
+                method.second->link->symTable.insert({formal->id, new objRec(formal, formal->lineNo, formalCtr++, formal->type)});
+            }
+        }
     }
 }
 
@@ -102,7 +109,7 @@ void ParserDriver::buildEnvs() {
 void ParserDriver::populateMaps(string klass) {
     set<string> attrsAlreadyAdded;
 
-    set<pair<objRec*, int>>& attrs = classMap[klass];
+    map<string, pair<objRec*, int>>& attrs = classMap[klass];
     map<string, pair<methodRec*, int>>& methods = implementationMap[klass];
 
     int attrCounter = 0;
@@ -120,13 +127,20 @@ void ParserDriver::populateMaps(string klass) {
         classEnv* curClassEnv = env->getRec(currentClass)->link;
 
         //attributes
-        for(map<string, rec*>::iterator it = curClassEnv->symTable.begin(); it != curClassEnv->symTable.end(); it++) {
-           if(attrsAlreadyAdded.find(it->first) != attrsAlreadyAdded.end()) {
+        vector<pair<string, objRec*>> orderedAttrs;
+        for(pair<string, rec*> attrPair : curClassEnv->symTable) {
+            orderedAttrs.push_back({attrPair.first, (objRec*)attrPair.second});
+        }
+        sort(orderedAttrs.begin(), orderedAttrs.end(), [](const pair<string, objRec*> lhs, const pair<string, objRec*> rhs) {
+            return lhs.second->localOffset < rhs.second->localOffset;
+        });
+        for(pair<string, objRec*> attr : orderedAttrs) {
+           if(attrsAlreadyAdded.find(attr.first) != attrsAlreadyAdded.end()) {
                cerr << "this attr has already been defined\n";
                cerr << "skipping redefinition of this attr\n";
                continue;
             }
-            attrs.insert({curClassEnv->getRec(it->first), attrCounter++});
+            attrs.insert({attr.first, {curClassEnv->getRec(attr.first), attrCounter++}});
         }
 
         //methods
@@ -188,22 +202,24 @@ void ParserDriver::printClassMap(ostream& os){
     os << "class_map" << endl;
     os << classMap.size() << endl;
 
-    //C++ maps are ordered by std::less by default, and we need it to print in alphabetical order
-    for(map<string, set<pair<objRec*, int>>>::iterator it = classMap.begin(); it != classMap.end(); it++) {
+    //C++ maps are ordered by std::less by default, and we need it to print classes in alphabetical order
+    for(map<string, map<string, pair<objRec*, int>>>::iterator it = classMap.begin(); it != classMap.end(); it++) {
         os << it->first << endl;
         os << it->second.size() << endl;
 
+        map<string, pair<objRec*, int>> currentMap = it->second;
 
-
-
-        //essentially convert from map w location info to a vector
-        vector<objRec*> orderedAttributes(it->second.size());
-        for(pair<objRec*, int> attr : it->second) {
-            orderedAttributes[attr.second] = attr.first;
+//        essentially convert from map w location info to a vector
+        vector<pair<objRec*, int>> orderedAttributes;
+        for(pair<string, pair<objRec*, int>> attr : currentMap) {
+            orderedAttributes.push_back(attr.second);
         }
-
+        sort(orderedAttributes.begin(), orderedAttributes.end(), [](const pair<objRec*, int> lhs, const pair<objRec*, int> rhs) {
+            return lhs.second < rhs.second;
+        });
         //print them, now that they are in order
-        for(objRec* obj : orderedAttributes) {
+        for(pair<objRec*, int> objPair : orderedAttributes) {
+            objRec* obj = objPair.first;
             _attr* attrObj = (_attr*)obj->treeNode;
             if(attrObj->optInit) {
                 os << "initializer" << endl;
@@ -266,7 +282,8 @@ void ParserDriver::printParentMap(ostream& os) {
 }
 
 /**
- * This method assumes that all SELF_TYPEs have been resolved to the containing class
+ * This method is compatible with and will return SELF_TYPE if appropriate, in unresolved form (the literal "SELF_TYPE")
+ * Compute the least upper bound of the classes in the set, that is, return the most recent common ancestor
  * @param s
  * @return
  */
@@ -276,6 +293,17 @@ string ParserDriver::computeLub(set<string> s) {
         abort();
     }
     else if(s.size() == 1) return *(s.begin());
+
+    //resolve SELF_TYPE choice, if any
+    bool removedSELF_TYPE = false;
+    set<string>::iterator selfTypeIt = s.find("SELF_TYPE");
+    if(selfTypeIt != s.end()) {
+        removedSELF_TYPE = true;
+        s.erase(selfTypeIt);
+
+        //resolve SELF_TYPE for the comparison/tree traversal
+        s.insert(currentClassEnv->id);
+    }
 
     map<string, vector<string>> inheritancePaths;
     for(string klass : s) {
@@ -297,19 +325,26 @@ string ParserDriver::computeLub(set<string> s) {
         }
     }
 
+    string lub;
+
     if(shortestPath == 0) {
-        return "Object";
+        lub =  "Object";
     }
     else {
         //get an arbitrary path and return the node that is shortestPath - 1 steps down from Object
         const vector<string>& somePath = (*(inheritancePaths.begin())).second;
-        return somePath[shortestPath - 1];
+        lub = somePath[shortestPath];
     }
+
+    if(removedSELF_TYPE && (lub == currentClassEnv->id)) lub = "SELF_TYPE"; //if the answer ended up being the resolved SELF_TYPE, we need to unresolve
+
+    return lub;
 
 }
 
 letCaseEnv* ParserDriver::buildLetEnv(_let* letNode) {
     letCaseEnv* returnThis = new letCaseEnv(top, "let" + to_string(encountered));
+
     for(int i = 0; i < letNode->bindingList.size(); ++i) {
         returnThis->symTable.insert({letNode->bindingList[i]->id, new objRec(letNode->bindingList[i], letNode->bindingList[i]->lineNo, i, letNode->bindingList[i]->type)});
     }
@@ -326,4 +361,15 @@ vector<letCaseEnv*> ParserDriver::buildCaseEnvs(_case* caseNode) {
     }
     return returnThis;
 
+}
+
+/**
+ * the caller, _class::decorate(ParserDriver& drv), has set up the drv.currentMethodEnv context, whose symTable has
+ * all attributes (including inherited attributes) and a self entry
+ * @param drv
+ */
+void _class:: decorateAttrInitExprs(ParserDriver &drv) {
+    for(_attr* attr : featureList.first) {
+        if(attr->optInit) attr->optInit->decorate(drv);
+    }
 }
