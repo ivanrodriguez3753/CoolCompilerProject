@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 project(CoolCompilerProjectTests)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_BINARY_DIR}/../src/lex.yy.cpp GENERATED)
 
@@ -12,6 +12,7 @@ add_executable(
     src/main.cpp
     src/astTests.cpp
     src/semanticAnalyzerTests.cpp
+    src/codegenTests.cpp
     src/utility.h src/utility.cpp
 )
 
@@ -37,8 +38,15 @@ target_include_directories(tests
 #link against stuff from main source code
 add_dependencies(tests CoolCompilerProject)
 
+find_package(LLVM REQUIRED CONFIG)
+include_directories(${LLVM_INCLUDE_DIRS})
+
+add_definitions(${LLVM_DEFINITIONS})
+llvm_map_components_to_libnames(llvm_libs core support irreader)
+
+
 #Link against Google Test library
-target_link_libraries(tests gmock_main gmock gtest MyLibrary stdc++)
+target_link_libraries(tests gmock_main gmock gtest MyLibrary stdc++ ${llvm_libs})
 target_link_directories(tests PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../src)
 
 #Build Google Test library

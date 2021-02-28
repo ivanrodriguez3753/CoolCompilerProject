@@ -15,6 +15,7 @@
 #include "environment.h"
 
 
+
 //give Flex the prototype of yylex we want...
 #define YY_DECL yy::parser::symbol_type yylex(ParserDriver& drv)
 //...and declare it for the parser's sake
@@ -69,6 +70,8 @@ public:
     void printClassMap(ostream& os);
     void printImplementationMap(ostream& os);
     void printParentMap(ostream& os);
+
+    void codegen();
 
     string computeLub(set<string> s);
 

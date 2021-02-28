@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.17)
 project(CoolCompilerProjectSource)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
@@ -29,9 +29,17 @@ endif()
 
 add_flex_bison_dependency(lexer parser)
 
+find_package(LLVM REQUIRED CONFIG)
+include_directories(${LLVM_INCLUDE_DIRS})
+
+add_definitions(${LLVM_DEFINITIONS})
+llvm_map_components_to_libnames(llvm_libs core support irreader)
+
+
 add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h environment.cpp)
-add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h environment.cpp)
-target_link_libraries(CoolCompilerProject MyLibrary stdc++)
+target_link_libraries(MyLibrary PUBLIC ${llvm_libs})
+add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h environment.cpp codegen.cpp codegen.h)
+target_link_libraries(CoolCompilerProject PUBLIC MyLibrary stdc++ ${llvm_libs})
 
 target_include_directories(CoolCompilerProject
     PUBLIC
