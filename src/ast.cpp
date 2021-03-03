@@ -298,7 +298,7 @@ void _id::decorate(ParserDriver &drv) {
         }
     }
 
-    type = obj->staticType;
+    type = obj->type;
     isDecorated = true;
 }
 

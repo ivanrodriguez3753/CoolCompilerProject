@@ -66,13 +66,13 @@ public:
 
 class objRec : public rec {
 public:
-    objRec(_symTable* node, int l, int o, string t) : rec(node, l), localOffset(o), staticType(t) {}
+    objRec(_symTable* node, int l, int o, string t) : rec(node, l), localOffset(o), type(t) {}
     /**
      * Used for offsetting off sp[i >= firstAttrOffset] for attributes,
      * fp[i >= 0] for method arguments, or fp[i < 0] for local variables.
      */
     const int localOffset; //self offset for attributes, fp[i >= 0] for method arguments, fp[i < 0] for local variables
-    const string staticType;
+    const string type;
 };
 
 

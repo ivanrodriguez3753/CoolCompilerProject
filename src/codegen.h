@@ -1,6 +1,3 @@
-//
-// Created by Ivan Rodriguez on 2/28/21.
-//
 
 
 #ifndef COOLCOMPILERPROJECTALL_CODEGEN_H
@@ -44,15 +41,36 @@ public:
         //Create a new builder for the module
         llvmBuilder = new llvm::IRBuilder<>(*llvmContext);
 
-        string result;
-        llvm::raw_string_ostream ss(result);
-        llvmModule->print(ss, nullptr);
-        cout << "Hello world!$$$\n";
-        cout << ss.str() << endl;
-        cout << "$$$\n";
+        //declare struct types (class types and vtable types) and functions
+        for(auto it : pdrv.implementationMap) {
+            llvm::StructType::create(*llvmContext, llvm::StringRef(it.first + "_class_type"));
+            llvm::StructType::create(*llvmContext, llvm::StringRef(it.first + "_vtable_type"));
+
+            for(auto methodIt : pdrv.implementationMap.at(it.first)) {
+                ;
+            }
+        }
+        //declare function types
+        for(auto it : pdrv.implementationMap)
+
+        //define struct types. first the _class_type's
+        for(auto it : pdrv.classMap) {
+            llvm::StructType* currentLlvmType = llvmModule->getTypeByName(it.first + "_class_type");
+
+            //Pointer to vtable followed by the real attributes, all of which are pointers to objects
+            vector<llvm::Type*> llvmAttributes(pdrv.classMap.at(it.first).size() + 1);
+            llvmAttributes.push_back(llvmModule->getTypeByName(it.first + "_vtable_type")->getPointerTo());
+            for(auto attrs : pdrv.classMap.at(it.first)) {
+                llvmAttributes[attrs.second.second + 1] = llvmModule->getTypeByName(attrs.second.first->type + "_class_type")->getPointerTo();
+            }
+            currentLlvmType->setBody(llvmAttributes);
+        }
+        //then the _vtable_type's
+        for(auto it : pdrv.implementationMap) {
+
+        }
     }
 
 
 };
-
 #endif //COOLCOMPILERPROJECTALL_CODEGEN_H
