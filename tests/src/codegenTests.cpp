@@ -33,10 +33,7 @@ TEST_P(codegenFixture, positive) {
     codegenDriver cdrv(drv);
 
 
-    string result;
-    llvm::raw_string_ostream ss(result);
-    cdrv.llvmModule->print(ss, nullptr);
-    cout << "$$$" + ss.str() + "$$$\n";
+
 }
 INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
         "bareMinimum.cl"
