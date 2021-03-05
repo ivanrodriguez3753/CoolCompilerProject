@@ -11,3 +11,5 @@ bison.pdf
 *.cl-asm
 *-ivan
 *.s
+
+tests/resources/cool
