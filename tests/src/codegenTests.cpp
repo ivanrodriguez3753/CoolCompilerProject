@@ -36,5 +36,17 @@ TEST_P(codegenFixture, positive) {
 
 }
 INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
-        "bareMinimum.cl"
+//        "hello-world.cl"
+));
+INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
+//        "CoolProgramsFull/arith.cl",
+//        "CoolProgramsFull/atoi.cl",
+//        "CoolProgramsFull/cells.cl",
+        "CoolProgramsFull/hello-world.cl"
+//        "CoolProgramsFull/list.cl",
+//        "CoolProgramsFull/new-complex.cl",
+//        "CoolProgramsFull/primes.cl",
+//        "CoolProgramsFull/print-cool.cl",
+//        "CoolProgramsFull/sort-list.cl",
+//        "CoolProgramsFull/hs.cl"
 ));

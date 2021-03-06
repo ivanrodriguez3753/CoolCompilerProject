@@ -31,10 +31,11 @@ public:
     llvm::IRBuilder<>* llvmBuilder;
     map<string, llvm::Value*> llvmNamedValues;
 
+
     void attempt1() {
         //declare struct types (class types and vtable types)
         for(auto it : pdrv.implementationMap) {
-            set<string> doingThese{"IO", "Object"};
+            set<string> doingThese{"IO", "Object", "Main", "String"};
             if(doingThese.find(it.first) == doingThese.end()) {
                 continue;
             }
@@ -46,7 +47,7 @@ public:
         //has to be in a separate loop from above because a method's parameter types might reference a class that has
         //not been defined yet (in the COOL source code).
         for(auto classIt : pdrv.implementationMap) {
-            set<string> doingThese{"IO", "Object"};
+            set<string> doingThese{"IO", "Object", "Main", "String"};
             if(doingThese.find(classIt.first) == doingThese.end()) {
                 continue;
             }
@@ -58,6 +59,7 @@ public:
                 //since all methods in Cool are virtual, we first push back a pointer to self
                 paramTypes.push_back(llvmModule->getTypeByName(llvm::StringRef(classIt.first + "_class_type"))->getPointerTo());
                 for (int i = 0; i < methodsIt.second->link->symTable.size() - 1; ++i) { //-1 b/c "self" is in symtable, which we accounted for above
+                    if(methodsIt.first == "out_string") continue; //TODO delete this
                     //everything in cool is an object, so we need pointers to attributes as attributes
                     //Since we only want one copy of each uniquely defined method, and we have a SELF_TYPE,
                     //we can't always use pointers to llvm types (except Object of course).
@@ -78,7 +80,7 @@ public:
             paramTypes.push_back(llvmModule->getTypeByName(llvm::StringRef(classIt.first + "_class_type"))->getPointerTo());
             //no parameters besides self for the constructor
             llvm::FunctionType* f_type = llvm::FunctionType::get(
-                    llvm::PointerType::getInt64PtrTy(*llvmContext),
+                    llvm::PointerType::getVoidTy(*llvmContext),
                     llvm::ArrayRef<llvm::Type*>(paramTypes),
                     false
             );
@@ -87,7 +89,7 @@ public:
 
         //define _class_types. first the _class_type's
         for(auto it : pdrv.classMap) {
-            set<string> doingThese{"IO", "Object"};
+            set<string> doingThese{"IO", "Object", "Main", "String"};
             if(doingThese.find(it.first) == doingThese.end()) {
                 continue;
             }
@@ -103,7 +105,7 @@ public:
         }
         //define_vtable_types
         for(auto it : pdrv.implementationMap) {
-            set<string> doingThese{"IO", "Object"};
+            set<string> doingThese{"IO", "Object", "Main", "String"};
             if(doingThese.find(it.first) == doingThese.end()) {
                 continue;
             }
@@ -129,7 +131,12 @@ public:
         llvm::BasicBlock* main_block = llvm::BasicBlock::Create(*llvmContext, "entry", main_func);
         llvmBuilder->SetInsertPoint(main_block);
 
-        hardcodeGlobalString();
+        llvm::AllocaInst* IO_instance = llvmBuilder->CreateAlloca(llvmModule->getTypeByName(llvm::StringRef("IO_class_type")), (unsigned)0, nullptr, "io_instance");
+        vector<llvm::Value*> params{IO_instance}; //TODO start here: essentially figure out how to get %io_instance to pass it into the call to IO..ctr
+//        vector<llvm::Value*> params{llvmBuilder->CreateAlloca(llvmModule->getTypeByName(llvm::StringRef("IO_class_type")), (unsigned)0, nullptr, "io_instance")}; //TODO start here: essentially figure out how to get %io_instance to pass it into the call to IO..ctr
+        llvmBuilder->CreateCall(llvmModule->getFunction(llvm::StringRef("IO..ctr")), llvm::ArrayRef<llvm::Value*>(params));
+        llvmBuilder->CreateCall(llvmModule->getFunction(llvm::StringRef("IO.out_string")), llvm::ArrayRef<llvm::Value*>(params));
+
 
         llvm::APInt returnValue(32, (uint32_t)0, true);
         llvmBuilder->CreateRet(llvm::ConstantInt::get(*llvmContext, returnValue));
@@ -137,6 +144,37 @@ public:
 
         llvm::verifyFunction(*main_func);
     }
+
+    void gen_callprintf() {
+        llvm::Function* printf = llvmModule->getFunction("printf");
+        vector<llvm::Value*> params{llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("string contents"), ".str.dummyTestString", 0, llvmModule)};
+        llvmBuilder->CreateCall(printf, params);
+    }
+
+    void define_IO_out_string() {
+        llvm::Function* out_string_func = llvmModule->getFunction("IO.out_string");
+        llvm::BasicBlock* out_string_block = llvm::BasicBlock::Create(*llvmContext, "entry", out_string_func);
+        llvmBuilder->SetInsertPoint(out_string_block);
+
+        gen_callprintf();
+
+        //TODO just return an i64* for now, return the actual correct thing later
+        llvm::Value* inttt = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), 123, false);
+        llvm::Value* v = llvmBuilder->CreateIntToPtr(inttt, llvm::Type::getInt64PtrTy(*llvmContext, 0));
+        llvmBuilder->CreateRet(v);
+
+
+        llvm::verifyFunction(*out_string_func);
+    }
+
+    void define_IO_ctr() {
+        llvm::Function* IO_ctr_func = llvmModule->getFunction("IO..ctr");
+        llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", IO_ctr_func);
+        llvmBuilder->SetInsertPoint(ctr_block);
+
+        llvmBuilder->CreateRetVoid();
+    }
+
 
     codegenDriver(ParserDriver& d) : pdrv(d) {
         //Open a new context and module
@@ -149,18 +187,13 @@ public:
 
         attempt1();
         declareExterns();
-        hardcodeGlobalString();
+        define_IO_ctr();
+        define_IO_out_string();
         genMain();
 
         llvmModule->print(llvm::outs(), nullptr);
     }
 
-    void hardcodeGlobalString() {
-        llvm::Function* printf = llvmModule->getFunction("printf");
-//        llvmBuilder->CreateGlobalString(llvm::StringRef("string contents"), ".str.dummyTestString", 0, llvmModule);
-        vector<llvm::Value*> params{llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("string contents"), ".str.dummyTestString", 0, llvmModule)};
-        llvmBuilder->CreateCall(printf, params);
-    }
 
     void declareExterns() {
         llvmModule->getOrInsertFunction(
