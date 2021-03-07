@@ -48,8 +48,10 @@ public:
 };
 class methodRec : public rec {
 public:
-    methodRec(_method* node, int l, int nA, methodEnv* link, int e, string rt) : rec((_symTable*)node, l), numArgs(nA), link(link), encountered(e), returnType(rt) { }
+    methodRec(_method* node, int l, int nA, methodEnv* link, int e, string rt, string& d) : rec((_symTable*)node, l), numArgs(nA), link(link), encountered(e), returnType(rt), definer(d) { }
     methodEnv* link;
+
+    string& definer;
 
     const int numArgs;
     int localOffset;

@@ -7,6 +7,7 @@
 #include <list>
 #include <vector>
 #include <iostream>
+#include "llvm/IR/Value.h"
 
 class node;
 class _symTable;
@@ -236,6 +237,7 @@ public:
      * @param methodEnv
      */
     virtual void decorate(ParserDriver& drv) = 0;
+    virtual llvm::Value* codegen(ParserDriver& drv) {cout << "THIS SHOULDN'T BE CALLED, ABORTING\n"; exit(0);}
 
 };
 
@@ -323,6 +325,7 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _id : public _expr {
@@ -355,6 +358,7 @@ public:
 
     void decorate(ParserDriver& drv) override;
 
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _dynamicDispatch : public _dispatch {

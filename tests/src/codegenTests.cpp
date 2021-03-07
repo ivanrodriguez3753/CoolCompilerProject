@@ -2,7 +2,6 @@
 
 #include "gtest/gtest.h"
 #include "utility.h"
-#include "codegen.h"
 
 #include "ParserDriver.hh"
 using namespace std;
@@ -27,22 +26,24 @@ TEST_P(codegenFixture, positive) {
     drv.buildEnvs();
     drv.populateClassImplementationMaps();
 
-    drv.internalsAst->decorateInternals(drv.env);
-    drv.ast->decorate(drv);
+    drv.internalsAst->decorateInternals(drv.env); //TODO: make a driver call
+    drv.ast->decorate(drv); //TODO: same. wrap in a driver call
 
-    codegenDriver cdrv(drv);
+    drv.codegen();
+
+//    codegenDriver cdrv(drv);
 
 
 
 }
 INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
-//        "hello-world.cl"
+    "printIntLiteral.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",
 //        "CoolProgramsFull/atoi.cl",
 //        "CoolProgramsFull/cells.cl",
-        "CoolProgramsFull/hello-world.cl"
+//        "CoolProgramsFull/hello-world.cl"
 //        "CoolProgramsFull/list.cl",
 //        "CoolProgramsFull/new-complex.cl",
 //        "CoolProgramsFull/primes.cl",

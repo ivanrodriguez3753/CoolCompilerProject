@@ -13,6 +13,8 @@
 #include "ast.h"
 #include "parser.hpp"
 #include "environment.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
 
 
 
@@ -35,6 +37,11 @@ public:
     _program* ast;
     _program* internalsAst;
     globalEnv* env;
+
+    llvm::LLVMContext* llvmContext;
+    llvm::Module* llvmModule;
+    llvm::IRBuilder<>* llvmBuilder;
+    map<string, llvm::Value*> llvmNamedValues;
 
     /**
      * points to the current letCaseEnv
@@ -99,6 +106,18 @@ public:
 
     friend class _node;
 private:
+    void initializeLLVM();
+    void genDeclarations();
+    void genClassAndVtableTypeDefs();
+        void addRawFields();
+    void genBasicClassMethodDefs();
+        void define_IO_ctr();
+        void define_IO_out_int();
+        void gen_callprintf_int();
+    void genAssemblyConstructors();
+    void genUserDefinedMethods();
+    void genLLVMMain();
+
 };
 
 

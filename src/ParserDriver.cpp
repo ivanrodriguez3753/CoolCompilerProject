@@ -92,7 +92,7 @@ void ParserDriver::buildEnvs() {
             methodEnv* method_env = new methodEnv(class_env, method->id);
 
             class_env->methodsSymTable.insert({method->id,
-                new methodRec(method, method->lineNo, method->formalsList.size(), method_env, i, method->returnType)});
+                new methodRec(method, method->lineNo, method->formalsList.size(), method_env, i, method->returnType, class_env->id)});
         }
         int formalCtr = 0;
         for(auto method : class_env->methodsSymTable) {
