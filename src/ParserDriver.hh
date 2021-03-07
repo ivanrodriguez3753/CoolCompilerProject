@@ -114,6 +114,7 @@ private:
         void define_IO_ctr();
         void define_IO_out_int();
         void gen_callprintf_int();
+        void gen_llvmStringTypeAndMethods();
     void genAssemblyConstructors();
     void genUserDefinedMethods();
     void genLLVMMain();
