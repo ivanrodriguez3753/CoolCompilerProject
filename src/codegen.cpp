@@ -6,15 +6,6 @@
 
 using namespace std;
 
-void ParserDriver::initializeLLVM() {
-    //Open a new context and module
-    llvmContext = new llvm::LLVMContext();
-    llvmModule = new llvm::Module("theModuleID", *llvmContext);
-
-    //Create a new builder for the module
-    llvmBuilder = new llvm::IRBuilder<>(*llvmContext);
-}
-
 void ParserDriver::genDeclarations() {
     //declare struct types (class types and vtable types)
     for(auto it : implementationMap) {
@@ -260,7 +251,6 @@ void ParserDriver::genLLVMMain() {
 }
 
 void ParserDriver::codegen() {
-    initializeLLVM();
     genDeclarations();
     genClassAndVtableTypeDefs();
     gen_llvmStringTypeAndMethods();
@@ -424,6 +414,14 @@ llvm::Value* _int::codegen(ParserDriver& drv) {
  * https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/appendix-a-how-to-implement-a-string-type-in-llvm/index.html
  */
 void ParserDriver::gen_llvmStringTypeAndMethods() {
+    llvm::Type* charTy = llvm::Type::getInt8Ty(*llvmContext);
+    llvm::PointerType* charPtrTy = llvm::Type::getInt8PtrTy(*llvmContext);
+    llvm::Type* int64Ty = llvm::Type::getInt64Ty(*llvmContext);
+    llvm::PointerType* int64PtrTy = llvm::Type::getInt64PtrTy(*llvmContext);
+    llvm::Type* voidTy = llvm::Type::getVoidTy(*llvmContext);
+    llvm::Value* nullTermChar =  llvm::ConstantInt::get(charTy, llvm::APInt(8, (uint64_t)0, true)); //Null terminating character
+
+
     //declare malloc
     llvm::FunctionType* malloc_ftype = llvm::FunctionType::get(llvm::Type::getInt8PtrTy(*llvmContext), vector<llvm::Type*>{llvm::Type::getInt64Ty(*llvmContext)}, false);
     llvmModule->getOrInsertFunction("malloc", malloc_ftype);
@@ -432,12 +430,9 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmModule->getOrInsertFunction("free", free_ftype);
     //declare memcpy
     llvm::FunctionType* memcpy_ftype = llvm::FunctionType::get(
-        llvm::Type::getInt8PtrTy(*llvmContext),
-        vector<llvm::Type*>{
-            llvm::Type::getInt8PtrTy(*llvmContext), llvm::Type::getInt8PtrTy(*llvmContext), llvm::Type::getInt64Ty(*llvmContext)
-        },
-        false
-    );
+        charPtrTy,
+        vector<llvm::Type*>{charPtrTy, charPtrTy, int64Ty},
+        false);
     llvmModule->getOrInsertFunction("memcpy", memcpy_ftype);
 
     //struct definition
@@ -449,72 +444,71 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     attributes.push_back(llvm::Type::getInt64Ty(*llvmContext));
     String->setBody(attributes);
 
+    //declare .concatChar because ..ctr uses it
+    vector<llvm::Type*> concatCharParams{String->getPointerTo(), charTy};
+    llvm::FunctionType* concatChar_func_type = llvm::FunctionType::get(voidTy, concatCharParams, false);
+    llvm::Function* concatChar_func = llvm::Function::Create(concatChar_func_type, llvm::GlobalValue::ExternalLinkage, "LLVMString.concatChar", llvmModule);
+
     llvm::Argument* this_ptr;
-    vector<llvm::Type*> params;//reuse this
-    params.push_back(llvmModule->getTypeByName("LLVMString")->getPointerTo());
+    vector<llvm::Type*> params{String->getPointerTo(), charPtrTy};
 
     //CONSTRUCTOR
     llvm::FunctionType* ctr_func_type = llvm::FunctionType::get(
         llvm::Type::getVoidTy(*llvmContext),
         params,
-        false
-    );
+        false);
     llvm::Function* ctr_func = llvm::Function::Create(ctr_func_type, llvm::GlobalValue::ExternalLinkage, 0, "LLVMString..ctr", llvmModule);
     this_ptr = ctr_func->getArg(0); this_ptr->setName("self");
+    llvm::Argument* globalString_ptr = ctr_func->getArg(1); globalString_ptr->setName("globalString_ptr");
     llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", ctr_func);
+    llvm::BasicBlock* loopSetup = llvm::BasicBlock::Create(*llvmContext, "loopSetup", ctr_func);
+    llvm::BasicBlock* loopHeader = llvm::BasicBlock::Create(*llvmContext, "loopHeader", ctr_func);
+    llvm::BasicBlock* loopBody = llvm::BasicBlock::Create(*llvmContext, "loopBody", ctr_func);
+    llvm::BasicBlock* loopEnd = llvm::BasicBlock::Create(*llvmContext, "loopEnd", ctr_func);
     llvmBuilder->SetInsertPoint(ctr_block);
-    llvm::Value* char_star_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("LLVMString"),
-        this_ptr,
-        0,
-        "char_ptr_ptr"
-    );
+    llvm::Value* char_star_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 0, "char_ptr_ptr");
+    llvmBuilder->CreateStore(llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(*llvmContext)), char_star_ptr);
+    llvm::Value* length_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 1, "length_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(*llvmContext)),
-        char_star_ptr
-    );
-    llvm::Value* length_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("LLVMString"),
-        this_ptr,
-        1,
-        "length_ptr"
-    );
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)0, true)),
+        length_ptr);
+    llvm::Value* maxlength_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 2, "maxlength_ptr");
     llvmBuilder->CreateStore(
         llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(*llvmContext),
-            llvm::APInt(64, (uint64_t)0, true)
-        ),
-        length_ptr
-    );
-    llvm::Value* maxlength_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("LLVMString"),
-        this_ptr,
-        2,
-        "maxlength_ptr"
-    );
+            llvm::APInt(64, (uint64_t)0, true)),
+        maxlength_ptr);
+    llvm::Value* factor_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 3, "factor_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(
-                llvm::Type::getInt64Ty(*llvmContext),
-                llvm::APInt(64, (uint64_t)0, true)
-        ),
-        maxlength_ptr
-    );
-    llvm::Value* factor_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("LLVMString"),
-        this_ptr,
-        3,
-        "factor_ptr"
-    );
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)16, true)),
+        factor_ptr);
+    llvmBuilder->CreateBr(loopSetup);
+
+    llvmBuilder->SetInsertPoint(loopSetup);
+    llvm::Value* acc_ptr = llvmBuilder->CreateAlloca(int64Ty, nullptr, "acc_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(*llvmContext),
-            llvm::APInt(64, (uint64_t)16, true)
-        ),
-        factor_ptr
-    );
+        llvm::ConstantInt::get(int64Ty, llvm::APInt(64, (uint64_t)0, true)),
+        acc_ptr);
+    llvmBuilder->CreateBr(loopHeader);
+
+    llvmBuilder->SetInsertPoint(loopHeader);
+    llvm::Value* acc = llvmBuilder->CreateLoad(int64Ty, acc_ptr, "acc");
+    llvm::Value* curCharPtr = llvmBuilder->CreateGEP(charTy, globalString_ptr, acc, "curCharPtr");
+    llvm::Value* curChar = llvmBuilder->CreateLoad(charTy, curCharPtr, "curChar");
+    llvm::Value* nullTermCheck_bool = llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_NE, curChar, nullTermChar, "nullTermCheck_bool");
+    llvmBuilder->CreateCondBr(nullTermCheck_bool, loopBody, loopEnd);
+
+    llvmBuilder->SetInsertPoint(loopBody);
+    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), vector<llvm::Value*>{this_ptr, curChar});
+    llvm::Value* accplusone = llvmBuilder->CreateAdd(acc, llvm::ConstantInt::get(int64Ty, 1), "accplusone");
+    llvmBuilder->CreateStore(accplusone, acc_ptr);
+    llvmBuilder->CreateBr(loopHeader);
+
+    llvmBuilder->SetInsertPoint(loopEnd);
     llvmBuilder->CreateRetVoid();
 
     //DESTRUCTOR
+    params.erase(--(params.end()));
     llvm::FunctionType* dtr_func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), params, false);
     llvm::Function* dtr_func = llvm::Function::Create(dtr_func_type, llvm::GlobalValue::ExternalLinkage, 0, "LLVMString..dtr", llvmModule);
     this_ptr = dtr_func->getArg(0);  this_ptr->setName("self");//check if need to set name again
@@ -545,8 +539,7 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateRetVoid();
 
     //RESIZE
-    //params has just an LLVMString*
-    params.push_back(llvm::Type::getInt64Ty(*llvmContext));
+    params.push_back(int64Ty);
     llvm::FunctionType* resize_func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), params, false);
     llvm::Function* resize_func = llvm::Function::Create(resize_func_type, llvm::GlobalValue::ExternalLinkage, 0, "LLVMString.resize", llvmModule);
     this_ptr = resize_func->getArg(0); this_ptr->setName("self");
@@ -565,9 +558,6 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateRetVoid();
 
     //CONCATCHAR
-    params[1] = llvm::Type::getInt8Ty(*llvmContext);
-    llvm::FunctionType* concatChar_func_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), params, false);
-    llvm::Function* concatChar_func = llvm::Function::Create(concatChar_func_type, llvm::GlobalValue::ExternalLinkage, "LLVMString.concatChar", llvmModule);
     this_ptr = concatChar_func->getArg(0); this_ptr->setName("self");
     r = concatChar_func->getArg(1); r->setName("value");
     llvm::BasicBlock* concatChar_block = llvm::BasicBlock::Create(*llvmContext, "entry", concatChar_func);
@@ -593,7 +583,7 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     //append to position length (last index is currently length - 1)
     llvm::Value* bufferAtPosLength_ptr = llvmBuilder->CreateGEP(char_ptr, length);
     llvmBuilder->CreateStore(r, bufferAtPosLength_ptr);
-    llvm::Value* lengthplusone = llvmBuilder->CreateAdd(length, llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), 1), "lengthplusone");
+    llvm::Value* lengthplusone = llvmBuilder->CreateAdd(length, llvm::ConstantInt::get(int64Ty, 1), "lengthplusone");
     llvmBuilder->CreateStore(lengthplusone, length_ptr);
     llvmBuilder->CreateRetVoid();
 
@@ -622,7 +612,7 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateCondBr(repeat_bool, loop_body, loop_end);
     llvmBuilder->SetInsertPoint(loop_body);
     llvm::Value* curChar_ptr = llvmBuilder->CreateGEP(char_ptr, i, "curChar_ptr");
-    llvm::Value* curChar = llvmBuilder->CreateLoad(curChar_ptr, "curChar");
+    curChar = llvmBuilder->CreateLoad(curChar_ptr, "curChar");
     llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), vector<llvm::Value*>{this_ptr, curChar});
     //i++
     llvm::Value* iplusone = llvmBuilder->CreateAdd(i, llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), 1), "iplusone");

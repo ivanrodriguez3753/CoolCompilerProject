@@ -38,9 +38,9 @@ public:
     _program* internalsAst;
     globalEnv* env;
 
-    llvm::LLVMContext* llvmContext;
-    llvm::Module* llvmModule;
-    llvm::IRBuilder<>* llvmBuilder;
+    llvm::LLVMContext* llvmContext = new llvm::LLVMContext();
+    llvm::Module* llvmModule = new llvm::Module("theModuleID", *llvmContext);
+    llvm::IRBuilder<>* llvmBuilder = new llvm::IRBuilder<>(*llvmContext);
     map<string, llvm::Value*> llvmNamedValues;
 
     /**
@@ -106,7 +106,6 @@ public:
 
     friend class _node;
 private:
-    void initializeLLVM();
     void genDeclarations();
     void genClassAndVtableTypeDefs();
         void addRawFields();
