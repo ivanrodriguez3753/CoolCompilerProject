@@ -433,6 +433,7 @@ public:
 class _string : public _expr {
 public:
     const string value;
+    int llvmKey; //string literals are enumarated, using the enumeration appended to ".str." as its identifier
 
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void print(ostream& os) const override;
@@ -440,6 +441,7 @@ public:
     _string(int l, string v) : _expr(l), value(v) {}
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _block : public _expr {

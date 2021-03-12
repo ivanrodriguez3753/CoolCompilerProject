@@ -172,7 +172,6 @@ void ParserDriver::genUserDefinedMethods() {
         classRec* rec = (classRec*)classIt.second;
         for(auto methodIt : rec->link->methodsSymTable) {
             if(methodIt.first == "main" && classIt.first == "Main") {
-                //set up the LLVM context
                 currentClassEnv = env->getRec(classIt.first)->link;
                 currentMethodEnv = currentClassEnv->getMethodRec(methodIt.first)->link;
                 llvm::Function* func = llvmModule->getFunction(classIt.first + '.' + methodIt.first);
@@ -214,64 +213,7 @@ void ParserDriver::genLLVMMain() {
     llvm::AllocaInst* implicitMain_instance = llvmBuilder->CreateAlloca(llvmModule->getTypeByName(llvm::StringRef("Main_class_type")), (unsigned)0, nullptr, "implicitMain_instance");
     vector<llvm::Value*> params{implicitMain_instance};
     llvmBuilder->CreateCall(llvmModule->getFunction(llvm::StringRef("Main..ctr")), llvm::ArrayRef<llvm::Value*>(params));
-
     llvmBuilder->CreateCall(llvmModule->getFunction(llvm::StringRef("Main.main")), llvm::ArrayRef<llvm::Value*>(params));
-
-    //alloc and call LLVMString..ctr
-    llvm::Value* str_instance = llvmBuilder->CreateAlloca(llvmModule->getTypeByName("LLVMString"), 0, 0, "String_instance");
-    params.clear();
-    params.push_back(str_instance);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), params);
-
-    //add ABCDE\n through 6 calls to @LLVMString.concatChar
-    params.push_back(llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 65)); //A
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 66);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 67);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 68);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 69);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 10);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    //now call LLVMString.print which calls printf
-    params.clear();
-    params.push_back(str_instance);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.print"), params);
-
-    //alloc and call LLVMString..ctr
-    llvm::Value* str_instance2 = llvmBuilder->CreateAlloca(llvmModule->getTypeByName("LLVMString"), 0, 0, "String_instance2");
-    params.clear();
-    params.push_back(str_instance2);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), params);
-
-    //add FGHIJ\n through 6 calls to @LLVMString.concatChar
-    params.push_back(llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 70)); //A
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 71);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 72);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 73);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 74);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    params[1] = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*llvmContext), 10); //10 is \n
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), params);
-    //now call LLVMString.print which calls printf
-    params.clear();
-    params.push_back(str_instance2);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.print"), params);
-
-    //concat then print
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concat"), vector<llvm::Value*>{str_instance, str_instance2});
-    params.clear();
-    params.push_back(str_instance);
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.print"), params);
-
-
     llvm::APInt returnValue(32, (uint32_t)0, true);
     llvmBuilder->CreateRet(llvm::ConstantInt::get(*llvmContext, returnValue));
 
@@ -447,6 +389,13 @@ llvm::Value* _int::codegen(ParserDriver& drv) {
         raw_field_ptr
     );
     return Int_instance;
+}
+
+llvm::Value* _string::codegen(ParserDriver& drv) {
+    llvm::Value* str1 = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName(type + "_class_type"), 0, nullptr, "str1");
+    llvm::Value* globalStrPtr = drv.strLits.at(value).second;
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction(type + "..ctr"), vector<llvm::Value*>{str1, globalStrPtr});
+    return str1;
 }
 
 /**

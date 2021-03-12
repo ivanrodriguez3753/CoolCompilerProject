@@ -97,16 +97,17 @@ t[rR][uU][eE]			        	return make_TRUE(yytext, loc);
 <<EOF>>                             return yy::parser::make_YYEOF(loc);
 
 <STRLIT>{
-[0-9A-Za-z \.,?!\-\+_=/\\:;\<]*			{
-	                                    stringLiteral += string(yytext);}
+[0-9A-Za-z \.,?!\-\+_=\/\:;\<]*			{
+	                                    stringLiteral += string(yytext);
+	                                    }
     
     /*this rule is for typing \n within a string*/
-    /*
-    \\n 							    {yylval->lexeme += "\\n";
-                                        stringLiteral += '\n';}
-    \\t                                 {yylval->lexeme += "\\t";
-                                        stringLiteral += '\t';}
-    */
+    \\n 							    {
+                                        stringLiteral += '\n';
+                                        }
+    \\t                                 {
+                                        stringLiteral += '\t';
+                                        }
    	\"								    {
 	                                    lexeme = stringLiteral; //need to pass to the tokenizer but also reset it, so introduce "lexeme" as a temp
 	                                    stringLiteral = "";

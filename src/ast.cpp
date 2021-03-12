@@ -312,6 +312,15 @@ void _string::print(ostream &os) const {
 void _string::decorate(ParserDriver &drv) {
     type = "String";
     isDecorated = true;
+
+    if(drv.strLits.find(value) == drv.strLits.end()) {
+        llvmKey =  drv.strLits.size();
+        string llvmName = ".str." + to_string(llvmKey);
+        drv.strLits.insert({value, {llvmKey, drv.llvmBuilder->CreateGlobalStringPtr(value, llvmName, 0, drv.llvmModule)}});
+    }
+    else {
+        llvmKey = drv.strLits.at(value).first;
+    }
 }
 
 void _if::print(ostream& os) const {

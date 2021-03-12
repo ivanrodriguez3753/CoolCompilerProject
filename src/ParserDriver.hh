@@ -44,6 +44,11 @@ public:
     map<string, llvm::Value*> llvmNamedValues;
 
     /**
+     * map a string to its enumerated @globalValue identifier in LLVM (names are @.str.x)
+     */
+    map<string, pair<int, llvm::Constant*>> strLits;
+
+    /**
      * points to the current letCaseEnv
      */
     letCaseEnv* top = nullptr;
