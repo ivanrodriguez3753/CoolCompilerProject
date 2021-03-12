@@ -110,8 +110,10 @@ private:
     void genClassAndVtableTypeDefs();
         void addRawFields();
     void genBasicClassMethodDefs();
+        void define_String_ctr();
         void define_IO_ctr();
         void define_IO_out_int();
+    void define_IO_out_string();
         void gen_callprintf_int();
         void gen_llvmStringTypeAndMethods();
     void genAssemblyConstructors();

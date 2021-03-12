@@ -22,7 +22,6 @@ void ParserDriver::genDeclarations() {
             //since all methods in Cool are virtual, we first push back a pointer to self
             paramTypes.push_back(llvmModule->getTypeByName(llvm::StringRef(classIt.first + "_class_type"))->getPointerTo());
             for (int i = 0; i < methodsIt.second->link->symTable.size() - 1; ++i) { //-1 b/c "self" is in symtable, which we accounted for above
-                if(methodsIt.first == "out_string") continue; //TODO delete this
                 //everything in cool is an object, so we need pointers to attributes as attributes
                 //Since we only want one copy of each uniquely defined method, and we have a SELF_TYPE,
                 //we can't always use pointers to llvm types (except Object of course).
@@ -43,6 +42,7 @@ void ParserDriver::genDeclarations() {
         //ctr
         vector<llvm::Type*> paramTypes;
         paramTypes.push_back(llvmModule->getTypeByName(llvm::StringRef(classIt.first + "_class_type"))->getPointerTo());
+        if(classIt.first == "String") paramTypes.push_back(llvm::Type::getInt8PtrTy(*llvmContext));
         //no parameters besides self for the constructor
         llvm::FunctionType* f_type = llvm::FunctionType::get(
                 llvm::PointerType::getVoidTy(*llvmContext),
@@ -84,7 +84,7 @@ void ParserDriver::addRawFields() {
     //String
     llvm::StructType* llvmType = llvmModule->getTypeByName("String_class_type");
     vector<llvm::Type*> llvmAttributes{
-            llvmModule->getTypeByName("String_class_type")->getPointerTo(),
+            llvmModule->getTypeByName("String_vtable_type")->getPointerTo(),
             llvmModule->getTypeByName("LLVMString")
     };
     llvmType->setBody(llvmAttributes);
@@ -126,6 +126,29 @@ void ParserDriver::genClassAndVtableTypeDefs() {
     }
 }
 
+void ParserDriver::define_IO_out_string() {
+    llvm::Function* IO_out_string_func = llvmModule->getFunction("IO.out_string");
+    llvm::Value* self = IO_out_string_func->getArg(0); self->setName("self");
+    llvm::Value* printee = IO_out_string_func->getArg(1); printee->setName("printee");
+    llvm::BasicBlock* out_string_block = llvm::BasicBlock::Create(*llvmContext, "entry", IO_out_string_func);
+    llvmBuilder->SetInsertPoint(out_string_block);
+    llvm::Value* castedPrintee = llvmBuilder->CreatePointerCast(
+        printee,
+        llvmModule->getTypeByName("String_class_type")->getPointerTo(),
+        "castedPrintee");
+    //essentially using GEP to do a %castedPrintee->1->0 which accesses the LLVMString object, then LLVMString's i8*
+    vector<llvm::Value*> indices{
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), llvm::APInt(32, (uint64_t)1, true)),
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), llvm::APInt(32, (uint64_t)0, true))
+    };
+    llvm::Value* raw_LLVMString_ptr = llvmBuilder->CreateStructGEP(castedPrintee, 1, "raw_LLVMString_ptr");
+    llvm::Value* char_ptr_ptr = llvmBuilder->CreateStructGEP(raw_LLVMString_ptr, 0, "char_ptr_ptr");
+    llvm::Value* char_ptr = llvmBuilder->CreateLoad(char_ptr_ptr, "char_ptr");
+    llvmBuilder->CreateCall(llvmModule->getFunction("printf"), vector<llvm::Value*>{char_ptr});
+    llvm::Value* castedSelf = llvmBuilder->CreatePointerCast(self, llvm::Type::getInt64PtrTy(*llvmContext), "castedSelf");
+    llvmBuilder->CreateRet(castedSelf);
+}
+
 void ParserDriver::genBasicClassMethodDefs() {
     addRawFields();
     currentClassEnv = env->getRec("IO")->link;
@@ -133,6 +156,12 @@ void ParserDriver::genBasicClassMethodDefs() {
     define_IO_ctr();
     currentMethodEnv = currentClassEnv->getMethodRec("out_int")->link;
     define_IO_out_int();
+    currentMethodEnv = currentClassEnv->getMethodRec("out_string")->link;
+    define_IO_out_string();
+
+    currentClassEnv = env->getRec("String")->link;
+    currentMethodEnv = ((_class*)(env->getRec("IO")->treeNode))->assemblyConstructorEnv;
+    define_String_ctr();
 
     currentMethodEnv = nullptr;
     currentClassEnv = nullptr;
@@ -268,6 +297,17 @@ void ParserDriver::define_IO_ctr() {
     llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", IO_ctr_func);
     llvmBuilder->SetInsertPoint(ctr_block);
 
+    llvmBuilder->CreateRetVoid();
+}
+
+void ParserDriver::define_String_ctr() {
+    llvm::Function* String_ctr_func = llvmModule->getFunction("String..ctr");
+    llvm::Value* self = String_ctr_func->getArg(0); self->setName("self");
+    llvm::Value* globalString_ptr = String_ctr_func->getArg(1); globalString_ptr->setName("globalString_ptr");
+    llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", String_ctr_func);
+    llvmBuilder->SetInsertPoint(ctr_block);
+    llvm::Value* LLVMString_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("String_class_type"), self, 1, "LLVMString_ptr");
+    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{LLVMString_ptr, globalString_ptr});
     llvmBuilder->CreateRetVoid();
 }
 
