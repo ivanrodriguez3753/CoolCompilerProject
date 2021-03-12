@@ -309,6 +309,29 @@ void _string::print(ostream &os) const {
     os << value << endl;
 }
 
+string _string::resolveEscapes() {
+    string returnThis = value;
+    int i = 0;
+    while(true) {
+        i = returnThis.find("\\", i);
+        if(i == string::npos) break;
+        else {
+            char esc = returnThis.at(i + 1);
+            if(esc == 'n') {//replace with newline
+                returnThis.replace(i, 2, "\n");
+            }
+            else if(esc == 't') {//replace with tab
+                returnThis.replace(i, 2, "\t");
+            }
+            else {//replace with character
+                returnThis.replace(i, 2, "" + esc);
+            }
+            ++i;
+        }
+    }
+    return returnThis;
+}
+
 void _string::decorate(ParserDriver &drv) {
     type = "String";
     isDecorated = true;
@@ -316,7 +339,9 @@ void _string::decorate(ParserDriver &drv) {
     if(drv.strLits.find(value) == drv.strLits.end()) {
         llvmKey =  drv.strLits.size();
         string llvmName = ".str." + to_string(llvmKey);
-        drv.strLits.insert({value, {llvmKey, drv.llvmBuilder->CreateGlobalStringPtr(value, llvmName, 0, drv.llvmModule)}});
+        //since we're keep tracking of the LEXEME in _string.value, we need to resolve any escape sequences so they show up
+        //as intended in the assembly code
+        drv.strLits.insert({value, {llvmKey, drv.llvmBuilder->CreateGlobalStringPtr(resolveEscapes(), llvmName, 0, drv.llvmModule)}});
     }
     else {
         llvmKey = drv.strLits.at(value).first;

@@ -442,6 +442,9 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+
+private:
+    string resolveEscapes();
 };
 
 class _block : public _expr {

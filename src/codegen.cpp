@@ -3,6 +3,8 @@
 #include <llvm/IR/Verifier.h>
 #include "llvm/IR/Module.h"
 #include "ParserDriver.hh"
+#include "ast.h"
+
 
 using namespace std;
 
@@ -230,8 +232,6 @@ void ParserDriver::codegen() {
     genUserDefinedMethods();
 
     genLLVMMain();
-
-    llvmModule->print(llvm::outs(), nullptr);
 }
 
 void ParserDriver::define_IO_ctr() {

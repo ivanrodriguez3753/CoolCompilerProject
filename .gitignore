@@ -6,6 +6,8 @@
 *.cl-lex
 *.cl-ast
 *.cl-type
+*.cl-out
+*.ll
 bison.pdf
 *TEST.cl
 *.cl-asm
