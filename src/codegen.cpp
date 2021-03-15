@@ -161,22 +161,21 @@ void ParserDriver::genBasicClassMethodDefs() {
     currentMethodEnv = currentClassEnv->getMethodRec("out_string")->link;
     define_IO_out_string();
 
-    currentClassEnv = env->getRec("String")->link;
-    currentMethodEnv = ((_class*)(env->getRec("IO")->treeNode))->assemblyConstructorEnv;
-    define_String_ctr();
-
     currentMethodEnv = nullptr;
     currentClassEnv = nullptr;
 }
 
 void ParserDriver::genUserDefinedMethods() {
     for(auto classIt : env->symTable) {
+        if(classIt.first == "String" || classIt.first == "Bool" || classIt.first == "Int" || classIt.first == "IO" || classIt.first == "Object") {
+            continue;
+        }
         classRec* rec = (classRec*)classIt.second;
         for(auto methodIt : rec->link->methodsSymTable) {
-            if(methodIt.first == "main" && classIt.first == "Main") {
                 currentClassEnv = env->getRec(classIt.first)->link;
                 currentMethodEnv = currentClassEnv->getMethodRec(methodIt.first)->link;
                 llvm::Function* func = llvmModule->getFunction(classIt.first + '.' + methodIt.first);
+                cur_func = func; //TODO see if we can just use cur_func
                 //name the arguments
                 for(auto it : methodIt.second->link->symTable) {
                     objRec* arg = methodIt.second->link->getRec(it.first);
@@ -187,19 +186,9 @@ void ParserDriver::genUserDefinedMethods() {
                 llvm::BasicBlock* block = llvm::BasicBlock::Create(*llvmContext, "entry", func);
                 llvmBuilder->SetInsertPoint(block);
 
-                ((_method*)(methodIt.second->treeNode))->body->codegen(*this);
-
-                //return self, but casted to an i64*
-                llvm::Value* castedSelf = llvmBuilder->CreatePointerCast(
-                        func->getArg(0),
-                        llvm::Type::getInt64PtrTy(*llvmContext),
-                        "castedSelf"
-                );
-                llvmBuilder->CreateRet(castedSelf); //return self
-            }
-            else {
-                ;//do nothing
-            }
+                llvm::Value* _body = ((_method*)(methodIt.second->treeNode))->body->codegen(*this);
+                llvm::Value* castedBody = llvmBuilder->CreatePointerCast(_body, llvm::Type::getInt64PtrTy(*llvmContext));
+                llvmBuilder->CreateRet(castedBody);
         }
     }
 
@@ -239,17 +228,6 @@ void ParserDriver::define_IO_ctr() {
     llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", IO_ctr_func);
     llvmBuilder->SetInsertPoint(ctr_block);
 
-    llvmBuilder->CreateRetVoid();
-}
-
-void ParserDriver::define_String_ctr() {
-    llvm::Function* String_ctr_func = llvmModule->getFunction("String..ctr");
-    llvm::Value* self = String_ctr_func->getArg(0); self->setName("self");
-    llvm::Value* globalString_ptr = String_ctr_func->getArg(1); globalString_ptr->setName("globalString_ptr");
-    llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", String_ctr_func);
-    llvmBuilder->SetInsertPoint(ctr_block);
-    llvm::Value* LLVMString_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("String_class_type"), self, 1, "LLVMString_ptr");
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{LLVMString_ptr, globalString_ptr});
     llvmBuilder->CreateRetVoid();
 }
 
@@ -342,60 +320,157 @@ void ParserDriver::genAssemblyConstructors() {
         llvmBuilder->CreateRetVoid();
     }
 
-    //Bool..ctr
-
     //Int..ctr
-    llvm::Function* int_ctr_func = llvmModule->getFunction("Int..ctr");
-    llvm::BasicBlock* int_ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", int_ctr_func);
+    llvm::Function* Int_ctr_func = llvmModule->getFunction("Int..ctr");
+    llvm::BasicBlock* int_ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", Int_ctr_func);
     llvmBuilder->SetInsertPoint(int_ctr_block);
-    llvm::Argument* this_ptr = int_ctr_func->getArg(0);
+    llvm::Argument* this_ptr = Int_ctr_func->getArg(0); this_ptr->setName("self");
     llvm::Value* raw_field_ptr = llvmBuilder->CreateStructGEP(
         llvmModule->getTypeByName("Int_class_type"),
         this_ptr,
         1, //0 is vtable pointer, 1 is first attribute (and in this case only attribute) (the unboxed int)
-        "raw_field_ptr"
-    );
+        "raw_field_ptr");
     llvmBuilder->CreateStore(
         llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(*llvmContext),
-            llvm::APInt(64, (uint64_t)0, true)
-        ),
-        raw_field_ptr
-    );
+            llvm::APInt(64, (uint64_t)0, true)), //default initialize to 0
+        raw_field_ptr);
+    llvmBuilder->CreateRetVoid();
+
+    //Bool..ctr
+    llvm::Function* Bool_ctr_func = llvmModule->getFunction("Bool..ctr");
+    llvm::BasicBlock* bool_ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", Bool_ctr_func);
+    llvmBuilder->SetInsertPoint(bool_ctr_block);
+    this_ptr = Bool_ctr_func->getArg(0); this_ptr->setName("self");
+    raw_field_ptr = llvmBuilder->CreateStructGEP(
+        llvmModule->getTypeByName("Bool_class_type"),
+        this_ptr,
+        1, //first attribute offset
+        "raw_field_ptr");
+    llvmBuilder->CreateStore(
+        llvm::ConstantInt::get(
+            llvm::Type::getInt64Ty(*llvmContext),
+            llvm::APInt(1, 0, false)), //1bit, false, unsigned
+        raw_field_ptr);
+    llvmBuilder->CreateRetVoid();
+
+    //String..ctr
+    llvm::Function* String_ctr_func = llvmModule->getFunction("String..ctr");
+    llvm::Value* self = String_ctr_func->getArg(0); self->setName("self");
+    llvm::Value* globalString_ptr = String_ctr_func->getArg(1); globalString_ptr->setName("globalString_ptr");
+    llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", String_ctr_func);
+    llvmBuilder->SetInsertPoint(ctr_block);
+    llvm::Value* LLVMString_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("String_class_type"), self, 1, "LLVMString_ptr");
+    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{LLVMString_ptr, globalString_ptr});
     llvmBuilder->CreateRetVoid();
 }
 
 llvm::Value* _int::codegen(ParserDriver& drv) {
+    //construct assembly object
     llvm::AllocaInst* Int_instance = drv.llvmBuilder->CreateAlloca(
         drv.llvmModule->getTypeByName("Int_class_type"),
         (unsigned)0,
         nullptr,
-        "Int_instance"
-    );
+        "Int_instance");
     vector<llvm::Value*> params{Int_instance};
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), params);
 
-    llvm::Value* raw_field_ptr = drv.llvmBuilder->CreateStructGEP(
-        drv.llvmModule->getTypeByName("Int_class_type"),
-        Int_instance,
-        1, //offset for first attribute
-        "raw_field_ptr"
-    );
-    drv.llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(*drv.llvmContext),
-            llvm::APInt(64, (uint64_t)value, true)
-        ),
-        raw_field_ptr
-    );
+    //default initialization is 0 so skip this if the value is 0
+    if(value){
+        llvm::Value* raw_field_ptr = drv.llvmBuilder->CreateStructGEP(
+            drv.llvmModule->getTypeByName("Int_class_type"),
+            Int_instance,
+            1, //offset for first attribute
+            "raw_field_ptr");
+        drv.llvmBuilder->CreateStore(
+            llvm::ConstantInt::get(
+                llvm::Type::getInt64Ty(*drv.llvmContext),
+                llvm::APInt(64, (uint64_t)value, true)),
+            raw_field_ptr);
+    }
     return Int_instance;
 }
 
 llvm::Value* _string::codegen(ParserDriver& drv) {
-    llvm::Value* str1 = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName(type + "_class_type"), 0, nullptr, "str1");
+    llvm::Value* str1 = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName(type + "_class_type"),(unsigned) 0, nullptr, "str1");
     llvm::Value* globalStrPtr = drv.strLits.at(value).second;
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction(type + "..ctr"), vector<llvm::Value*>{str1, globalStrPtr});
     return str1;
+}
+
+llvm::Value* _bool::codegen(ParserDriver &drv) {
+    //construct assembly object
+    llvm::AllocaInst* Bool_instance = drv.llvmBuilder->CreateAlloca(
+        drv.llvmModule->getTypeByName("Bool_class_type"),
+        (unsigned)0,
+        nullptr,
+        "Bool_instance");
+    vector<llvm::Value*> params{Bool_instance};
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), params);
+
+    //default initialization is false so skip this if the value is false
+    if(value) {
+        llvm::Value* raw_field_ptr = drv.llvmBuilder->CreateStructGEP(
+            drv.llvmModule->getTypeByName("Bool_class_type"),
+            Bool_instance,
+            1,//offset for first attribute
+            "raw_field_ptr");
+        drv.llvmBuilder->CreateStore(
+            llvm::ConstantInt::get(
+                llvm::Type::getInt1Ty(*drv.llvmContext),
+                llvm::APInt(1, 1, false)), //1bit, true, unsigned
+            raw_field_ptr);
+    }
+    return Bool_instance;
+}
+
+llvm::Value* _if::codegen(ParserDriver& drv) {
+    llvm::Value* _predicate = predicate->codegen(drv);
+
+    llvm::BasicBlock* t_block = llvm::BasicBlock::Create(*drv.llvmContext, "if_t", drv.cur_func);
+    llvm::BasicBlock* f_block = llvm::BasicBlock::Create(*drv.llvmContext, "if_f", drv.cur_func);
+    llvm::BasicBlock* fi_block = llvm::BasicBlock::Create(*drv.llvmContext, "fi", drv.cur_func);
+
+    llvm::Value* raw_bool_ptr = drv.llvmBuilder->CreateStructGEP(
+        drv.llvmModule->getTypeByName("Bool_class_type"),
+        _predicate,
+        1,//offset for first attribute
+        "raw_field_ptr");
+
+    llvm::Value* raw_bool = drv.llvmBuilder->CreateLoad(raw_bool_ptr, "raw_bool");
+    drv.llvmBuilder->CreateCondBr(raw_bool, t_block, f_block);
+
+    drv.llvmBuilder->SetInsertPoint(t_block);
+    llvm::Value* result_t_uncasted = tthen->codegen(drv);
+    result_t_uncasted->setName("result_t_uncasted");
+    llvm::Value* result_t = drv.llvmBuilder->CreatePointerCast(result_t_uncasted, llvm::Type::getInt64PtrTy(*drv.llvmContext), "result_t");
+    result_t->setName("result_t");
+    drv.llvmBuilder->CreateBr(fi_block);
+
+    drv.llvmBuilder->SetInsertPoint(f_block);
+    llvm::Value* result_f_uncasted = eelse->codegen(drv);
+    result_f_uncasted->setName("result_f_uncasted");
+    llvm::Value* result_f = drv.llvmBuilder->CreatePointerCast(result_f_uncasted, llvm::Type::getInt64PtrTy(*drv.llvmContext), "result_f");
+    result_t->setName("result_f");
+    drv.llvmBuilder->CreateBr(fi_block);
+
+    drv.llvmBuilder->SetInsertPoint(fi_block);
+    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(llvm::Type::getInt64PtrTy(*drv.llvmContext), 2, "uncastedResult");
+    phi->addIncoming(result_t, t_block);
+    phi->addIncoming(result_f, f_block);
+
+
+    llvm::Value* result = drv.llvmBuilder->CreatePointerCast(phi, drv.llvmModule->getTypeByName(resolveType(drv) + "_class_type")->getPointerTo(), "result");
+    return result;
+}
+
+llvm::Value* _block::codegen(ParserDriver& drv) {
+    int i = 0;
+    while(i < body.size() - 1) {
+        body[i++]->codegen(drv);
+    }
+    //the whole block evaluates to whatever the last expression evaluates to
+    return body[i]->codegen(drv);
 }
 
 /**

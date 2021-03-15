@@ -231,14 +231,16 @@ public:
     string type;
     bool isDecorated = false;
 
-    /**
-     * most nested, nontrivial environment layer is the method. letCase env have arbitrary depth,
-     * but we sometimes want to skip prev links all the way back up to the globalEnv.
-     * @param methodEnv
-     */
+
     virtual void decorate(ParserDriver& drv) = 0;
     virtual llvm::Value* codegen(ParserDriver& drv) {cout << "THIS SHOULDN'T BE CALLED, ABORTING\n"; exit(0);}
 
+    /**
+     * This method assumes that currentMethodEnv and currentClassEnv are correct
+     * @param drv
+     * @return
+     */
+    string resolveType(ParserDriver& drv);
 };
 
 class _bool : public _expr {
@@ -249,6 +251,7 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 
     _bool(int l, bool v) : _expr(l), value(v) {}
 };
@@ -401,6 +404,7 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 
 };
 
@@ -455,6 +459,7 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 
     _block(int l, vector<_expr*> b) : _expr(l), body(b) {}
 };

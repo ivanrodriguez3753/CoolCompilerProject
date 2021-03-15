@@ -679,3 +679,10 @@ void _case::decorate(ParserDriver& drv) {
 void _caseElement::decorate(ParserDriver& drv) {
     caseBranch->decorate(drv);
 }
+
+string _expr::resolveType(ParserDriver &drv) {
+    if(type != "SELF_TYPE") return type;
+    else {
+        return drv.currentClassEnv->id;
+    }
+}

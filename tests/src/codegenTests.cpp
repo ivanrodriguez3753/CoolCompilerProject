@@ -66,7 +66,9 @@ TEST_P(codegenFixture, positive) {
 
 }
 INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
-    "printIntLiteral.cl"
+    "CoolProgramsAssembly/printIntLiteral.cl",
+    "CoolProgramsAssembly/ifExpr.cl",
+    "CoolProgramsAssembly/blockExpr.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",
