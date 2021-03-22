@@ -8,496 +8,52 @@
 
 using namespace std;
 
-void ParserDriver::genDeclarations() {
-    //declare struct types (class types and vtable types)
-    for(auto it : implementationMap) {
-        llvm::StructType::create(*llvmContext, llvm::StringRef(it.first + "_class_type"));
-        llvm::StructType::create(*llvmContext, llvm::StringRef(it.first + "_vtable_type"));
-    }
-
-    //declare functions
-    for(auto classIt : implementationMap) {
-        //these will be global, so the name mangling is <defining class>.<methodIdentifier>
-        for (auto methodsIt : env->getRec(classIt.first)->link->methodsSymTable) {
-            //first, build the function type. Start with parameter types
-            vector<llvm::Type *> paramTypes;
-            //since all methods in Cool are virtual, we first push back a pointer to self
-            paramTypes.push_back(llvmModule->getTypeByName(llvm::StringRef(classIt.first + "_class_type"))->getPointerTo());
-            for (int i = 0; i < methodsIt.second->link->symTable.size() - 1; ++i) { //-1 b/c "self" is in symtable, which we accounted for above
-                //everything in cool is an object, so we need pointers to attributes as attributes
-                //Since we only want one copy of each uniquely defined method, and we have a SELF_TYPE,
-                //we can't always use pointers to llvm types (except Object of course).
-                //todo: find out if non-SELF_TYPE types can be passed a pointer to that class. might avoid some unnecessary
-                // bit casts if that's the case
-                paramTypes.push_back(llvm::PointerType::getInt64PtrTy(*llvmContext));
-            }
-            //now push back the function with those params, and also an extra pointer for the return value. there are
-            //no void expression values in COOL, only an object which is void. so just use another pointer
-            llvm::FunctionType *f_type = llvm::FunctionType::get(
-                    llvm::PointerType::getInt64PtrTy(*llvmContext),
-                    llvm::ArrayRef<llvm::Type*>(paramTypes),
-                    false
-            );
-            llvm::Function* f = llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, classIt.first + '.' + methodsIt.first, llvmModule);
-            llvmNamedValues.insert({classIt.first + '.' + methodsIt.first, f});
-        }
-        //ctr
-        vector<llvm::Type*> paramTypes;
-        paramTypes.push_back(llvmModule->getTypeByName(llvm::StringRef(classIt.first + "_class_type"))->getPointerTo());
-        if(classIt.first == "String") paramTypes.push_back(llvm::Type::getInt8PtrTy(*llvmContext));
-        //no parameters besides self for the constructor
-        llvm::FunctionType* f_type = llvm::FunctionType::get(
-                llvm::PointerType::getVoidTy(*llvmContext),
-                llvm::ArrayRef<llvm::Type*>(paramTypes),
-                false
-        );
-        llvm::Function* f = llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, classIt.first + '.' + ".ctr", llvmModule); //Class..ctr in case we have a method named ctr (Class.ctr)
-        llvmNamedValues.insert({classIt.first + '.' + ".ctr", f});
-    }
-
-    //declare extern printf
-    llvmModule->getOrInsertFunction(
-            "printf",
-            llvm::FunctionType::get(
-                    llvm::IntegerType::getInt32Ty(*llvmContext),
-                    llvm::Type::getInt8Ty(*llvmContext)->getPointerTo(),
-                    true /* this is var arg func type*/
-            )
-    );
-}
-
-void ParserDriver::addRawFields() {
-    //Bool
-    llvm::StructType* llvmBool = llvmModule->getTypeByName("Bool_class_type");
-    vector<llvm::Type*> llvmBoolAttributes{
-        llvmModule->getTypeByName("Bool_vtable_type")->getPointerTo(),
-        llvm::Type::getInt1Ty(*llvmContext)
-    };
-    llvmBool->setBody(llvmBoolAttributes);
-
-    //Int
-    llvm::StructType* llvmInt = llvmModule->getTypeByName("Int_class_type");
-    vector<llvm::Type*> llvmIntAttributes{
-            llvmModule->getTypeByName("Int_vtable_type")->getPointerTo(),
-            llvm::Type::getInt64Ty(*llvmContext)
-    };
-    llvmInt->setBody(llvmIntAttributes);
-
-    //String
-    llvm::StructType* llvmType = llvmModule->getTypeByName("String_class_type");
-    vector<llvm::Type*> llvmAttributes{
-            llvmModule->getTypeByName("String_vtable_type")->getPointerTo(),
-            llvmModule->getTypeByName("LLVMString")
-    };
-    llvmType->setBody(llvmAttributes);
-
-
-}
-
-void ParserDriver::genClassAndVtableTypeDefs() {
-    //define _class_types
-    map<string, map<string, pair<objRec*, int>>> classMapMinusBoolIntString = classMap;
-    classMapMinusBoolIntString.erase(classMapMinusBoolIntString.find("Bool"));
-    classMapMinusBoolIntString.erase(classMapMinusBoolIntString.find("Int"));
-    classMapMinusBoolIntString.erase(classMapMinusBoolIntString.find("String"));
-    for(auto it : classMapMinusBoolIntString) {
-        llvm::StructType* currentLlvmType = llvmModule->getTypeByName(it.first + "_class_type");
-
-        //Pointer to vtable followed by the real attributes, all of which are pointers to objects
-        vector<llvm::Type*> llvmAttributes(classMap.at(it.first).size() + 1);
-        llvmAttributes[0] = llvmModule->getTypeByName(it.first + "_vtable_type")->getPointerTo();
-        for(auto attrs : classMap.at(it.first)) {
-            llvmAttributes[attrs.second.second + 1] = llvm::Type::getInt64PtrTy(*llvmContext);
-        }
-        currentLlvmType->setBody(llvmAttributes);
-    }
-    //define_vtable_types
-    for(auto it : implementationMap) {
-        llvm::StructType* currentLlvmStructType = llvmModule->getTypeByName(it.first + "_vtable_type");
-
-        //a list of function pointers
-        vector<llvm::Type*> llvmAttributes(it.second.size() + 1);
-        //first, a pointer to the constructor
-        llvmAttributes[0] = llvmModule->getFunction(it.first + '.' + ".ctr")->getFunctionType()->getPointerTo();
-        //all the other methods, placed in the correct spot
-        for(auto methodIt : it.second) {
-            string definer = methodIt.second.first->link->prev->id;
-            llvmAttributes[methodIt.second.second + 1] = llvmModule->getFunction(definer + '.' + methodIt.first)->getFunctionType()->getPointerTo();
-        }
-        currentLlvmStructType->setBody(llvmAttributes);
-    }
-}
-
-void ParserDriver::define_IO_out_string() {
-    llvm::Function* IO_out_string_func = llvmModule->getFunction("IO.out_string");
-    llvm::Value* self = IO_out_string_func->getArg(0); self->setName("self");
-    llvm::Value* printee = IO_out_string_func->getArg(1); printee->setName("printee");
-    llvm::BasicBlock* out_string_block = llvm::BasicBlock::Create(*llvmContext, "entry", IO_out_string_func);
-    llvmBuilder->SetInsertPoint(out_string_block);
-    llvm::Value* castedPrintee = llvmBuilder->CreatePointerCast(
-        printee,
-        llvmModule->getTypeByName("String_class_type")->getPointerTo(),
-        "castedPrintee");
-    //essentially using GEP to do a %castedPrintee->1->0 which accesses the LLVMString object, then LLVMString's i8*
-    vector<llvm::Value*> indices{
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), llvm::APInt(32, (uint64_t)1, true)),
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), llvm::APInt(32, (uint64_t)0, true))
-    };
-    llvm::Value* raw_LLVMString_ptr = llvmBuilder->CreateStructGEP(castedPrintee, 1, "raw_LLVMString_ptr");
-    llvm::Value* char_ptr_ptr = llvmBuilder->CreateStructGEP(raw_LLVMString_ptr, 0, "char_ptr_ptr");
-    llvm::Value* char_ptr = llvmBuilder->CreateLoad(char_ptr_ptr, "char_ptr");
-    llvmBuilder->CreateCall(llvmModule->getFunction("printf"), vector<llvm::Value*>{char_ptr});
-    llvm::Value* castedSelf = llvmBuilder->CreatePointerCast(self, llvm::Type::getInt64PtrTy(*llvmContext), "castedSelf");
-    llvmBuilder->CreateRet(castedSelf);
-}
-
-void ParserDriver::genBasicClassMethodDefs() {
-    addRawFields();
-    currentClassEnv = env->getRec("IO")->link;
-    currentMethodEnv = ((_class*)(env->getRec("IO")->treeNode))->assemblyConstructorEnv;
-    define_IO_ctr();
-    currentMethodEnv = currentClassEnv->getMethodRec("out_int")->link;
-    define_IO_out_int();
-    currentMethodEnv = currentClassEnv->getMethodRec("out_string")->link;
-    define_IO_out_string();
-
-    currentMethodEnv = nullptr;
-    currentClassEnv = nullptr;
-}
-
-void ParserDriver::genUserDefinedMethods() {
-    for(auto classIt : env->symTable) {
-        if(classIt.first == "String" || classIt.first == "Bool" || classIt.first == "Int" || classIt.first == "IO" || classIt.first == "Object") {
-            continue;
-        }
-        classRec* rec = (classRec*)classIt.second;
-        for(auto methodIt : rec->link->methodsSymTable) {
-                currentClassEnv = env->getRec(classIt.first)->link;
-                currentMethodEnv = currentClassEnv->getMethodRec(methodIt.first)->link;
-                llvm::Function* func = llvmModule->getFunction(classIt.first + '.' + methodIt.first);
-                cur_func = func; //TODO see if we can just use cur_func
-                //name the arguments
-                for(auto it : methodIt.second->link->symTable) {
-                    objRec* arg = methodIt.second->link->getRec(it.first);
-                    func->getArg(arg->localOffset + 1)->setName(it.first);
-                }//implicit self arg
-                func->getArg(0)->setName("self");
-
-                llvm::BasicBlock* block = llvm::BasicBlock::Create(*llvmContext, "entry", func);
-                llvmBuilder->SetInsertPoint(block);
-
-                llvm::Value* _body = ((_method*)(methodIt.second->treeNode))->body->codegen(*this);
-                llvm::Value* castedBody = llvmBuilder->CreatePointerCast(_body, llvm::Type::getInt64PtrTy(*llvmContext));
-                llvmBuilder->CreateRet(castedBody);
-        }
-    }
-
-}
-
-void ParserDriver::genLLVMMain() {
-    llvm::FunctionType* main_ftype = llvm::FunctionType::get(llvm::Type::getInt32Ty(*llvmContext), false);
-    llvm::Function* main_func = llvm::Function::Create(main_ftype, llvm::Function::ExternalLinkage, "main", *llvmModule);
-    llvmNamedValues.insert({"Main.main", main_func});
-    llvm::BasicBlock* main_block = llvm::BasicBlock::Create(*llvmContext, "entry", main_func);
-    llvmBuilder->SetInsertPoint(main_block);
-
-    llvm::AllocaInst* implicitMain_instance = llvmBuilder->CreateAlloca(llvmModule->getTypeByName(llvm::StringRef("Main_class_type")), (unsigned)0, nullptr, "implicitMain_instance");
-    vector<llvm::Value*> params{implicitMain_instance};
-    llvmBuilder->CreateCall(llvmModule->getFunction(llvm::StringRef("Main..ctr")), llvm::ArrayRef<llvm::Value*>(params));
-    llvmBuilder->CreateCall(llvmModule->getFunction(llvm::StringRef("Main.main")), llvm::ArrayRef<llvm::Value*>(params));
-    llvm::APInt returnValue(32, (uint32_t)0, true);
-    llvmBuilder->CreateRet(llvm::ConstantInt::get(*llvmContext, returnValue));
-
-
-    llvm::verifyFunction(*main_func);
-}
+const int vtableOffset = 0;
+const int selfOffset = 1;
+const int firstAttrOffset = 2;
 
 void ParserDriver::codegen() {
-    genDeclarations();
-    genClassAndVtableTypeDefs();
+    declareExterns();
     gen_llvmStringTypeAndMethods();
-    genBasicClassMethodDefs();
-    genAssemblyConstructors();
-    genUserDefinedMethods();
-
-    genLLVMMain();
+    declaresStructsAndFuncs();
+    genVTables();
+    genStructDefs();
+    genBoolIntStringCtrs();
+    genCtrs();
+    genBasicClassMethods();
+    genUserMethods();
+    genLLVMmain();
 }
 
-void ParserDriver::define_IO_ctr() {
-    llvm::Function* IO_ctr_func = llvmModule->getFunction("IO..ctr");
-    llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", IO_ctr_func);
-    llvmBuilder->SetInsertPoint(ctr_block);
+void ParserDriver::declareExterns() {
+    //declare extern printf
+    llvmModule->getOrInsertFunction(
+        "printf",
+        llvm::FunctionType::get(
+            llvm::IntegerType::getInt32Ty(*llvmContext),
+            llvm::Type::getInt8Ty(*llvmContext)->getPointerTo(),
+            true));
+    //declare extern malloc
+    llvm::FunctionType* malloc_ftype = llvm::FunctionType::get(llvm::Type::getInt8PtrTy(*llvmContext), vector<llvm::Type*>{llvm::Type::getInt64Ty(*llvmContext)}, false);
+    llvmModule->getOrInsertFunction("malloc", malloc_ftype);
 
-    llvmBuilder->CreateRetVoid();
+    //declare free
+    llvm::FunctionType* free_ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), vector<llvm::Type*>{llvm::Type::getInt8PtrTy(*llvmContext)}, false);
+    llvmModule->getOrInsertFunction("free", free_ftype);
+
+    //declare memcpy
+    llvm::Type* charPtrTy = llvm::Type::getInt8PtrTy(*llvmContext);
+    llvm::FunctionType* memcpy_ftype = llvm::FunctionType::get(
+        charPtrTy, vector<llvm::Type*>{charPtrTy, charPtrTy, llvm::Type::getInt64Ty(*llvmContext)}, false);
+    llvmModule->getOrInsertFunction("memcpy", memcpy_ftype);
 }
 
-void ParserDriver::define_IO_out_int() {
-    llvm::Function* out_int_func = llvmModule->getFunction("IO.out_int");
-    llvm::BasicBlock* out_int_block = llvm::BasicBlock::Create(*llvmContext, "entry", out_int_func);
-    llvmBuilder->SetInsertPoint(out_int_block);
-    llvm::Value* castedArg = llvmBuilder->CreatePointerCast(
-        out_int_func->getArg(1),
-        llvmModule->getTypeByName("Int_class_type")->getPointerTo(),
-        "castedArg"
-    );
-
-    llvm::Function* printf = llvmModule->getFunction("printf");
-    vector<llvm::Value*> printf_args{llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("%d"), ".str.percentd", 0, llvmModule)};
-    llvm::Value* raw_int_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("Int_class_type"),
-        castedArg,
-        1,
-        "raw_int_ptr"
-    );
-    llvm::Value* raw_int = llvmBuilder->CreateLoad(llvm::Type::getInt64Ty(*llvmContext), raw_int_ptr, "raw_int");
-    printf_args.push_back(raw_int);
-    llvmBuilder->CreateCall(printf, printf_args);
-
-    //return self, but casted to an i64*
-    llvm::Value* castedSelf = llvmBuilder->CreatePointerCast(
-        out_int_func->getArg(0),
-        llvm::Type::getInt64PtrTy(*llvmContext),
-        "castedSelf"
-    );
-    llvmBuilder->CreateRet(castedSelf); //return self
-}
-
-void ParserDriver::gen_callprintf_int() {
-    llvm::Function* printf = llvmModule->getFunction("printf");
-    vector<llvm::Value*> params{llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("%d"), ".str.percentd", 0, llvmModule)};
-    params.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), 123, true));
-    llvmBuilder->CreateCall(printf, params);
-}
-
-llvm::Value* _selfDispatch::codegen(ParserDriver &drv) {
-    string& definer = drv.implementationMap.at(drv.currentClassEnv->id).at(id).first->definer;
-
-    //this refers to the environment we are in in terms of the tree, NOT in terms of the dispatch
-    llvm::Function* funcWeAreDefining = drv.llvmModule->getFunction(drv.currentClassEnv->id + '.' + drv.currentMethodEnv->id);
-
-    llvm::Value* self = funcWeAreDefining->getArg(0);
-    //cast to definer type
-    self = drv.llvmBuilder->CreatePointerCast(
-            self, //source
-            drv.llvmModule->getTypeByName(definer + "_class_type")->getPointerTo(), //dest type
-            "casted_self"
-    );
-    vector<llvm::Value*> args{self};
-
-    int argCounter = 1;
-    for(auto arg : argList) {
-        llvm::Value* uncastedResult = arg->codegen(drv);
-        args.push_back(uncastedResult);
-    }
-    for(int i = 1; i < args.size(); ++i) {
-        args[i] = drv.llvmBuilder->CreatePointerCast(
-                args[i],
-                llvm::Type::getInt64PtrTy(*drv.llvmContext),
-                "casted_arg" + to_string(argCounter++)
-        );
-    }
-
-
-
-    return drv.llvmBuilder->CreateCall(
-        drv.llvmModule->getFunction(definer + '.' + id),
-        args
-    );
-
-}
-
-void ParserDriver::genAssemblyConstructors() {
-    //TODO: enable support for classes with attributes
-    map<string, map<string, pair<objRec*, int>>> classMapMinusBoolIntString = classMap;
-    classMapMinusBoolIntString.erase(classMapMinusBoolIntString.find("Bool"));
-    classMapMinusBoolIntString.erase(classMapMinusBoolIntString.find("Int"));
-    classMapMinusBoolIntString.erase(classMapMinusBoolIntString.find("String"));
-    for(auto classIt : classMapMinusBoolIntString) {
-        llvm::Function* ctr_func = llvmModule->getFunction(classIt.first + "..ctr");
-        llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", ctr_func);
-        llvmBuilder->SetInsertPoint(ctr_block);
-
-        llvmBuilder->CreateRetVoid();
-    }
-
-    //Int..ctr
-    llvm::Function* Int_ctr_func = llvmModule->getFunction("Int..ctr");
-    llvm::BasicBlock* int_ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", Int_ctr_func);
-    llvmBuilder->SetInsertPoint(int_ctr_block);
-    llvm::Argument* this_ptr = Int_ctr_func->getArg(0); this_ptr->setName("self");
-    llvm::Value* raw_field_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("Int_class_type"),
-        this_ptr,
-        1, //0 is vtable pointer, 1 is first attribute (and in this case only attribute) (the unboxed int)
-        "raw_field_ptr");
-    llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(*llvmContext),
-            llvm::APInt(64, (uint64_t)0, true)), //default initialize to 0
-        raw_field_ptr);
-    llvmBuilder->CreateRetVoid();
-
-    //Bool..ctr
-    llvm::Function* Bool_ctr_func = llvmModule->getFunction("Bool..ctr");
-    llvm::BasicBlock* bool_ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", Bool_ctr_func);
-    llvmBuilder->SetInsertPoint(bool_ctr_block);
-    this_ptr = Bool_ctr_func->getArg(0); this_ptr->setName("self");
-    raw_field_ptr = llvmBuilder->CreateStructGEP(
-        llvmModule->getTypeByName("Bool_class_type"),
-        this_ptr,
-        1, //first attribute offset
-        "raw_field_ptr");
-    llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(*llvmContext),
-            llvm::APInt(1, 0, false)), //1bit, false, unsigned
-        raw_field_ptr);
-    llvmBuilder->CreateRetVoid();
-
-    //String..ctr
-    llvm::Function* String_ctr_func = llvmModule->getFunction("String..ctr");
-    llvm::Value* self = String_ctr_func->getArg(0); self->setName("self");
-    llvm::Value* globalString_ptr = String_ctr_func->getArg(1); globalString_ptr->setName("globalString_ptr");
-    llvm::BasicBlock* ctr_block = llvm::BasicBlock::Create(*llvmContext, "entry", String_ctr_func);
-    llvmBuilder->SetInsertPoint(ctr_block);
-    llvm::Value* LLVMString_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("String_class_type"), self, 1, "LLVMString_ptr");
-    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{LLVMString_ptr, globalString_ptr});
-    llvmBuilder->CreateRetVoid();
-}
-
-llvm::Value* _int::codegen(ParserDriver& drv) {
-    //construct assembly object
-    llvm::AllocaInst* Int_instance = drv.llvmBuilder->CreateAlloca(
-        drv.llvmModule->getTypeByName("Int_class_type"),
-        (unsigned)0,
-        nullptr,
-        "Int_instance");
-    vector<llvm::Value*> params{Int_instance};
-    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), params);
-
-    //default initialization is 0 so skip this if the value is 0
-    if(value){
-        llvm::Value* raw_field_ptr = drv.llvmBuilder->CreateStructGEP(
-            drv.llvmModule->getTypeByName("Int_class_type"),
-            Int_instance,
-            1, //offset for first attribute
-            "raw_field_ptr");
-        drv.llvmBuilder->CreateStore(
-            llvm::ConstantInt::get(
-                llvm::Type::getInt64Ty(*drv.llvmContext),
-                llvm::APInt(64, (uint64_t)value, true)),
-            raw_field_ptr);
-    }
-    return Int_instance;
-}
-
-llvm::Value* _string::codegen(ParserDriver& drv) {
-    llvm::Value* str1 = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName(type + "_class_type"),(unsigned) 0, nullptr, "str1");
-    llvm::Value* globalStrPtr = drv.strLits.at(value).second;
-    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction(type + "..ctr"), vector<llvm::Value*>{str1, globalStrPtr});
-    return str1;
-}
-
-llvm::Value* _bool::codegen(ParserDriver &drv) {
-    //construct assembly object
-    llvm::AllocaInst* Bool_instance = drv.llvmBuilder->CreateAlloca(
-        drv.llvmModule->getTypeByName("Bool_class_type"),
-        (unsigned)0,
-        nullptr,
-        "Bool_instance");
-    vector<llvm::Value*> params{Bool_instance};
-    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), params);
-
-    //default initialization is false so skip this if the value is false
-    if(value) {
-        llvm::Value* raw_field_ptr = drv.llvmBuilder->CreateStructGEP(
-            drv.llvmModule->getTypeByName("Bool_class_type"),
-            Bool_instance,
-            1,//offset for first attribute
-            "raw_field_ptr");
-        drv.llvmBuilder->CreateStore(
-            llvm::ConstantInt::get(
-                llvm::Type::getInt1Ty(*drv.llvmContext),
-                llvm::APInt(1, 1, false)), //1bit, true, unsigned
-            raw_field_ptr);
-    }
-    return Bool_instance;
-}
-
-llvm::Value* _if::codegen(ParserDriver& drv) {
-    llvm::Value* _predicate = predicate->codegen(drv);
-
-    llvm::BasicBlock* t_block = llvm::BasicBlock::Create(*drv.llvmContext, "if_t", drv.cur_func);
-    llvm::BasicBlock* f_block = llvm::BasicBlock::Create(*drv.llvmContext, "if_f", drv.cur_func);
-    llvm::BasicBlock* fi_block = llvm::BasicBlock::Create(*drv.llvmContext, "fi", drv.cur_func);
-
-    llvm::Value* raw_bool_ptr = drv.llvmBuilder->CreateStructGEP(
-        drv.llvmModule->getTypeByName("Bool_class_type"),
-        _predicate,
-        1,//offset for first attribute
-        "raw_field_ptr");
-
-    llvm::Value* raw_bool = drv.llvmBuilder->CreateLoad(raw_bool_ptr, "raw_bool");
-    drv.llvmBuilder->CreateCondBr(raw_bool, t_block, f_block);
-
-    drv.llvmBuilder->SetInsertPoint(t_block);
-    llvm::Value* result_t_uncasted = tthen->codegen(drv);
-    result_t_uncasted->setName("result_t_uncasted");
-    llvm::Value* result_t = drv.llvmBuilder->CreatePointerCast(result_t_uncasted, llvm::Type::getInt64PtrTy(*drv.llvmContext), "result_t");
-    result_t->setName("result_t");
-    drv.llvmBuilder->CreateBr(fi_block);
-
-    drv.llvmBuilder->SetInsertPoint(f_block);
-    llvm::Value* result_f_uncasted = eelse->codegen(drv);
-    result_f_uncasted->setName("result_f_uncasted");
-    llvm::Value* result_f = drv.llvmBuilder->CreatePointerCast(result_f_uncasted, llvm::Type::getInt64PtrTy(*drv.llvmContext), "result_f");
-    result_t->setName("result_f");
-    drv.llvmBuilder->CreateBr(fi_block);
-
-    drv.llvmBuilder->SetInsertPoint(fi_block);
-    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(llvm::Type::getInt64PtrTy(*drv.llvmContext), 2, "uncastedResult");
-    phi->addIncoming(result_t, t_block);
-    phi->addIncoming(result_f, f_block);
-
-
-    llvm::Value* result = drv.llvmBuilder->CreatePointerCast(phi, drv.llvmModule->getTypeByName(resolveType(drv) + "_class_type")->getPointerTo(), "result");
-    return result;
-}
-
-llvm::Value* _block::codegen(ParserDriver& drv) {
-    int i = 0;
-    while(i < body.size() - 1) {
-        body[i++]->codegen(drv);
-    }
-    //the whole block evaluates to whatever the last expression evaluates to
-    return body[i]->codegen(drv);
-}
-
-/**
- * This LLVM String class is taken from
- * https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/appendix-a-how-to-implement-a-string-type-in-llvm/index.html
- */
 void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvm::Type* charTy = llvm::Type::getInt8Ty(*llvmContext);
     llvm::PointerType* charPtrTy = llvm::Type::getInt8PtrTy(*llvmContext);
     llvm::Type* int64Ty = llvm::Type::getInt64Ty(*llvmContext);
-    llvm::PointerType* int64PtrTy = llvm::Type::getInt64PtrTy(*llvmContext);
     llvm::Type* voidTy = llvm::Type::getVoidTy(*llvmContext);
     llvm::Value* nullTermChar =  llvm::ConstantInt::get(charTy, llvm::APInt(8, (uint64_t)0, true)); //Null terminating character
-
-
-    //declare malloc
-    llvm::FunctionType* malloc_ftype = llvm::FunctionType::get(llvm::Type::getInt8PtrTy(*llvmContext), vector<llvm::Type*>{llvm::Type::getInt64Ty(*llvmContext)}, false);
-    llvmModule->getOrInsertFunction("malloc", malloc_ftype);
-    //declare free
-    llvm::FunctionType* free_ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), vector<llvm::Type*>{llvm::Type::getInt8PtrTy(*llvmContext)}, false);
-    llvmModule->getOrInsertFunction("free", free_ftype);
-    //declare memcpy
-    llvm::FunctionType* memcpy_ftype = llvm::FunctionType::get(
-        charPtrTy,
-        vector<llvm::Type*>{charPtrTy, charPtrTy, int64Ty},
-        false);
-    llvmModule->getOrInsertFunction("memcpy", memcpy_ftype);
 
     //struct definition
     llvm::StructType* String = llvm::StructType::create(*llvmContext, llvm::StringRef("LLVMString"));
@@ -518,9 +74,9 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
 
     //CONSTRUCTOR
     llvm::FunctionType* ctr_func_type = llvm::FunctionType::get(
-        llvm::Type::getVoidTy(*llvmContext),
-        params,
-        false);
+            llvm::Type::getVoidTy(*llvmContext),
+            params,
+            false);
     llvm::Function* ctr_func = llvm::Function::Create(ctr_func_type, llvm::GlobalValue::ExternalLinkage, 0, "LLVMString..ctr", llvmModule);
     this_ptr = ctr_func->getArg(0); this_ptr->setName("self");
     llvm::Argument* globalString_ptr = ctr_func->getArg(1); globalString_ptr->setName("globalString_ptr");
@@ -534,25 +90,25 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateStore(llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(*llvmContext)), char_star_ptr);
     llvm::Value* length_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 1, "length_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)0, true)),
-        length_ptr);
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)0, true)),
+            length_ptr);
     llvm::Value* maxlength_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 2, "maxlength_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(*llvmContext),
-            llvm::APInt(64, (uint64_t)0, true)),
-        maxlength_ptr);
+            llvm::ConstantInt::get(
+                    llvm::Type::getInt64Ty(*llvmContext),
+                    llvm::APInt(64, (uint64_t)0, true)),
+            maxlength_ptr);
     llvm::Value* factor_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 3, "factor_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)16, true)),
-        factor_ptr);
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)16, true)),
+            factor_ptr);
     llvmBuilder->CreateBr(loopSetup);
 
     llvmBuilder->SetInsertPoint(loopSetup);
     llvm::Value* acc_ptr = llvmBuilder->CreateAlloca(int64Ty, nullptr, "acc_ptr");
     llvmBuilder->CreateStore(
-        llvm::ConstantInt::get(int64Ty, llvm::APInt(64, (uint64_t)0, true)),
-        acc_ptr);
+            llvm::ConstantInt::get(int64Ty, llvm::APInt(64, (uint64_t)0, true)),
+            acc_ptr);
     llvmBuilder->CreateBr(loopHeader);
 
     llvmBuilder->SetInsertPoint(loopHeader);
@@ -685,4 +241,349 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
 
     llvmBuilder->SetInsertPoint(loop_end);
     llvmBuilder->CreateRetVoid();
+}
+
+void ParserDriver::declaresStructsAndFuncs() {
+    //declare struct types (class types and vtable types)
+    for(auto classIt : implementationMap) {
+        llvm::StructType::create(*llvmContext, llvm::StringRef(classIt.first + "_c"));
+        llvm::StructType::create(*llvmContext, llvm::StringRef(classIt.first + "_v"));
+    }
+
+    //declare user functions and also their assembly constructors
+    map<string, map<string, pair<methodRec*, int>>> user_implementationMap = implementationMap;
+    user_implementationMap.erase(user_implementationMap.find("Bool"));
+    user_implementationMap.erase(user_implementationMap.find("Int"));
+    user_implementationMap.erase(user_implementationMap.find("IO"));
+    user_implementationMap.erase(user_implementationMap.find("String"));
+    user_implementationMap.erase(user_implementationMap.find("Object"));
+    for(auto classIt : user_implementationMap) {
+        for(auto methodIt : env->getRec(classIt.first)->link->methodsSymTable) {
+            vector<llvm::Type*> formalTypes{llvmModule->getTypeByName(classIt.first + "_c")->getPointerTo()};
+            map<string, rec*> symTableNoSelf = methodIt.second->link->symTable;
+            symTableNoSelf.erase(symTableNoSelf.find("self"));
+            for(auto sym : symTableNoSelf) {
+                const string& type = ((objRec*)sym.second)->type;
+                if(type != "SELF_TYPE") {
+                    formalTypes.push_back(llvmModule->getTypeByName(type + "_c")->getPointerTo());
+                }
+                else {
+                    formalTypes.push_back(llvm::Type::getInt64PtrTy(*llvmContext));
+                }
+            }
+            llvm::FunctionType* f_type;
+            const string& retType = methodIt.second->returnType;
+            if(retType != "SELF_TYPE") {
+                f_type = llvm::FunctionType::get(
+                    llvmModule->getTypeByName(retType + "_c")->getPointerTo(), formalTypes, false);
+            }
+            else {
+                f_type = llvm::FunctionType::get(
+                    llvm::Type::getInt64PtrTy(*llvmContext), formalTypes, false);
+            }
+            llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, classIt.first + '.' + methodIt.first, llvmModule);
+        }
+
+        //constructor
+        vector<llvm::Type*> formalTypes{llvmModule->getTypeByName(classIt.first + "_c")->getPointerTo()};
+        llvm::FunctionType* f_type = llvm::FunctionType::get(
+            llvm::Type::getVoidTy(*llvmContext), formalTypes, false);
+        llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, classIt.first + '.' + ".ctr", llvmModule);
+    }
+
+    //declare basic class functions
+    map<string, map<string, pair<methodRec*, int>>> basic_implementationMap{
+        {"Bool", implementationMap.at("Bool")},
+        {"Int", implementationMap.at("Int")},
+        {"IO", implementationMap.at("IO")},
+        {"String", implementationMap.at("String")},
+        {"Object", implementationMap.at("Object")}
+    };
+    for(auto classIt : basic_implementationMap) {
+        for(auto methodIt : env->getRec(classIt.first)->link->methodsSymTable) {
+            vector<llvm::Type*> formalTypes{llvmModule->getTypeByName(classIt.first + "_c")->getPointerTo()};
+            map<string, rec*> symTableNoSelf = methodIt.second->link->symTable;
+            symTableNoSelf.erase(symTableNoSelf.find("self"));
+            for(auto sym : symTableNoSelf) {
+                const string& type = ((objRec*)sym.second)->type;
+                if(type != "SELF_TYPE") {
+                    formalTypes.push_back(llvmModule->getTypeByName(type + "_c")->getPointerTo());
+                }
+                else {
+                    formalTypes.push_back(llvm::PointerType::getInt64PtrTy(*llvmContext));
+                }
+            }
+            llvm::FunctionType* f_type;
+            const string& retType = methodIt.second->returnType;
+            if(retType != "SELF_TYPE") {
+                f_type = llvm::FunctionType::get(
+                    llvmModule->getTypeByName(retType + "_c")->getPointerTo(), formalTypes, false);
+            }
+            else {
+                f_type = llvm::FunctionType::get(llvm::Type::getInt64PtrTy(*llvmContext), formalTypes, false);
+            }
+            llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, classIt.first + '.' + methodIt.first, llvmModule);
+        }
+    }
+
+    //declare basic class constructors
+    vector<llvm::Type*> formalTypes; llvm::FunctionType* f_type; llvm::Type* voidTy = llvm::Type::getVoidTy(*llvmContext);
+    //Bool
+    formalTypes.push_back(llvmModule->getTypeByName("Bool_c")->getPointerTo());
+    formalTypes.push_back(llvm::Type::getInt1Ty(*llvmContext));
+    f_type = llvm::FunctionType::get(voidTy, formalTypes, false);
+    llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, "Bool..ctr", llvmModule);
+    //Int
+    formalTypes.clear();
+    formalTypes.push_back(llvmModule->getTypeByName("Int_c")->getPointerTo());
+    formalTypes.push_back(llvm::Type::getInt64Ty(*llvmContext));
+    f_type = llvm::FunctionType::get(voidTy, formalTypes, false);
+    llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, "Int..ctr", llvmModule);
+    //IO
+    formalTypes.clear();
+    formalTypes.push_back(llvmModule->getTypeByName("IO_c")->getPointerTo());
+    f_type = llvm::FunctionType::get(voidTy, formalTypes, false);
+    llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, "IO..ctr", llvmModule);
+    //String
+    formalTypes.clear();
+    formalTypes.push_back(llvmModule->getTypeByName("String_c")->getPointerTo());
+    formalTypes.push_back(llvm::Type::getInt8PtrTy(*llvmContext));
+    f_type = llvm::FunctionType::get(voidTy, formalTypes, false);
+    llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, "String..ctr", llvmModule);
+    //Object
+    formalTypes.clear();
+    formalTypes.push_back(llvmModule->getTypeByName("Object_c")->getPointerTo());
+    f_type = llvm::FunctionType::get(voidTy, formalTypes, false);
+    llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, "Object..ctr", llvmModule);
+}
+
+void ParserDriver::genVTables() {
+    llvm::FunctionType* voidVarArg_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), true);
+    for(auto classIt : implementationMap) {
+        vector<llvm::Constant*> funcPtrs(1 + classIt.second.size());
+        //push the assembly constructor, then methods
+        llvm::Function* f = llvmModule->getFunction(classIt.first + "..ctr");
+        llvm::Value* bitcastedFunc = llvmBuilder->CreateBitCast(f, voidVarArg_type->getPointerTo());
+        funcPtrs[0] = (llvm::Constant*)bitcastedFunc;
+        for(auto methodIt : implementationMap.at(classIt.first)) {
+            llvm::Function* f = llvmModule->getFunction(methodIt.second.first->definer + '.' + methodIt.first);
+            llvm::Value* bitcastedFunc = llvmBuilder->CreateBitCast(f, voidVarArg_type->getPointerTo());
+            funcPtrs[1 + methodIt.second.second] = ((llvm::Constant*)bitcastedFunc);
+        }
+        llvm::ArrayType* table_type = llvm::ArrayType::get(voidVarArg_type->getPointerTo(), classIt.second.size() + 1);
+        llvm::GlobalVariable* global = (llvm::GlobalVariable*)llvmModule->getOrInsertGlobal(classIt.first + "_v", table_type);
+        global->setInitializer(llvm::ConstantArray::get(table_type, funcPtrs));
+        global->setConstant(true);
+    }
+}
+void ParserDriver::genStructDefs() {
+    //All structures are laid out as follows: vtable ptr, then all attributes
+    //Bool/Int/String are handled separately because their struct defs differ from what they have on the symbol table
+    map<string, map<string, pair<objRec*, int>>> classMap_noPrimitives = classMap;
+    classMap_noPrimitives.erase(classMap_noPrimitives.find("Bool"));
+    classMap_noPrimitives.erase(classMap_noPrimitives.find("Int"));
+    classMap_noPrimitives.erase(classMap_noPrimitives.find("String"));
+    for(auto classIt : classMap_noPrimitives) {
+        vector<llvm::Type*> attrs(classIt.second.size() - 1 + firstAttrOffset);
+        attrs[0] = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), true)->getPointerTo()->getPointerTo();
+        attrs[1] = llvmModule->getTypeByName(classIt.first + "_c")->getPointerTo();
+        for(auto attrIt : classIt.second) {
+            const string& type = attrIt.second.first->type;
+            if(type != "SELF_TYPE") {
+                attrs[firstAttrOffset + attrIt.second.second] = llvmModule->getTypeByName(type + "_c")->getPointerTo();
+            }
+            else {
+                attrs[firstAttrOffset + attrIt.second.second] = llvm::Type::getInt64PtrTy(*llvmContext);
+            }
+        }
+        llvmModule->getTypeByName(classIt.first + "_c")->setBody(attrs);
+    }
+    //Now for special cases of Bool/Int/String (raw fields)
+    vector<llvm::Type*> attrs(3);
+    attrs[0] = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), true)->getPointerTo()->getPointerTo();
+    //Bool
+    attrs[selfOffset] = llvmModule->getTypeByName("Bool_c")->getPointerTo();
+    attrs[firstAttrOffset] = llvm::Type::getInt1Ty(*llvmContext);
+    llvmModule->getTypeByName("Bool_c")->setBody(attrs);
+    //Int
+    attrs[selfOffset] = llvmModule->getTypeByName("Int_c")->getPointerTo();
+    attrs[firstAttrOffset] = llvm::Type::getInt64Ty(*llvmContext);
+    llvmModule->getTypeByName("Int_c")->setBody(attrs);
+    //String
+    attrs[selfOffset] = llvmModule->getTypeByName("String_c")->getPointerTo();
+    attrs[firstAttrOffset] = llvmModule->getTypeByName("LLVMString");
+    llvmModule->getTypeByName("String_c")->setBody(attrs);
+}
+
+void ParserDriver::genBoolIntStringCtrs() {
+    llvm::Function* f; llvm::BasicBlock* b; llvm::Argument* self; llvm::Argument* raw;
+    llvm::Value *raw_ptr, *selfPtr_ptr, *loadedSelf;
+
+    //Bool
+    f = llvmModule->getFunction("Bool..ctr"); self = f->getArg(0); raw = f->getArg(1);
+    self->setName("self"); raw->setName("rawBool");
+    b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvmBuilder->SetInsertPoint(b);
+    //TODO
+    llvmBuilder->CreateRetVoid();
+
+    //Int
+    f = llvmModule->getFunction("Int..ctr"); self = f->getArg(0); raw = f->getArg(1);
+    self->setName("self"); raw->setName("rawInt");
+    b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvmBuilder->SetInsertPoint(b);
+    selfPtr_ptr = llvmBuilder->CreateAlloca(self->getType(), nullptr, "selfPtr_ptr");
+    llvmBuilder->CreateStore(self, selfPtr_ptr);
+    loadedSelf = llvmBuilder->CreateLoad(self->getType(), selfPtr_ptr, "loadedSelf");
+    llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(loadedSelf, 0, "vtablePtr");
+    llvmBuilder->CreateStore(llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal("Int_v"), 0), vtablePtr);
+    raw_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("Int_c"), loadedSelf, firstAttrOffset, "raw_ptr");
+    llvmBuilder->CreateStore(raw, raw_ptr);
+    llvmBuilder->CreateRetVoid();
+
+
+
+    //String
+    f = llvmModule->getFunction("String..ctr"); self = f->getArg(0); raw = f->getArg(1);
+    self->setName("self"); raw->setName("rawLLVMString");
+    b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvmBuilder->SetInsertPoint(b);
+    //TODO
+    llvmBuilder->CreateRetVoid();
+}
+void ParserDriver::genCtrs() {
+    //just Main for now
+    map<string, pair<objRec*, int>> mainMap = classMap.at("Main");
+    llvm::Function* f = llvmModule->getFunction("Main..ctr");
+    llvm::Value* self = f->getArg(0); self->setName("self");
+    llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvmBuilder->SetInsertPoint(b);
+    llvm::Value* selfPtr_ptr = llvmBuilder->CreateAlloca(self->getType(), 0, nullptr, "selfPtr_ptr");
+    llvmBuilder->CreateStore(self, selfPtr_ptr);
+    llvm::Value* loadedSelf = llvmBuilder->CreateLoad(self->getType(), selfPtr_ptr, "loadedSelf");
+    llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(loadedSelf, 0, "vtablePtr");
+    llvmBuilder->CreateStore(llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal("Main_v"), 0), vtablePtr);
+    llvmBuilder->CreateRetVoid();
+    //TODO everything, not just Main. also, add codegen for attributes
+}
+void ParserDriver::genBasicClassMethods() {
+    //TODO put out_int in its own method, and implement the rest of the basic class methods
+    llvm::Function* out_int_func = llvmModule->getFunction("IO.out_int");
+    llvm::BasicBlock* out_int_block = llvm::BasicBlock::Create(*llvmContext, "entry", out_int_func);
+    llvmBuilder->SetInsertPoint(out_int_block);
+    llvm::Value* castedArg = llvmBuilder->CreatePointerCast(
+            out_int_func->getArg(1),
+            llvmModule->getTypeByName("Int_c")->getPointerTo(),
+            "castedArg"
+    );
+
+    llvm::Function* printf = llvmModule->getFunction("printf");
+    vector<llvm::Value*> printf_args{llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("%d"), ".str.percentd", 0, llvmModule)};
+    llvm::Value* raw_int_ptr = llvmBuilder->CreateStructGEP(
+        llvmModule->getTypeByName("Int_c"),
+        castedArg,
+        firstAttrOffset,
+        "raw_int_ptr"
+    );
+    llvm::Value* raw_int = llvmBuilder->CreateLoad(llvm::Type::getInt64Ty(*llvmContext), raw_int_ptr, "raw_int");
+    printf_args.push_back(raw_int);
+    llvmBuilder->CreateCall(printf, printf_args);
+
+    //return self, but casted to an i64*
+    llvm::Value* castedSelf = llvmBuilder->CreatePointerCast(
+            out_int_func->getArg(0),
+            llvm::Type::getInt64PtrTy(*llvmContext),
+            "castedSelf"
+    );
+    llvmBuilder->CreateRet(castedSelf); //return self
+}
+void ParserDriver::genUserMethods() {
+    //just gen Main.main for now
+    currentClassEnv = env->getRec("Main")->link;
+    currentMethodEnv = currentClassEnv->getMethodRec("main")->link;
+    _method* main = (_method*)implementationMap.at("Main").at("main").first->treeNode;
+    llvm::Function* f = llvmModule->getFunction("Main.main");
+    cur_func = f;
+    llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvmBuilder->SetInsertPoint(b);
+    llvm::Value* ret = main->body->codegen(*this);
+    llvmBuilder->CreateRet(ret);
+    //TODO gen all user methods, not just Main.main
+}
+
+void ParserDriver::genLLVMmain() {
+    llvm::FunctionType* f_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*llvmContext), false);
+    llvm::Function* LLVMmain = llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, "main", *llvmModule);
+    llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", LLVMmain);
+    llvmBuilder->SetInsertPoint(b);
+    llvm::Value* MainPtr_ptr = llvmBuilder->CreateAlloca(llvmModule->getTypeByName("Main_c")->getPointerTo(), nullptr, "MainPtr_ptr");
+    llvm::Value* mallocRes = llvmBuilder->CreateCall(
+        llvmModule->getFunction("malloc"),
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, 8, false)));
+    llvm::Value* castedMallocRes = llvmBuilder->CreateBitCast(mallocRes, llvmModule->getTypeByName("Main_c")->getPointerTo());
+    llvmBuilder->CreateStore(castedMallocRes, MainPtr_ptr);
+    llvm::Value* loadedMain = llvmBuilder->CreateLoad(MainPtr_ptr);
+    llvmBuilder->CreateCall(llvmModule->getFunction("Main..ctr"), loadedMain);
+    llvmBuilder->CreateCall(llvmModule->getFunction("Main.main"), loadedMain);
+    llvmBuilder->CreateRet(llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(32, 0, false)));
+}
+
+
+
+llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
+    //TODO: make generic instead of hardcoding stuff for printIntLiteral.cl
+    llvm::Value* self = drv.cur_func->getArg(0); self->setName("self");
+    vector<llvm::Value*> args;
+    for(auto arg : argList) {
+        args.push_back(arg->codegen(drv));
+    }
+
+    llvm::Value* vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(self, 0, "vtablePtr_ptr");
+    llvm::Value* vtablePtr = drv.llvmBuilder->CreateLoad(vtablePtr_ptr);
+    int funcOffset = drv.implementationMap.at(drv.currentClassEnv->id).at(id).second;
+    llvm::Value* funcPtr_ptr = drv.llvmBuilder->CreateGEP(
+        vtablePtr,
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 1 + funcOffset, false)),
+        "funcPtr_ptr");
+    llvm::Value* funcPtr = drv.llvmBuilder->CreateLoad(funcPtr_ptr, "funcPtr");
+    llvm::Value* func = drv.llvmBuilder->CreateBitCast(funcPtr, drv.llvmModule->getFunction("IO.out_int")->getType(), "func");
+    llvm::FunctionCallee fc((llvm::FunctionType*)drv.llvmModule->getFunction("IO.out_int")->getType(), func);
+    llvm::Value* selfIOcast = drv.llvmBuilder->CreateBitCast(self, drv.llvmModule->getTypeByName("IO_c")->getPointerTo(), "selfIOcast");
+    llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, vector<llvm::Value*>{selfIOcast, args[0]}, "ret");
+    //TODO figure out why ret type is a function pointer. for now, use mutateType
+    ret->mutateType(llvm::Type::getInt64PtrTy(*drv.llvmContext));
+    llvm::Value* castedRet = drv.llvmBuilder->CreateBitCast(ret, drv.llvmModule->getTypeByName("Object_c")->getPointerTo(), "castedRet");
+    return castedRet;
+
+}
+
+llvm::Value* _if::codegen(ParserDriver& drv) {
+    return nullptr;
+}
+
+llvm::Value* _int::codegen(ParserDriver& drv) {
+    //TODO: check for any needed changes here
+    llvm::Value* IntPtr_ptr = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName("Int_c")->getPointerTo());
+    llvm::Value* numBytes = llvm::ConstantInt::get(
+        llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 24, false));
+    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Int_c")->getPointerTo(), "castedMallocRes");
+    drv.llvmBuilder->CreateStore(castedMallocRes, IntPtr_ptr);
+    llvm::Value* loadedSelf = drv.llvmBuilder->CreateLoad(IntPtr_ptr, "loadedSelf");
+    llvm::Value* intLiteralValue = llvm::ConstantInt::get(
+        llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, value, false));
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), vector<llvm::Value*>{loadedSelf, intLiteralValue});
+    return loadedSelf;
+}
+
+llvm::Value* _bool::codegen(ParserDriver& drv) {
+    return nullptr;
+}
+
+llvm::Value* _block::codegen(ParserDriver& drv) {
+    return nullptr;
+}
+
+llvm::Value* _string::codegen(ParserDriver& drv) {
+    return nullptr;
 }

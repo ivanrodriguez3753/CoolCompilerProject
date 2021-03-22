@@ -42,6 +42,7 @@ public:
     llvm::Module* llvmModule = new llvm::Module("theModuleID", *llvmContext);
     llvm::IRBuilder<>* llvmBuilder = new llvm::IRBuilder<>(*llvmContext);
     map<string, llvm::Value*> llvmNamedValues;
+    map<string, llvm::Type*> types;
 
     llvm::Function* cur_func;
 
@@ -113,18 +114,16 @@ public:
 
     friend class _node;
 private:
-    void genDeclarations();
-    void genClassAndVtableTypeDefs();
-        void addRawFields();
-    void genBasicClassMethodDefs();
-        void define_IO_ctr();
-        void define_IO_out_int();
-        void define_IO_out_string();
-        void gen_callprintf_int();
-        void gen_llvmStringTypeAndMethods();
-    void genAssemblyConstructors();
-    void genUserDefinedMethods();
-    void genLLVMMain();
+    void declareExterns();
+    void gen_llvmStringTypeAndMethods();
+    void declaresStructsAndFuncs();
+    void genVTables();
+    void genStructDefs();
+    void genBoolIntStringCtrs();
+    void genCtrs();
+    void genBasicClassMethods();
+    void genUserMethods();
+    void genLLVMmain();
 
 };
 
