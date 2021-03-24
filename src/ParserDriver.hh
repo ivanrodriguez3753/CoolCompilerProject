@@ -55,6 +55,37 @@ public:
      * points to the current letCaseEnv
      */
     letCaseEnv* top = nullptr;
+
+    /**
+     * This map keeps track of all the available local identifiers for a function, which is known at compile time
+     * Name mangling will be (letCaseEnv.id) + id for the keys, and the value is a pointer to the result of alloca,
+     * where alloca is called once for each local identifier at the beginning of the LLVM code for each user function.
+     * Initialization for the identifier (i.e. calling its ..ctr) happens only in the block in which that identifier
+     * is declared in the cool source code. For example,
+     * if isTrue then
+     *      let x : Int ...
+     * else
+     *      let x : Int ...
+     * fi
+     * We would alloca for each x above, at the beginning of the LLVM user function definition, but we
+     * call Int..ctr only in the block in which that identifier is introduced. Something like the following:
+     * %let1.x = alloca %Int_c
+     * %let2.x = alloca %Int_c
+     *
+     * %boolCheck = some boolean based on isTrue above
+     * br i1 %boolCheck label %truePath, label %falsePath
+     * truePath:
+     *      call Int..ctr and pass in %let1.x
+     *      ...do stuff
+     *      br label %fi
+     * falsePath:
+     *      call Int..ctr and pass in %let2.x
+     *      ...do stuff
+     *      br label %fi
+     * fi:
+     *      ...whatever comes after the if statement
+     */
+    map<string, llvm::Value*> localsMap;
     int letCaseCounter = 0;
 
     map<string, map<string, pair<objRec*, int>>> classMap;
@@ -122,6 +153,16 @@ private:
     void genBoolIntStringCtrs();
     void genCtrs();
     void genBasicClassMethods();
+        void genIO_out_int();
+        void genIO_out_string();
+        void genIO_in_int();
+        void genIO_in_string();
+        void genObject_abort();
+        void genObject_copy();
+        void genObject_type_name();
+        void genString_concat();
+        void genString_length();
+        void genString_substr();
     void genUserMethods();
     void genLLVMmain();
 
