@@ -67,6 +67,8 @@ TEST_P(codegenFixture, positive) {
 }
 INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/printIntLiteral.cl",
+    "CoolProgramsAssembly/printIntAttrNoInit.cl",
+    "CoolProgramsAssembly/printIntAttrInit.cl",
     "CoolProgramsAssembly/ifExpr.cl",
     "CoolProgramsAssembly/blockExpr.cl"
 ));

@@ -341,6 +341,7 @@ public:
     _id(int l, string v) : _expr(l), value(v) { }
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _dispatch : public _expr {

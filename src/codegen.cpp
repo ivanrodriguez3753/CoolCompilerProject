@@ -457,17 +457,89 @@ void ParserDriver::genCtrs() {
         currentMethodEnv = ((_class*)(env->getRec(classIt.first)->treeNode))->assemblyConstructorEnv;
 
         llvm::Value* self = f->getArg(0); self->setName("self");
-        llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
-        llvmBuilder->SetInsertPoint(b);
+        llvm::BasicBlock* entry_b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+        llvmBuilder->SetInsertPoint(entry_b);
         //Do the vtable
         llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
         llvmBuilder->CreateStore(
             llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal(classIt.first + "_v"), 0),
             vtablePtr);
+        //make a block for each attribute and place in correct order so that attributes get initialized top to bottom, as
+        //the user would expect
+        vector<llvm::BasicBlock*> attrBlocks(classIt.second.size());
         for(auto attrIt : classIt.second) {
-            //TODO now do the attributes
+            attrBlocks[attrIt.second.second] = llvm::BasicBlock::Create(*llvmContext, attrIt.first + ".attr.init", cur_func);
         }
+        for(int i = 0; i < (int)attrBlocks.size() - 1; ++i) {
+            attrBlocks[i]->moveBefore(attrBlocks[i + 1]);
+        }
+
+
+        for(auto attrIt : classIt.second) {
+            llvm::Type* llvmType;
+            const string& type = attrIt.second.first->type;
+            string resolvedType = type;
+            if(type == "SELF_TYPE") {
+                resolvedType = classIt.first;
+                llvmType = llvmModule->getTypeByName(classIt.first + "_c")->getPointerTo();
+            }
+            else {
+                llvmType = llvmModule->getTypeByName(type + "_c")->getPointerTo();
+            }
+            llvm::BasicBlock* attr_b = attrBlocks[attrIt.second.second];
+            llvmBuilder->SetInsertPoint(attr_b);
+
+            llvm::Value* storeAtEnd;
+            _expr*& optInit = ((_attr*)(attrIt.second.first->treeNode))->optInit;
+            if(resolvedType == "String" || resolvedType == "Int" || resolvedType == "Bool") {
+                if(resolvedType == "String") {
+                    if(!optInit) {
+                        optInit = new _string(0, ""); //random line number which will never be used, and default "" value
+                    }
+                    storeAtEnd = optInit->codegen(*this);
+                }
+                else if(resolvedType == "Int") {
+                    if(!optInit) {
+                        optInit = new _int(0, 0); //random line number which will never be used, and default 0 value
+                    }
+                    storeAtEnd = optInit->codegen(*this);
+                }
+                else if(resolvedType == "Bool") {
+                    if(!optInit) {
+                        optInit = new _bool(0, false); //random line number which will never be used, and default false value
+                    }
+                    storeAtEnd = optInit->codegen(*this);
+                }
+            }
+            else {
+                if(optInit) {
+                    storeAtEnd = optInit->codegen(*this);
+                }
+                else {
+                    storeAtEnd = llvm::Constant::getNullValue(llvmType);
+                }
+            }
+            llvmBuilder->CreateStore(
+                storeAtEnd,
+                llvmBuilder->CreateStructGEP(self, firstAttrOffset + attrIt.second.second));
+        }
+
+        llvm::BasicBlock* end_b = llvm::BasicBlock::Create(*llvmContext, "end", cur_func);
+        llvmBuilder->SetInsertPoint(end_b);
         llvmBuilder->CreateRetVoid();
+
+        //now take care of LLVM's required br instruction on block dropthroughs
+        llvmBuilder->SetInsertPoint(entry_b);
+        if(attrBlocks.size()) {
+            llvmBuilder->CreateBr(attrBlocks[0]);
+            llvmBuilder->SetInsertPoint(attrBlocks[0]);
+            for(int i = 1; i < (int)attrBlocks.size() ; ++i) {
+                llvmBuilder->CreateBr(attrBlocks[i]);
+                llvmBuilder->SetInsertPoint(attrBlocks[i]);
+            }
+            llvmBuilder->SetInsertPoint(attrBlocks[(int)attrBlocks.size() - 1]);
+        }
+        llvmBuilder->CreateBr(end_b);
     }
 }
 void ParserDriver::genBasicClassMethods() {
@@ -667,18 +739,14 @@ llvm::Value* _if::codegen(ParserDriver& drv) {
 }
 
 llvm::Value* _int::codegen(ParserDriver& drv) {
-    //TODO: check for any needed changes here
-    llvm::Value* IntPtr_ptr = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName("Int_c")->getPointerTo());
     llvm::Value* numBytes = llvm::ConstantInt::get(
         llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 16, false)); //vtable pointer, raw value (64 bit int)
     llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
     llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Int_c")->getPointerTo(), "castedMallocRes");
-    drv.llvmBuilder->CreateStore(castedMallocRes, IntPtr_ptr);
-    llvm::Value* loadedSelf = drv.llvmBuilder->CreateLoad(IntPtr_ptr, "loadedSelf");
     llvm::Value* intLiteralValue = llvm::ConstantInt::get(
         llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, value, false));
-    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), vector<llvm::Value*>{loadedSelf, intLiteralValue});
-    return loadedSelf;
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), vector<llvm::Value*>{castedMallocRes, intLiteralValue});
+    return castedMallocRes;
 }
 
 llvm::Value* _bool::codegen(ParserDriver& drv) {
@@ -691,4 +759,28 @@ llvm::Value* _block::codegen(ParserDriver& drv) {
 
 llvm::Value* _string::codegen(ParserDriver& drv) {
     return nullptr;
+}
+
+/**
+ * identifier resolution from lval -> rval needs to happen in this order: local(letCase) vars, method arguments, then class attributes
+ * we are currently under the assumption that the identifier exists in one of these 3 categories
+ * @param drv
+ * @return
+ */
+llvm::Value* _id::codegen(ParserDriver& drv) {
+    llvm::Value* retThis;
+    if(false) {
+        //TODO: local vars
+        return retThis;
+    }
+    else if(false) {
+        //TODO: method arguments
+        return retThis;
+    }
+    else {
+        int attrOffset = drv.classMap.at(drv.currentClassEnv->id).at(value).second;
+        llvm::Value* attrPtr_ptr = drv.llvmBuilder->CreateStructGEP(drv.cur_func->getArg(0), firstAttrOffset + attrOffset, value + "Ptr_ptr");
+        retThis = drv.llvmBuilder->CreateLoad(attrPtr_ptr, value + "Ptr");
+        return retThis;
+    }
 }
