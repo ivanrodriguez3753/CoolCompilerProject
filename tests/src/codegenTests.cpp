@@ -72,10 +72,15 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/printIntParam.cl",
     "CoolProgramsAssembly/printFirstIntParam.cl",
     "CoolProgramsAssembly/printSecondIntParam.cl",
+    "CoolProgramsAssembly/printStringLiteral.cl",
+    "CoolProgramsAssembly/printStringAttrNoInit.cl",
+    "CoolProgramsAssembly/printStringAttrInit.cl",
+    "CoolProgramsAssembly/printStringParam.cl",
+    "CoolProgramsAssembly/printFirstStringParam.cl",
+    "CoolProgramsAssembly/printSecondStringParam.cl",
     "CoolProgramsAssembly/intBlockExpr.cl",
     "CoolProgramsAssembly/printLetInt.cl",
     "CoolProgramsAssembly/printLetIntNested.cl"
-
 //    "CoolProgramsAssembly/ifExpr.cl",
 //    "CoolProgramsAssembly/blockExpr.cl"
 ));

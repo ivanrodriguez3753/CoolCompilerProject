@@ -349,7 +349,7 @@ void ParserDriver::declaresStructsAndFuncs() {
     //String
     formalTypes.clear();
     formalTypes.push_back(llvmModule->getTypeByName("String_c")->getPointerTo());
-    formalTypes.push_back(llvm::Type::getInt8PtrTy(*llvmContext));
+    formalTypes.push_back(llvmModule->getTypeByName("LLVMString"));
     f_type = llvm::FunctionType::get(voidTy, formalTypes, false);
     llvm::Function::Create(f_type, llvm::GlobalValue::ExternalLinkage, 0, "String..ctr", llvmModule);
     //Object
@@ -430,23 +430,21 @@ void ParserDriver::genBoolIntStringCtrs() {
     self->setName("self"); raw->setName("rawInt");
     b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
     llvmBuilder->SetInsertPoint(b);
-    selfPtr_ptr = llvmBuilder->CreateAlloca(self->getType(), nullptr, "selfPtr_ptr");
-    llvmBuilder->CreateStore(self, selfPtr_ptr);
-    loadedSelf = llvmBuilder->CreateLoad(self->getType(), selfPtr_ptr, "loadedSelf");
-    llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(loadedSelf, 0, "vtablePtr");
+    llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
     llvmBuilder->CreateStore(llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal("Int_v"), 0), vtablePtr);
-    raw_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("Int_c"), loadedSelf, firstAttrOffset, "raw_ptr");
+    raw_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("Int_c"), self, firstAttrOffset, "raw_ptr");
     llvmBuilder->CreateStore(raw, raw_ptr);
     llvmBuilder->CreateRetVoid();
-
-
 
     //String
     f = llvmModule->getFunction("String..ctr"); self = f->getArg(0); raw = f->getArg(1);
     self->setName("self"); raw->setName("rawLLVMString");
     b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
     llvmBuilder->SetInsertPoint(b);
-    //TODO Implement String..ctr
+    vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
+    llvmBuilder->CreateStore(llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal("String_v"), 0), vtablePtr);
+    raw_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("String_c"), self, firstAttrOffset, "raw_ptr");
+    llvmBuilder->CreateStore(raw, raw_ptr);
     llvmBuilder->CreateRetVoid();
 }
 void ParserDriver::genCtrs() {
@@ -588,10 +586,15 @@ void ParserDriver::genIO_out_int() {
 void ParserDriver::genIO_out_string() {
     llvm::Function* f = llvmModule->getFunction("IO.out_string");
     llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvm::Value* self = f->getArg(0); self->setName("self");
+    llvm::Value* x = f->getArg(1); x->setName("x");
     llvmBuilder->SetInsertPoint(b);
-    //TODO implement, returning null for now so it compiles in LLVM
-    llvm::Value* retThis = llvmBuilder->CreateAlloca(llvm::Type::getInt64Ty(*llvmContext));
-    llvmBuilder->CreateRet(retThis);
+    llvm::Value* raw_LLVMString_ptr = llvmBuilder->CreateStructGEP(x, 1, "raw_LLVMString_ptr");
+    llvm::Value* charPtr_ptr = llvmBuilder->CreateStructGEP(raw_LLVMString_ptr, 0, "charPtr_ptr");
+    llvm::Value* charPtr = llvmBuilder->CreateLoad(charPtr_ptr, "charPtr");
+    llvmBuilder->CreateCall(llvmModule->getFunction("printf"), charPtr);
+    llvm::Value* castedSelf = llvmBuilder->CreateBitCast(self, llvm::Type::getInt64PtrTy(*llvmContext), "castedSelf");
+    llvmBuilder->CreateRet(castedSelf);
 
 
 }
@@ -749,6 +752,24 @@ llvm::Value* _int::codegen(ParserDriver& drv) {
     return castedMallocRes;
 }
 
+llvm::Value* _string::codegen(ParserDriver& drv) {
+    llvm::Value* numBytes = llvm::ConstantInt::get(
+        llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 32, false)); //i8*, i64, i64, i64 so 8 * 4 = 32 bytes
+    llvm::Value* mallocRes_LLVMString = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes_LLVMString");
+    llvm::Value* castedMallocRes_LLVMString = drv.llvmBuilder->CreateBitCast(mallocRes_LLVMString, drv.llvmModule->getTypeByName("LLVMString")->getPointerTo(), "castedMallocRes_LLVMString");
+    llvm::Value* stringPtr = drv.strLits.at(value).second;
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{castedMallocRes_LLVMString, stringPtr});
+
+    numBytes = llvm::ConstantInt::get(
+        llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 16, false)); //vtable pointer, raw LLVMString
+    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("String_c")->getPointerTo(), "castedMallocRes");
+    llvm::Value* loadedLLVMString = drv.llvmBuilder->CreateLoad(castedMallocRes_LLVMString, "loaded_LLVMString");
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("String..ctr"), vector<llvm::Value*>{castedMallocRes, loadedLLVMString});
+
+    return castedMallocRes;
+}
+
 llvm::Value* _bool::codegen(ParserDriver& drv) {
     return nullptr;
 }
@@ -818,10 +839,6 @@ llvm::Value* _let::codegen(ParserDriver& drv) {
     drv.top = drv.top->prevLetCase;
 
     return retThis;
-}
-
-llvm::Value* _string::codegen(ParserDriver& drv) {
-    return nullptr;
 }
 
 /**

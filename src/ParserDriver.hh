@@ -57,7 +57,8 @@ public:
     /**
      * map a string to its enumerated @globalValue identifier in LLVM (names are @.str.x)
      */
-    map<string, pair<int, llvm::Constant*>> strLits;
+    map<string, pair<int, llvm::Constant*>> strLits{
+        {"", {0, llvmBuilder->CreateGlobalStringPtr(llvm::StringRef(""), ".str.0", 0, llvmModule)}}}; //empty string
 
 
 
