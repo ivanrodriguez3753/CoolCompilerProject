@@ -345,10 +345,11 @@ string ParserDriver::computeLub(set<string> s) {
 }
 
 letCaseEnv* ParserDriver::buildLetEnv(_let* letNode) {
-    letCaseEnv* returnThis = new letCaseEnv(top, "let" + to_string(encountered));
+    letCaseEnv* returnThis = new letCaseEnv(top, "let" + to_string(letNode->encountered));
 
     for(int i = 0; i < letNode->bindingList.size(); ++i) {
         returnThis->symTable.insert({letNode->bindingList[i]->id, new objRec(letNode->bindingList[i], letNode->bindingList[i]->lineNo, i, letNode->bindingList[i]->type)});
+        currentMethodEnv->localsMap.insert({returnThis->id + '.' + letNode->bindingList[i]->id, nullptr});
     }
     return returnThis;
 }

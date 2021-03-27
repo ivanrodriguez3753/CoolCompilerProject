@@ -180,7 +180,7 @@ public:
 
 };
 
-class _letBinding : public _symTable {
+class _letBinding : public _symTable{
 public:
     const string type;
     const int type_lineno;
@@ -277,6 +277,7 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _case : public _expr, _env {

@@ -675,7 +675,6 @@ void ParserDriver::genUserMethods() {
         for(auto methodIt : currentClassEnv->methodsSymTable) {
             cur_func = llvmModule->getFunction(classIt.first + '.' + methodIt.first);
             currentMethodEnv = methodIt.second->link;
-            localsMap.clear();
             //TODO: populate locals map
             llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", cur_func);
             llvmBuilder->SetInsertPoint(b);
@@ -731,6 +730,7 @@ llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
     //TODO figure out why ret type is a function pointer. for now, use mutateType
     ret->mutateType(drv.llvmModule->getFunction(definer + '.' + id)->getReturnType());
     llvm::Value* castedRet = drv.llvmBuilder->CreateBitCast(ret, drv.cur_func->getReturnType(), "castedRet");
+
     return castedRet;
 }
 
@@ -754,7 +754,70 @@ llvm::Value* _bool::codegen(ParserDriver& drv) {
 }
 
 llvm::Value* _block::codegen(ParserDriver& drv) {
-    return nullptr;
+    for(vector<_expr*>::iterator it = body.begin(); it != body.end() - 1; ++it) {
+        (*it)->codegen(drv);
+    }
+    return (*(body.end() - 1))->codegen(drv);
+}
+
+llvm::Value* _let::codegen(ParserDriver& drv) {
+    map<string, llvm::Value*>& localsMap = drv.currentMethodEnv->localsMap;
+    //call alloca for each identifier, and we can codegen the init expression in _letBinding
+    for(_letBinding* binding : bindingList) {
+        string resolvedType = binding->type;
+        if(resolvedType == "SELF_TYPE") {
+            resolvedType = drv.currentClassEnv->id;
+        }
+        llvm::Type* llvmType = drv.llvmModule->getTypeByName(resolvedType + "_c");
+
+        localsMap[selfEnv->id + '.' + binding->id] = drv.llvmBuilder->CreateAlloca(
+            llvmType->getPointerTo(), 0, nullptr, id + '.' + binding->id);
+    }
+
+    drv.top = (letCaseEnv*)selfEnv;
+    for(_letBinding* binding : bindingList) {
+        string resolvedType = binding->type;
+        if(resolvedType == "SELF_TYPE") {
+            resolvedType = drv.currentClassEnv->id;
+        }
+        llvm::Type* llvmType = drv.llvmModule->getTypeByName(resolvedType + "_c");
+        llvm::Value* storeAtEnd;
+        if(resolvedType == "Int" || resolvedType == "Bool" || resolvedType == "String") {
+            if(resolvedType == "String") {
+                if(!binding->optInit) {
+                    binding->optInit = new _string(0, ""); //random line number which will never be used, and default "" value
+                }
+                storeAtEnd = binding->optInit->codegen(drv);
+            }
+            else if(resolvedType == "Int") {
+                if(!binding->optInit) {
+                    binding->optInit = new _int(0, 0); //random line number which will never be used, and default 0 value
+                }
+                storeAtEnd = binding->optInit->codegen(drv);
+            }
+            else if(resolvedType == "Bool") {
+                if(!binding->optInit) {
+                    binding->optInit = new _bool(0, false); //random line number which will never be used, and default false value
+                }
+                storeAtEnd = binding->optInit->codegen(drv);
+            }
+        }
+        else {
+            if(binding->optInit) {
+                llvm::Value* initExprRes = binding->optInit->codegen(drv);
+                initExprRes->setName("initExprRes");
+                storeAtEnd = drv.llvmBuilder->CreateBitCast(initExprRes, llvmType->getPointerTo(), "castedInit");
+            }
+            else {
+                storeAtEnd = llvm::Constant::getNullValue(llvmType->getPointerTo());
+            }
+        }
+        drv.llvmBuilder->CreateStore(storeAtEnd, localsMap[selfEnv->id + '.' + binding->id]);
+    }
+    llvm::Value* retThis = body->codegen(drv);
+    drv.top = drv.top->prevLetCase;
+
+    return retThis;
 }
 
 llvm::Value* _string::codegen(ParserDriver& drv) {
@@ -769,18 +832,24 @@ llvm::Value* _string::codegen(ParserDriver& drv) {
  */
 llvm::Value* _id::codegen(ParserDriver& drv) {
     llvm::Value* retThis;
-    if(false) {
-        //TODO: local vars
-        return retThis;
+    bool found = false;
+
+    if(drv.top != nullptr) {
+        map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(drv.top->id + '.' + value);
+        if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
+            llvm::Value* doublePtr = searchResIt->second;
+            retThis = drv.llvmBuilder->CreateLoad(doublePtr); retThis->setName(drv.top->id + '.' + value + "_loaded");
+            found = true;
+        }
     }
-    else if(false) {
-        //TODO: method arguments
-        return retThis;
+    if(!found && drv.currentMethodEnv->getRec(value)) {
+        retThis = drv.cur_func->getArg(1 + drv.currentMethodEnv->getRec(value)->localOffset);//self is always first parameter
+        found = true;
     }
-    else {
+    if(!found) {
         int attrOffset = drv.classMap.at(drv.currentClassEnv->id).at(value).second;
         llvm::Value* attrPtr_ptr = drv.llvmBuilder->CreateStructGEP(drv.cur_func->getArg(0), firstAttrOffset + attrOffset, value + "Ptr_ptr");
         retThis = drv.llvmBuilder->CreateLoad(attrPtr_ptr, value + "Ptr");
-        return retThis;
     }
+    return retThis;
 }

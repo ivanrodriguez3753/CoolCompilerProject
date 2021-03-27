@@ -29,6 +29,10 @@ class ParserDriver {
 public:
     int encountered = 0;
 
+    /**
+    * points to the current letCaseEnv
+    */
+    letCaseEnv* top = nullptr;
     classEnv* currentClassEnv = nullptr;
     methodEnv* currentMethodEnv = nullptr;
 
@@ -44,6 +48,10 @@ public:
     map<string, llvm::Value*> llvmNamedValues;
     map<string, llvm::Type*> types;
 
+    /**
+     * Keeps track of current the current LLVM function in the LLVM we are in when codegen'ing. Typically set/restored
+     * at the beginning/end of a dispatch expression or function definition
+     */
     llvm::Function* cur_func;
 
     /**
@@ -51,41 +59,9 @@ public:
      */
     map<string, pair<int, llvm::Constant*>> strLits;
 
-    /**
-     * points to the current letCaseEnv
-     */
-    letCaseEnv* top = nullptr;
 
-    /**
-     * This map keeps track of all the available local identifiers for a function, which is known at compile time
-     * Name mangling will be (letCaseEnv.id) + id for the keys, and the value is a pointer to the result of alloca,
-     * where alloca is called once for each local identifier at the beginning of the LLVM code for each user function.
-     * Initialization for the identifier (i.e. calling its ..ctr) happens only in the block in which that identifier
-     * is declared in the cool source code. For example,
-     * if isTrue then
-     *      let x : Int ...
-     * else
-     *      let x : Int ...
-     * fi
-     * We would alloca for each x above, at the beginning of the LLVM user function definition, but we
-     * call Int..ctr only in the block in which that identifier is introduced. Something like the following:
-     * %let1.x = alloca %Int_c
-     * %let2.x = alloca %Int_c
-     *
-     * %boolCheck = some boolean based on isTrue above
-     * br i1 %boolCheck label %truePath, label %falsePath
-     * truePath:
-     *      call Int..ctr and pass in %let1.x
-     *      ...do stuff
-     *      br label %fi
-     * falsePath:
-     *      call Int..ctr and pass in %let2.x
-     *      ...do stuff
-     *      br label %fi
-     * fi:
-     *      ...whatever comes after the if statement
-     */
-    map<string, llvm::Value*> localsMap;
+
+
     int letCaseCounter = 0;
 
     map<string, map<string, pair<objRec*, int>>> classMap;

@@ -69,8 +69,15 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/printIntLiteral.cl",
     "CoolProgramsAssembly/printIntAttrNoInit.cl",
     "CoolProgramsAssembly/printIntAttrInit.cl",
-    "CoolProgramsAssembly/ifExpr.cl",
-    "CoolProgramsAssembly/blockExpr.cl"
+    "CoolProgramsAssembly/printIntParam.cl",
+    "CoolProgramsAssembly/printFirstIntParam.cl",
+    "CoolProgramsAssembly/printSecondIntParam.cl",
+    "CoolProgramsAssembly/intBlockExpr.cl",
+    "CoolProgramsAssembly/printLetInt.cl",
+    "CoolProgramsAssembly/printLetIntNested.cl"
+
+//    "CoolProgramsAssembly/ifExpr.cl",
+//    "CoolProgramsAssembly/blockExpr.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",

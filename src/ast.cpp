@@ -618,7 +618,7 @@ void _assign::decorate(ParserDriver& drv) {
 }
 
 void _let::decorate(ParserDriver& drv) {
-    letCaseEnv* letEnv = drv.buildLetEnv(this);
+    selfEnv = drv.buildLetEnv(this);
 
     //traverse the initializers, at the current scope
     for(_letBinding* binding : bindingList) {
@@ -627,7 +627,7 @@ void _let::decorate(ParserDriver& drv) {
 
     //traversing the body, which is the first block that can use the new identifiers,
     //needs to be done with the proper context. so set drv.top to the letCaseEnv we just created
-    drv.top = letEnv;
+    drv.top = (letCaseEnv*)selfEnv;
     body->decorate(drv);
     drv.top = drv.top->prevLetCase;
 
