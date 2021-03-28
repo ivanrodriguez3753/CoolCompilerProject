@@ -415,14 +415,17 @@ void ParserDriver::genStructDefs() {
 
 void ParserDriver::genBoolIntStringCtrs() {
     llvm::Function* f; llvm::BasicBlock* b; llvm::Argument* self; llvm::Argument* raw;
-    llvm::Value *raw_ptr, *selfPtr_ptr, *loadedSelf;
+    llvm::Value *raw_ptr, *selfPtr_ptr, *loadedSelf, *vtablePtr;
 
     //Bool
     f = llvmModule->getFunction("Bool..ctr"); self = f->getArg(0); raw = f->getArg(1);
     self->setName("self"); raw->setName("rawBool");
     b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
     llvmBuilder->SetInsertPoint(b);
-    //TODO Implement Bool..ctr
+    vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
+    llvmBuilder->CreateStore(llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal("Bool_v"), 0), vtablePtr);
+    raw_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("Bool_c"), self, firstAttrOffset, "raw_ptr");
+    llvmBuilder->CreateStore(raw, raw_ptr);
     llvmBuilder->CreateRetVoid();
 
     //Int
@@ -430,7 +433,7 @@ void ParserDriver::genBoolIntStringCtrs() {
     self->setName("self"); raw->setName("rawInt");
     b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
     llvmBuilder->SetInsertPoint(b);
-    llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
+    vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
     llvmBuilder->CreateStore(llvmBuilder->CreateStructGEP(llvmModule->getNamedGlobal("Int_v"), 0), vtablePtr);
     raw_ptr = llvmBuilder->CreateStructGEP(llvmModule->getTypeByName("Int_c"), self, firstAttrOffset, "raw_ptr");
     llvmBuilder->CreateStore(raw, raw_ptr);
@@ -685,7 +688,13 @@ void ParserDriver::genUserMethods() {
 
             llvm::Value* ret = methodNode->body->codegen(*this);
 
-            llvmBuilder->CreateRet(ret);
+            string resolvedType = methodIt.second->returnType;
+            if(methodIt.second->returnType == "SELF_TYPE") resolvedType = classIt.first;
+            llvm::Value* ret_cast = llvmBuilder->CreateBitCast(
+                ret,
+                llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo(),
+                "ret_cast");
+            llvmBuilder->CreateRet(ret_cast);
         }
     }
 }
@@ -732,13 +741,40 @@ llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
     llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, args, "ret");
     //TODO figure out why ret type is a function pointer. for now, use mutateType
     ret->mutateType(drv.llvmModule->getFunction(definer + '.' + id)->getReturnType());
-    llvm::Value* castedRet = drv.llvmBuilder->CreateBitCast(ret, drv.cur_func->getReturnType(), "castedRet");
 
-    return castedRet;
+    return ret;
 }
 
 llvm::Value* _if::codegen(ParserDriver& drv) {
-    return nullptr;
+    llvm::Value* _predicate = predicate->codegen(drv);
+
+    llvm::BasicBlock* true_b = llvm::BasicBlock::Create(*drv.llvmContext, "if_t", drv.cur_func);
+    llvm::BasicBlock* false_b = llvm::BasicBlock::Create(*drv.llvmContext, "if_f", drv.cur_func);
+    llvm::BasicBlock* fi_b = llvm::BasicBlock::Create(*drv.llvmContext, "fi", drv.cur_func);
+
+    llvm::Value* rawBool_ptr = drv.llvmBuilder->CreateStructGEP(_predicate, firstAttrOffset, "rawBool_ptr");
+    llvm::Value* rawBool = drv.llvmBuilder->CreateLoad(rawBool_ptr);
+    drv.llvmBuilder->CreateCondBr(rawBool, true_b, false_b);
+
+    //cast results of true and false paths because PHI node needs both candidates to be the same type
+    drv.llvmBuilder->SetInsertPoint(true_b);
+    llvm::Value* true_res = tthen->codegen(drv); true_res->setName("true_res");
+    llvm::Value* true_res_cast = drv.llvmBuilder->CreateBitCast(true_res, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+    drv.llvmBuilder->CreateBr(fi_b);
+
+    drv.llvmBuilder->SetInsertPoint(false_b);
+    llvm::Value* false_res = eelse->codegen(drv); false_res->setName("false_res");
+    llvm::Value* false_res_cast = drv.llvmBuilder->CreateBitCast(true_res, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+    drv.llvmBuilder->CreateBr(fi_b);
+
+    drv.llvmBuilder->SetInsertPoint(fi_b);
+    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(llvm::Type::getInt64PtrTy(*drv.llvmContext), 2, "if_res");
+    phi->addIncoming(true_res_cast, true_b);
+    phi->addIncoming(false_res_cast, false_b);
+
+    string resolvedType = type;
+    if(type == "SELF_TYPE") resolvedType = resolveType(drv);
+    return drv.llvmBuilder->CreatePointerCast(phi, drv.llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo(), "if_res_cast");
 }
 
 llvm::Value* _int::codegen(ParserDriver& drv) {
@@ -749,6 +785,20 @@ llvm::Value* _int::codegen(ParserDriver& drv) {
     llvm::Value* intLiteralValue = llvm::ConstantInt::get(
         llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, value, false));
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), vector<llvm::Value*>{castedMallocRes, intLiteralValue});
+    return castedMallocRes;
+}
+
+llvm::Value* _bool::codegen(ParserDriver& drv) {
+    llvm::Value* numBytes = llvm::ConstantInt::get(
+            llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 9, false)); //vtable pointer, raw value (1 bit int)
+    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "castedMallocRes");
+    int intVal;
+    if(value) intVal = 1;
+    else intVal = 0;
+    llvm::Value* intLiteralValue = llvm::ConstantInt::get(
+        llvm::Type::getInt1Ty(*drv.llvmContext), llvm::APInt(1, intVal, false));
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, intLiteralValue});
     return castedMallocRes;
 }
 
@@ -768,10 +818,6 @@ llvm::Value* _string::codegen(ParserDriver& drv) {
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("String..ctr"), vector<llvm::Value*>{castedMallocRes, loadedLLVMString});
 
     return castedMallocRes;
-}
-
-llvm::Value* _bool::codegen(ParserDriver& drv) {
-    return nullptr;
 }
 
 llvm::Value* _block::codegen(ParserDriver& drv) {

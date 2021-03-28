@@ -4,7 +4,7 @@ class Main inherits IO {
         if true then
             "truePath"
         else
-            "falsPath"
+            "falsePath"
         fi;
     }};
 
