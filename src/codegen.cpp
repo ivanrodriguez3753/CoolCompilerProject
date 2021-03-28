@@ -681,11 +681,20 @@ void ParserDriver::genUserMethods() {
         for(auto methodIt : currentClassEnv->methodsSymTable) {
             cur_func = llvmModule->getFunction(classIt.first + '.' + methodIt.first);
             currentMethodEnv = methodIt.second->link;
-            //TODO: populate locals map
             llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", cur_func);
             llvmBuilder->SetInsertPoint(b);
             _method* methodNode = (_method*)methodIt.second->treeNode;
 
+            //formals cannot have SELF_TYPE so don't need to check
+
+            for(int i = 0; i < methodNode->formalsList.size(); ++i) {
+                _formal*& formal = methodNode->formalsList[i];
+                const string formalKey = "methodParam." + formal->id;
+                currentMethodEnv->localsMap.insert({
+                    formalKey,
+                    llvmBuilder->CreateAlloca(llvmModule->getTypeByName(formal->type + "_c")->getPointerTo())});
+                llvmBuilder->CreateStore(cur_func->getArg(1 + i), currentMethodEnv->localsMap[formalKey]); //first arg is always self so offset
+            }
             llvm::Value* ret = methodNode->body->codegen(*this);
 
             string resolvedType = methodIt.second->returnType;
@@ -897,7 +906,11 @@ llvm::Value* _id::codegen(ParserDriver& drv) {
     llvm::Value* retThis;
     bool found = false;
 
-    if(drv.top != nullptr) {
+    if(value == "self") {
+        return drv.cur_func->getArg(0);
+    }
+
+    if(drv.top != nullptr) {//locals - letCase
         map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(drv.top->id + '.' + value);
         if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
             llvm::Value* doublePtr = searchResIt->second;
@@ -905,14 +918,53 @@ llvm::Value* _id::codegen(ParserDriver& drv) {
             found = true;
         }
     }
-    if(!found && drv.currentMethodEnv->getRec(value)) {
-        retThis = drv.cur_func->getArg(1 + drv.currentMethodEnv->getRec(value)->localOffset);//self is always first parameter
-        found = true;
+    if(!found) {//locals - methodParams
+        map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find("methodParam." + value);
+        if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
+            llvm::Value* doublePtr = searchResIt->second;
+            retThis = drv.llvmBuilder->CreateLoad(doublePtr); retThis->setName("methodParam." + value + "_loaded");
+            found = true;
+        }
     }
-    if(!found) {
+    if(!found) {//attributes
         int attrOffset = drv.classMap.at(drv.currentClassEnv->id).at(value).second;
         llvm::Value* attrPtr_ptr = drv.llvmBuilder->CreateStructGEP(drv.cur_func->getArg(0), firstAttrOffset + attrOffset, value + "Ptr_ptr");
         retThis = drv.llvmBuilder->CreateLoad(attrPtr_ptr, value + "Ptr");
     }
     return retThis;
+}
+
+llvm::Value* _assign::codegen(ParserDriver& drv) {
+    llvm::Value* rhs_val = rhs->codegen(drv);
+
+    llvm::Value* lhs_doublePtr;
+    bool found = false;
+    string lhsType;
+
+    //locals first, then methodParams, then attributes
+    if(drv.top != nullptr) {
+        map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(drv.top->id + '.' + id);
+        if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
+            lhs_doublePtr = searchResIt->second;
+            lhsType = drv.top->getRec(id)->type;
+            found = true;
+        }
+    }
+    if(!found) {
+        map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find("methodParam." + id);
+        if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
+            lhs_doublePtr = searchResIt->second;
+            lhsType = drv.currentMethodEnv->getRec(id)->type;
+            found = true;
+        }
+    }
+    if(!found) {
+        int attrOffset = drv.classMap.at(drv.currentClassEnv->id).at(id).second;
+        lhs_doublePtr = drv.llvmBuilder->CreateStructGEP(drv.cur_func->getArg(0), firstAttrOffset + attrOffset);
+        lhsType = drv.classMap.at(drv.currentClassEnv->id).at(id).first->type;
+    }
+
+    llvm::Value* rhs_cast = drv.llvmBuilder->CreateBitCast(rhs_val, drv.llvmModule->getTypeByName(lhsType + "_c")->getPointerTo());
+    drv.llvmBuilder->CreateStore(rhs_cast, lhs_doublePtr);
+    return rhs_val;
 }

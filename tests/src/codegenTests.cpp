@@ -82,7 +82,9 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/printLetInt.cl",
     "CoolProgramsAssembly/printLetIntNested.cl",
     "CoolProgramsAssembly/ifExpr.cl",
-    "CoolProgramsAssembly/blockExpr.cl"
+    "CoolProgramsAssembly/blockExpr.cl",
+    "CoolProgramsAssembly/assignIntAttrExpr.cl",
+    "CoolProgramsAssembly/assignIntFirstParamExpr.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",

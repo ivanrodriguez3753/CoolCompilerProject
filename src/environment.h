@@ -121,9 +121,13 @@ class methodEnv : public env {
 public:
     /**
      * This map keeps track of all the available local identifiers for a function, which is known at compile time
-     * Name mangling will be (letCaseEnv.id) + id for the keys, and the value is a pointer to the result of alloca,
+     * Name mangling will be
+     *      (letCaseEnv.id) + id  OR
+     *      "methodParam." + id
+     * for the keys, and the value is a pointer to the result of alloca,
      * where alloca is called once for each local identifier at the beginning of the LLVM code for each user function.
-     * Initialization for the identifier (i.e. calling its ..ctr) happens only in the block in which that identifier
+     * Initialization for a methodParam is passed in as a single pointer, stored into the result of alloca for that parameter
+     * Initialization for a let/case identifier (i.e. calling its ..ctr) happens only in the block in which that identifier
      * is declared in the cool source code. For example,
      * if isTrue then
      *      let x : Int ...

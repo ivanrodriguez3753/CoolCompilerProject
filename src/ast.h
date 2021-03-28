@@ -434,6 +434,7 @@ public:
     void print(ostream& os) const override;
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _string : public _expr {
