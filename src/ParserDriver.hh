@@ -54,6 +54,8 @@ public:
      */
     llvm::Function* cur_func;
 
+    vector<llvm::BasicBlock*> currentBlocks;
+
     /**
      * map a string to its enumerated @globalValue identifier in LLVM (names are @.str.x)
      */

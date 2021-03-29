@@ -520,8 +520,9 @@ void ParserDriver::genCtrs() {
                     storeAtEnd = llvm::Constant::getNullValue(llvmType);
                 }
             }
+            llvm::Value* castedStoreAtEnd = llvmBuilder->CreateBitCast(storeAtEnd, llvmModule->getTypeByName(attrIt.second.first->type + "_c")->getPointerTo());
             llvmBuilder->CreateStore(
-                storeAtEnd,
+                castedStoreAtEnd,
                 llvmBuilder->CreateStructGEP(self, firstAttrOffset + attrIt.second.second));
         }
 
@@ -681,8 +682,10 @@ void ParserDriver::genUserMethods() {
         for(auto methodIt : currentClassEnv->methodsSymTable) {
             cur_func = llvmModule->getFunction(classIt.first + '.' + methodIt.first);
             currentMethodEnv = methodIt.second->link;
+            currentBlocks.clear();
             llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", cur_func);
-            llvmBuilder->SetInsertPoint(b);
+            llvmBuilder->SetInsertPoint(b); currentBlocks.push_back(b);
+
             _method* methodNode = (_method*)methodIt.second->treeNode;
 
             //formals cannot have SELF_TYPE so don't need to check
@@ -704,6 +707,11 @@ void ParserDriver::genUserMethods() {
                 llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo(),
                 "ret_cast");
             llvmBuilder->CreateRet(ret_cast);
+
+            //now take care of block order
+            for(int i = 1; i < currentBlocks.size(); ++i) {
+                currentBlocks[i]->moveAfter(currentBlocks[i - 1]);
+            }
         }
     }
 }
@@ -714,9 +722,10 @@ void ParserDriver::genLLVMmain() {
     llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", LLVMmain);
     llvmBuilder->SetInsertPoint(b);
     llvm::Value* MainPtr_ptr = llvmBuilder->CreateAlloca(llvmModule->getTypeByName("Main_c")->getPointerTo(), nullptr, "MainPtr_ptr");
+    int numAttr = classMap.at("Main").size();
     llvm::Value* mallocRes = llvmBuilder->CreateCall(
         llvmModule->getFunction("malloc"),
-        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, 8, false)));
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (numAttr + 1) * 8, false)));
     llvm::Value* castedMallocRes = llvmBuilder->CreateBitCast(mallocRes, llvmModule->getTypeByName("Main_c")->getPointerTo());
     llvmBuilder->CreateStore(castedMallocRes, MainPtr_ptr);
     llvm::Value* loadedMain = llvmBuilder->CreateLoad(MainPtr_ptr);
@@ -763,15 +772,15 @@ llvm::Value* _isvoid::codegen(ParserDriver& drv) {
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, arg, llvm::Constant::getNullValue(arg->getType()));
     drv.llvmBuilder->CreateCondBr(isNull, wasvoid_b, wasnotvoid_b);
 
-    drv.llvmBuilder->SetInsertPoint(wasvoid_b);
+    drv.llvmBuilder->SetInsertPoint(wasvoid_b); drv.currentBlocks.push_back(wasvoid_b);
     llvm::Value* trueObj = _bool(0, true).codegen(drv);
     drv.llvmBuilder->CreateBr(endvoid_b);
 
-    drv.llvmBuilder->SetInsertPoint(wasnotvoid_b);
+    drv.llvmBuilder->SetInsertPoint(wasnotvoid_b); drv.currentBlocks.push_back(wasnotvoid_b);
     llvm::Value* falseObj = _bool(0, false).codegen(drv);
     drv.llvmBuilder->CreateBr(endvoid_b);
 
-    drv.llvmBuilder->SetInsertPoint(endvoid_b);
+    drv.llvmBuilder->SetInsertPoint(endvoid_b); drv.currentBlocks.push_back(endvoid_b);
     llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), 2, "isvoid_res");
     phi->addIncoming(trueObj, wasvoid_b);
     phi->addIncoming(falseObj, wasnotvoid_b);
@@ -792,11 +801,11 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
     drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
 
-    drv.llvmBuilder->SetInsertPoint(isNull_b);
+    drv.llvmBuilder->SetInsertPoint(isNull_b); drv.currentBlocks.push_back(isNull_b);
     //TODO syscall ABORT with message "dispatch on void"
     drv.llvmBuilder->CreateBr(notNull_b);
 
-    drv.llvmBuilder->SetInsertPoint(notNull_b);
+    drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
 
     //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
     //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
@@ -840,11 +849,11 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
     drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
 
-    drv.llvmBuilder->SetInsertPoint(isNull_b);
+    drv.llvmBuilder->SetInsertPoint(isNull_b); drv.currentBlocks.push_back(isNull_b);
     //TODO syscall ABORT with message "dispatch on void"
     drv.llvmBuilder->CreateBr(notNull_b);
 
-    drv.llvmBuilder->SetInsertPoint(notNull_b);
+    drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
 
     //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
     //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
@@ -880,17 +889,17 @@ llvm::Value* _while::codegen(ParserDriver& drv) {
     llvm::BasicBlock* pool_b = llvm::BasicBlock::Create(*drv.llvmContext, "pool_b", drv.cur_func);
 
     drv.llvmBuilder->CreateBr(predicate_b);
-    drv.llvmBuilder->SetInsertPoint(predicate_b);
+    drv.llvmBuilder->SetInsertPoint(predicate_b); drv.currentBlocks.push_back(predicate_b);
     llvm::Value* pred_res = predicate->codegen(drv);
     llvm::Value* rawBool_ptr = drv.llvmBuilder->CreateStructGEP(pred_res, 1, "rawBool_ptr");
     llvm::Value* rawBool = drv.llvmBuilder->CreateLoad(rawBool_ptr, "rawBool");
     drv.llvmBuilder->CreateCondBr(rawBool, loop_b, pool_b);
 
-    drv.llvmBuilder->SetInsertPoint(loop_b);
+    drv.llvmBuilder->SetInsertPoint(loop_b); drv.currentBlocks.push_back(loop_b);
     body->codegen(drv);
     drv.llvmBuilder->CreateBr(predicate_b);
 
-    drv.llvmBuilder->SetInsertPoint(pool_b);
+    drv.llvmBuilder->SetInsertPoint(pool_b); drv.currentBlocks.push_back(pool_b);
     llvm::Value* whileRes = llvm::Constant::getNullValue(drv.llvmModule->getTypeByName("Object_c")->getPointerTo());
     return whileRes;
 }
@@ -907,20 +916,22 @@ llvm::Value* _if::codegen(ParserDriver& drv) {
     drv.llvmBuilder->CreateCondBr(rawBool, true_b, false_b);
 
     //cast results of true and false paths because PHI node needs both candidates to be the same type
-    drv.llvmBuilder->SetInsertPoint(true_b);
+    drv.llvmBuilder->SetInsertPoint(true_b); drv.currentBlocks.push_back(true_b);
     llvm::Value* true_res = tthen->codegen(drv); true_res->setName("true_res");
     llvm::Value* true_res_cast = drv.llvmBuilder->CreateBitCast(true_res, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+    llvm::BasicBlock* true_res_cast_block = drv.currentBlocks.back();
     drv.llvmBuilder->CreateBr(fi_b);
 
-    drv.llvmBuilder->SetInsertPoint(false_b);
+    drv.llvmBuilder->SetInsertPoint(false_b); drv.currentBlocks.push_back(false_b);
     llvm::Value* false_res = eelse->codegen(drv); false_res->setName("false_res");
-    llvm::Value* false_res_cast = drv.llvmBuilder->CreateBitCast(true_res, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+    llvm::Value* false_res_cast = drv.llvmBuilder->CreateBitCast(false_res, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+    llvm::BasicBlock* false_res_cast_block = drv.currentBlocks.back();
     drv.llvmBuilder->CreateBr(fi_b);
 
-    drv.llvmBuilder->SetInsertPoint(fi_b);
+    drv.llvmBuilder->SetInsertPoint(fi_b); drv.currentBlocks.push_back(fi_b);
     llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(llvm::Type::getInt64PtrTy(*drv.llvmContext), 2, "if_res");
-    phi->addIncoming(true_res_cast, true_b);
-    phi->addIncoming(false_res_cast, false_b);
+    phi->addIncoming(true_res_cast, true_res_cast_block);
+    phi->addIncoming(false_res_cast, false_res_cast_block);
 
     string resolvedType = type;
     if(type == "SELF_TYPE") resolvedType = resolveType(drv);
@@ -1040,15 +1051,15 @@ llvm::Value* _unary::codegen(ParserDriver& drv) {
 
         drv.llvmBuilder->CreateCondBr(rawBool, true_block, false_block);
 
-        drv.llvmBuilder->SetInsertPoint(true_block);
+        drv.llvmBuilder->SetInsertPoint(true_block); drv.currentBlocks.push_back(true_block);
         llvm::Value* i1false = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), 0, false);
         drv.llvmBuilder->CreateBr(end_block);
 
-        drv.llvmBuilder->SetInsertPoint(false_block);
+        drv.llvmBuilder->SetInsertPoint(false_block); drv.currentBlocks.push_back(false_block);
         llvm::Value* i1true = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), 1, false);
         drv.llvmBuilder->CreateBr(end_block);
 
-        drv.llvmBuilder->SetInsertPoint(end_block);
+        drv.llvmBuilder->SetInsertPoint(end_block); drv.currentBlocks.push_back(end_block);
         llvm::PHINode* i1phi = drv.llvmBuilder->CreatePHI(llvm::Type::getInt1Ty(*drv.llvmContext), 2, "negatedi1");
         i1phi->addIncoming(i1false, true_block);
         i1phi->addIncoming(i1true, false_block);
