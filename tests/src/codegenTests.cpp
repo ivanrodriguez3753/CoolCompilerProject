@@ -92,7 +92,9 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
 //    "CoolProgramsAssembly/staticDispatch.cl",
 //    "CoolProgramsAssembly/isvoid.cl",
 //    "CoolProgramsAssembly/arith.cl",
-    "CoolProgramsAssembly/relational.cl"
+//    "CoolProgramsAssembly/relational.cl",
+    "CoolProgramsAssembly/unaryNegate.cl",
+    "CoolProgramsAssembly/unaryNot.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",

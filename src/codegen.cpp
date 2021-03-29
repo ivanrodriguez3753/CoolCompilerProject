@@ -993,6 +993,55 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
     return castedMallocRes;
 }
 
+llvm::Value* _unary::codegen(ParserDriver& drv) {
+    llvm::Value* arg = expr->codegen(drv);
+    if(OP == NEG) {
+        llvm::Value* rawInt_ptr = drv.llvmBuilder->CreateStructGEP(arg, 1, "rawInt_ptr");
+        llvm::Value* rawInt = drv.llvmBuilder->CreateLoad(rawInt_ptr, "rawInt");
+        llvm::Value* negatedRawInt = drv.llvmBuilder->CreateMul(
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), -1, true),
+            rawInt);
+        //now use this value to create an Int_c
+        llvm::Value* numBytes = llvm::ConstantInt::get(
+                llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 16, false)); //vtable pointer, raw value (64 bit int)
+        llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+        llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Int_c")->getPointerTo(), "castedMallocRes");
+        drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), vector<llvm::Value*>{castedMallocRes, negatedRawInt});
+        return castedMallocRes;
+    }
+    else if(OP == NOT) {
+        llvm::Value* rawBool_ptr = drv.llvmBuilder->CreateStructGEP(arg, 1, "rawBool_ptr");
+        llvm::Value* rawBool = drv.llvmBuilder->CreateLoad(rawBool_ptr, "rawBool");
+
+        llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*drv.llvmContext, "true_b", drv.cur_func);
+        llvm::BasicBlock* false_block = llvm::BasicBlock::Create(*drv.llvmContext, "false_b", drv.cur_func);
+        llvm::BasicBlock* end_block = llvm::BasicBlock::Create(*drv.llvmContext, "end_b", drv.cur_func);
+
+        drv.llvmBuilder->CreateCondBr(rawBool, true_block, false_block);
+
+        drv.llvmBuilder->SetInsertPoint(true_block);
+        llvm::Value* i1false = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), 0, false);
+        drv.llvmBuilder->CreateBr(end_block);
+
+        drv.llvmBuilder->SetInsertPoint(false_block);
+        llvm::Value* i1true = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), 1, false);
+        drv.llvmBuilder->CreateBr(end_block);
+
+        drv.llvmBuilder->SetInsertPoint(end_block);
+        llvm::PHINode* i1phi = drv.llvmBuilder->CreatePHI(llvm::Type::getInt1Ty(*drv.llvmContext), 2, "negatedi1");
+        i1phi->addIncoming(i1false, true_block);
+        i1phi->addIncoming(i1true, false_block);
+
+        llvm::Value* numBytes = llvm::ConstantInt::get(
+                llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 9, false)); //vtable pointer, raw value (1 bit int)
+        llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+        llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "castedMallocRes");
+        drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1phi});
+
+        return castedMallocRes;
+    }
+}
+
 llvm::Value* _bool::codegen(ParserDriver& drv) {
     llvm::Value* numBytes = llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 9, false)); //vtable pointer, raw value (1 bit int)

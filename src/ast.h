@@ -548,6 +548,7 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _internal : public _expr {
