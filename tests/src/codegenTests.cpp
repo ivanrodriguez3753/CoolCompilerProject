@@ -93,18 +93,20 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
 //    "CoolProgramsAssembly/isvoid.cl",
 //    "CoolProgramsAssembly/arith.cl",
 //    "CoolProgramsAssembly/relational.cl",
-    "CoolProgramsAssembly/unaryNegate.cl",
-    "CoolProgramsAssembly/unaryNot.cl"
+//    "CoolProgramsAssembly/unaryNegate.cl",
+//    "CoolProgramsAssembly/unaryNot.cl",
+    "CoolProgramsAssembly/while.cl",
+    "CoolProgramsAssembly/whileReturnVoidObj.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",
 //        "CoolProgramsFull/atoi.cl",
 //        "CoolProgramsFull/cells.cl",
-        "CoolProgramsFull/hello-world.cl"
-//        "CoolProgramsFull/list.cl",
+        "CoolProgramsFull/hello-world.cl",
+        "CoolProgramsFull/list.cl",
 //        "CoolProgramsFull/new-complex.cl",
 //        "CoolProgramsFull/primes.cl",
-//        "CoolProgramsFull/print-cool.cl",
+        "CoolProgramsFull/print-cool.cl"
 //        "CoolProgramsFull/sort-list.cl",
 //        "CoolProgramsFull/hs.cl"
 ));

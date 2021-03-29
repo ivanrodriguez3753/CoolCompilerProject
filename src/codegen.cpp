@@ -874,6 +874,27 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     return nullptr;
 }
 
+llvm::Value* _while::codegen(ParserDriver& drv) {
+    llvm::BasicBlock* predicate_b = llvm::BasicBlock::Create(*drv.llvmContext, "predicate_b", drv.cur_func);
+    llvm::BasicBlock* loop_b = llvm::BasicBlock::Create(*drv.llvmContext, "loop_b", drv.cur_func);
+    llvm::BasicBlock* pool_b = llvm::BasicBlock::Create(*drv.llvmContext, "pool_b", drv.cur_func);
+
+    drv.llvmBuilder->CreateBr(predicate_b);
+    drv.llvmBuilder->SetInsertPoint(predicate_b);
+    llvm::Value* pred_res = predicate->codegen(drv);
+    llvm::Value* rawBool_ptr = drv.llvmBuilder->CreateStructGEP(pred_res, 1, "rawBool_ptr");
+    llvm::Value* rawBool = drv.llvmBuilder->CreateLoad(rawBool_ptr, "rawBool");
+    drv.llvmBuilder->CreateCondBr(rawBool, loop_b, pool_b);
+
+    drv.llvmBuilder->SetInsertPoint(loop_b);
+    body->codegen(drv);
+    drv.llvmBuilder->CreateBr(predicate_b);
+
+    drv.llvmBuilder->SetInsertPoint(pool_b);
+    llvm::Value* whileRes = llvm::Constant::getNullValue(drv.llvmModule->getTypeByName("Object_c")->getPointerTo());
+    return whileRes;
+}
+
 llvm::Value* _if::codegen(ParserDriver& drv) {
     llvm::Value* _predicate = predicate->codegen(drv);
 
@@ -919,7 +940,7 @@ llvm::Value* _new::codegen(ParserDriver& drv) {
     else {
         int numAttr = drv.classMap.at(id).size();
         llvm::Value* numBytes = llvm::ConstantInt::get(
-                llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, (1 + numAttr) * 8));
+            llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, (1 + numAttr) * 8));
         llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
         llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName(id + "_c")->getPointerTo(), "castedMallocRes");
         drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction(id + "..ctr"), castedMallocRes);
