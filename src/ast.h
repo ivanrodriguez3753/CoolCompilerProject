@@ -376,7 +376,7 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
-
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _staticDispatch : public _dispatch {
@@ -478,6 +478,7 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
 class _isvoid : public _expr {

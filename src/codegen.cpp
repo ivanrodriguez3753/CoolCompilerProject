@@ -754,6 +754,53 @@ llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
     return ret;
 }
 
+llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
+    vector<llvm::Value*> args{nullptr};//will replace with self after checking if null and casting
+    for(_expr* arg : argList) {
+        args.push_back(arg->codegen(drv));
+    }
+
+    //codegen the caller
+    args[0] = caller->codegen(drv);
+    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "isNull", drv.cur_func);
+    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "notNull", drv.cur_func);
+    llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
+    drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
+
+    drv.llvmBuilder->SetInsertPoint(isNull_b);
+    drv.llvmBuilder->CreateBr(notNull_b);
+
+    drv.llvmBuilder->SetInsertPoint(notNull_b);
+
+    //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
+    //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
+    //NOTE: This is not necessarily the correct methodRec, but its offset info and method signature are sufficient
+    string resolvedType = caller->type;
+    if(resolvedType == "SELF_TYPE") resolvedType = drv.currentClassEnv->id;
+
+    methodRec* rec = drv.implementationMap.at(resolvedType).at(id).first;
+    llvm::FunctionType* funcType = drv.llvmModule->getFunction(rec->definer + '.' + id)->getFunctionType();
+
+    int funcOffset = drv.implementationMap.at(resolvedType).at(id).second;
+
+    llvm::Value* vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(args[0], vtableOffset, "vtablePtr_ptr");
+    llvm::Value* vtablePtr = drv.llvmBuilder->CreateLoad(vtablePtr_ptr);
+    llvm::Value* funcPtr_ptr = drv.llvmBuilder->CreateGEP(
+        vtablePtr,
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, firstFuncOffset + funcOffset, false)),
+        "funcPtr_ptr");
+    llvm::Value* funcPtr = drv.llvmBuilder->CreateLoad(funcPtr_ptr, "funcPtr");
+    llvm::Value* func = drv.llvmBuilder->CreateBitCast(funcPtr, funcType->getPointerTo(), id);
+    llvm::FunctionCallee fc(funcType, func);
+    args[0] = drv.llvmBuilder->CreateBitCast(args[0], funcType->getParamType(0));
+
+    llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, args, "ret");
+    //TODO figure out why ret type is a function pointer. for now, use mutateType
+    ret->mutateType(funcType->getReturnType());
+
+    return ret;
+}
+
 llvm::Value* _if::codegen(ParserDriver& drv) {
     llvm::Value* _predicate = predicate->codegen(drv);
 
@@ -784,6 +831,27 @@ llvm::Value* _if::codegen(ParserDriver& drv) {
     string resolvedType = type;
     if(type == "SELF_TYPE") resolvedType = resolveType(drv);
     return drv.llvmBuilder->CreatePointerCast(phi, drv.llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo(), "if_res_cast");
+}
+
+llvm::Value* _new::codegen(ParserDriver& drv) {
+    if(id == "Int") {
+        return _int(0, 0).codegen(drv);
+    }
+    else if(id == "Bool") {
+        return _bool(0, false).codegen(drv);
+    }
+    else if(id == "String") {
+        return _string(0, "").codegen(drv);
+    }
+    else {
+        int numAttr = drv.classMap.at(id).size();
+        llvm::Value* numBytes = llvm::ConstantInt::get(
+                llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, (1 + numAttr) * 8));
+        llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+        llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName(id + "_c")->getPointerTo(), "castedMallocRes");
+        drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction(id + "..ctr"), castedMallocRes);
+        return castedMallocRes;
+    }
 }
 
 llvm::Value* _int::codegen(ParserDriver& drv) {
