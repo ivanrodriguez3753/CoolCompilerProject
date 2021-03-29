@@ -754,6 +754,31 @@ llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
     return ret;
 }
 
+llvm::Value* _isvoid::codegen(ParserDriver& drv) {
+    llvm::Value* arg = expr->codegen(drv);
+
+    llvm::BasicBlock* wasvoid_b = llvm::BasicBlock::Create(*drv.llvmContext, "wasvoid_b", drv.cur_func);
+    llvm::BasicBlock* wasnotvoid_b = llvm::BasicBlock::Create(*drv.llvmContext, "wasnotvoid_b", drv.cur_func);
+    llvm::BasicBlock* endvoid_b = llvm::BasicBlock::Create(*drv.llvmContext, "endvoid_b", drv.cur_func);
+    llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, arg, llvm::Constant::getNullValue(arg->getType()));
+    drv.llvmBuilder->CreateCondBr(isNull, wasvoid_b, wasnotvoid_b);
+
+    drv.llvmBuilder->SetInsertPoint(wasvoid_b);
+    llvm::Value* trueObj = _bool(0, true).codegen(drv);
+    drv.llvmBuilder->CreateBr(endvoid_b);
+
+    drv.llvmBuilder->SetInsertPoint(wasnotvoid_b);
+    llvm::Value* falseObj = _bool(0, false).codegen(drv);
+    drv.llvmBuilder->CreateBr(endvoid_b);
+
+    drv.llvmBuilder->SetInsertPoint(endvoid_b);
+    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), 2, "isvoid_res");
+    phi->addIncoming(trueObj, wasvoid_b);
+    phi->addIncoming(falseObj, wasnotvoid_b);
+
+    return phi;
+}
+
 llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     vector<llvm::Value*> args{nullptr};//will replace with self after checking if null and casting
     for(_expr* arg : argList) {
@@ -768,6 +793,7 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(isNull_b);
+    //TODO syscall ABORT with message "dispatch on void"
     drv.llvmBuilder->CreateBr(notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(notNull_b);
@@ -799,6 +825,53 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     ret->mutateType(funcType->getReturnType());
 
     return ret;
+}
+
+llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
+    vector<llvm::Value*> args{nullptr};//will replace with self after checking if null and casting
+    for(_expr* arg : argList) {
+        args.push_back(arg->codegen(drv));
+    }
+
+    //codegen the caller
+    args[0] = caller->codegen(drv);
+    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "isNull", drv.cur_func);
+    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "notNull", drv.cur_func);
+    llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
+    drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
+
+    drv.llvmBuilder->SetInsertPoint(isNull_b);
+    //TODO syscall ABORT with message "dispatch on void"
+    drv.llvmBuilder->CreateBr(notNull_b);
+
+    drv.llvmBuilder->SetInsertPoint(notNull_b);
+
+    //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
+    //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
+    //NOTE: This is not necessarily the correct methodRec, but its offset info and method signature are sufficient
+    string resolvedType = caller->type;
+    if(resolvedType == "SELF_TYPE") resolvedType = drv.currentClassEnv->id;
+
+    methodRec* rec = drv.implementationMap.at(resolvedType).at(id).first;
+    llvm::FunctionType* funcType = drv.llvmModule->getFunction(rec->definer + '.' + id)->getFunctionType();
+
+    int funcOffset = drv.implementationMap.at(resolvedType).at(id).second;
+
+    llvm::Value* vtablePtr = drv.llvmModule->getNamedGlobal(staticType + "_v");
+    llvm::Value* vtable = drv.llvmBuilder->CreateLoad(vtablePtr);
+    llvm::Value* funcPtr = drv.llvmBuilder->CreateExtractValue(vtable, firstFuncOffset + funcOffset, "funcPtr");
+
+    llvm::Value* func = drv.llvmBuilder->CreateBitCast(funcPtr, funcType->getPointerTo(), id);
+
+    llvm::FunctionCallee fc(funcType, func);
+    args[0] = drv.llvmBuilder->CreateBitCast(args[0], funcType->getParamType(0));
+
+    llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, args, "ret");
+    //TODO figure out why ret type is a function pointer. for now, use mutateType
+    ret->mutateType(funcType->getReturnType());
+
+    return ret;
+    return nullptr;
 }
 
 llvm::Value* _if::codegen(ParserDriver& drv) {

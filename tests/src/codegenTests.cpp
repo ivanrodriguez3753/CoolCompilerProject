@@ -88,7 +88,9 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/dynamicDispatch.cl",
     "CoolProgramsAssembly/methodOverride.cl",
     "CoolProgramsAssembly/intImmutability.cl",
-    "CoolProgramsAssembly/chainedCopy.cl"
+    "CoolProgramsAssembly/chainedCopy.cl",
+    "CoolProgramsAssembly/staticDispatch.cl",
+    "CoolProgramsAssembly/isvoid.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/arith.cl",
