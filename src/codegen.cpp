@@ -938,6 +938,61 @@ llvm::Value* _int::codegen(ParserDriver& drv) {
     return castedMallocRes;
 }
 
+llvm::Value* _arith::codegen(ParserDriver& drv) {
+    llvm::Value* LLVMlhs = lhs->codegen(drv);
+    llvm::Value* LLVMrhs = rhs->codegen(drv);
+
+    llvm::Value* rawInt1_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs, firstAttrOffset, "rawInt1_ptr");
+    llvm::Value* rawInt1 = drv.llvmBuilder->CreateLoad(rawInt1_ptr, "rawInt1");
+    llvm::Value* rawInt2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs, firstAttrOffset, "rawInt2_ptr");
+    llvm::Value* rawInt2 = drv.llvmBuilder->CreateLoad(rawInt2_ptr, "rawInt2");
+
+    llvm::Value* sum;
+    if(OP == MINUS) sum = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "sum");
+    else if(OP == PLUS) sum = drv.llvmBuilder->CreateAdd(rawInt1, rawInt2, "sum");
+    else if(OP == TIMES) sum = drv.llvmBuilder->CreateMul(rawInt1, rawInt2, "sum");
+    else if(OP == DIVIDE) sum = drv.llvmBuilder->CreateSDiv(rawInt1, rawInt2, "sum");
+
+    //essentially the same as _int::codegen from here on below
+    llvm::Value* numBytes = llvm::ConstantInt::get(
+        llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 16, false)); //vtable pointer, raw value (64 bit int)
+    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Int_c")->getPointerTo(), "castedMallocRes");
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Int..ctr"), vector<llvm::Value*>{castedMallocRes, sum});
+    return castedMallocRes;
+}
+
+llvm::Value* _relational::codegen(ParserDriver& drv) {
+    llvm::Value* LLVMlhs = lhs->codegen(drv);
+    llvm::Value* LLVMrhs = rhs->codegen(drv);
+
+    llvm::Value* rawInt1_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs, firstAttrOffset, "rawInt1_ptr");
+    llvm::Value* rawInt1 = drv.llvmBuilder->CreateLoad(rawInt1_ptr, "rawInt1");
+    llvm::Value* rawInt2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs, firstAttrOffset, "rawInt2_ptr");
+    llvm::Value* rawInt2 = drv.llvmBuilder->CreateLoad(rawInt2_ptr, "rawInt2");
+
+    llvm::Value* diff = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "diff");
+    llvm::Value* i1;
+    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0));
+    if(OP == LT) {
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLT, diff, zero);
+    }
+    else if(OP == LE) {
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, diff, zero);
+    }
+    else if(OP == EQUALS) {
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, diff, zero);
+    }
+
+    //essentially the same as _bool::codegen from here on below
+    llvm::Value* numBytes = llvm::ConstantInt::get(
+            llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 9, false)); //vtable pointer, raw value (1 bit int)
+    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "castedMallocRes");
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
+    return castedMallocRes;
+}
+
 llvm::Value* _bool::codegen(ParserDriver& drv) {
     llvm::Value* numBytes = llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 9, false)); //vtable pointer, raw value (1 bit int)
