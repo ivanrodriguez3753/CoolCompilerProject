@@ -655,6 +655,9 @@ void _block::decorate(ParserDriver& drv) {
 
 void _case::decorate(ParserDriver& drv) {
     vector<letCaseEnv*> caseEnvs = drv.buildCaseEnvs(this);
+    for(int i = 0; i < caseEnvs.size(); ++i){
+        caseList[i]->setSelfEnv(caseEnvs[i]);
+    }
 
     switchee->decorate(drv);
 

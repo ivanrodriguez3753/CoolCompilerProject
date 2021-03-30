@@ -299,17 +299,22 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+    llvm::Value* codegen(ParserDriver& drv) override;
 };
 
-class _caseElement : public _symTable {
+class _caseElement : public _env {
 public:
     const string type;
     const int type_lineno;
 
     _expr* caseBranch;
 
-    _caseElement(int l, string i, int tL, string t, _expr* cb) : _symTable(l, i), type_lineno(tL), type(t), caseBranch(cb) {}
+    _caseElement(int l, string i, int tL, string t, _expr* cb) : _env(l, i), type_lineno(tL), type(t), caseBranch(cb) {}
 
+    void setSelfEnv(env* s) {selfEnv = s;}
+    letCaseEnv* getSelfEnv() const override {
+        return (letCaseEnv*)selfEnv;
+    }
     objRec* getSelfRec() const override {
         return (objRec*)selfRec;
     }

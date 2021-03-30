@@ -456,10 +456,11 @@ void ParserDriver::genCtrs() {
 
         cur_func = f; currentClassEnv = env->getRec(classIt.first)->link;
         currentMethodEnv = ((_class*)(env->getRec(classIt.first)->treeNode))->assemblyConstructorEnv;
+        currentBlocks.clear();
 
         llvm::Value* self = f->getArg(0); self->setName("self");
         llvm::BasicBlock* entry_b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
-        llvmBuilder->SetInsertPoint(entry_b);
+        llvmBuilder->SetInsertPoint(entry_b); currentBlocks.push_back(entry_b);
         //Do the vtable
         llvm::Value* vtablePtr = llvmBuilder->CreateStructGEP(self, 0, "vtablePtr");
         llvmBuilder->CreateStore(
@@ -488,7 +489,7 @@ void ParserDriver::genCtrs() {
                 llvmType = llvmModule->getTypeByName(type + "_c")->getPointerTo();
             }
             llvm::BasicBlock* attr_b = attrBlocks[attrIt.second.second];
-            llvmBuilder->SetInsertPoint(attr_b);
+            llvmBuilder->SetInsertPoint(attr_b); currentBlocks.push_back(attr_b);
 
             llvm::Value* storeAtEnd;
             _expr*& optInit = ((_attr*)(attrIt.second.first->treeNode))->optInit;
@@ -527,7 +528,7 @@ void ParserDriver::genCtrs() {
         }
 
         llvm::BasicBlock* end_b = llvm::BasicBlock::Create(*llvmContext, "end", cur_func);
-        llvmBuilder->SetInsertPoint(end_b);
+        llvmBuilder->SetInsertPoint(end_b); currentBlocks.push_back(end_b);
         llvmBuilder->CreateRetVoid();
 
         //now take care of LLVM's required br instruction on block dropthroughs
@@ -542,6 +543,12 @@ void ParserDriver::genCtrs() {
             llvmBuilder->SetInsertPoint(attrBlocks[(int)attrBlocks.size() - 1]);
         }
         llvmBuilder->CreateBr(end_b);
+
+        for(int i = 1; i < currentBlocks.size(); ++i) {
+            currentBlocks[i]->moveAfter(currentBlocks[i - 1]);
+        }
+        llvm::verifyFunction(*cur_func);
+
     }
 }
 void ParserDriver::genBasicClassMethods() {
@@ -712,6 +719,7 @@ void ParserDriver::genUserMethods() {
             for(int i = 1; i < currentBlocks.size(); ++i) {
                 currentBlocks[i]->moveAfter(currentBlocks[i - 1]);
             }
+            llvm::verifyFunction(*cur_func);
         }
     }
 }
@@ -738,11 +746,15 @@ void ParserDriver::genLLVMmain() {
 
 llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
     llvm::Value* self = drv.cur_func->getArg(0); self->setName("self");
+    methodRec* rec = drv.implementationMap.at(drv.currentClassEnv->id).at(id).first;
     const string& definer = drv.implementationMap.at(drv.currentClassEnv->id).at(id).first->definer;
     llvm::Value* selfCast = drv.llvmBuilder->CreateBitCast(self, drv.llvmModule->getTypeByName(definer + "_c")->getPointerTo(), "selfCast");
     vector<llvm::Value*> args{selfCast};
-    for(auto arg : argList) {
-        args.push_back(arg->codegen(drv));
+    for(int i = 0; i < argList.size(); ++i) {
+        _expr*& arg = argList[i];
+        llvm::Value* curArg = arg->codegen(drv);
+        llvm::Value* castedArg = drv.llvmBuilder->CreateBitCast(curArg, drv.llvmModule->getFunction(definer + '.' + id)->getArg(1 + i)->getType()); //first arg is always self
+        args.push_back(castedArg);
     }
 
     llvm::Value* vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(self, vtableOffset, "vtablePtr_ptr");
@@ -789,9 +801,21 @@ llvm::Value* _isvoid::codegen(ParserDriver& drv) {
 }
 
 llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
+    //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
+    //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
+    //NOTE: This is not necessarily the correct methodRec, but its offset info and method signature are sufficient
+    string resolvedType = caller->type;
+    if(resolvedType == "SELF_TYPE") resolvedType = drv.currentClassEnv->id;
+
+    methodRec* rec = drv.implementationMap.at(resolvedType).at(id).first;
+    llvm::FunctionType* funcType = drv.llvmModule->getFunction(rec->definer + '.' + id)->getFunctionType();
+
     vector<llvm::Value*> args{nullptr};//will replace with self after checking if null and casting
-    for(_expr* arg : argList) {
-        args.push_back(arg->codegen(drv));
+    for(int i = 0; i < argList.size(); ++i) {
+        _expr*& arg = argList[i];
+        llvm::Value* curArg = arg->codegen(drv);
+        llvm::Value* castedArg = drv.llvmBuilder->CreateBitCast(curArg, drv.llvmModule->getFunction(rec->definer + '.' + id)->getArg(1 + i)->getType()); //first arg is always self
+        args.push_back(castedArg);
     }
 
     //codegen the caller
@@ -807,14 +831,6 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
 
     drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
 
-    //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
-    //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
-    //NOTE: This is not necessarily the correct methodRec, but its offset info and method signature are sufficient
-    string resolvedType = caller->type;
-    if(resolvedType == "SELF_TYPE") resolvedType = drv.currentClassEnv->id;
-
-    methodRec* rec = drv.implementationMap.at(resolvedType).at(id).first;
-    llvm::FunctionType* funcType = drv.llvmModule->getFunction(rec->definer + '.' + id)->getFunctionType();
 
     int funcOffset = drv.implementationMap.at(resolvedType).at(id).second;
 
@@ -837,9 +853,21 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
 }
 
 llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
+    //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
+    //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
+    //NOTE: This is not necessarily the correct methodRec, but its offset info and method signature are sufficient
+    string resolvedType = caller->type;
+    if(resolvedType == "SELF_TYPE") resolvedType = drv.currentClassEnv->id;
+
+    methodRec* rec = drv.implementationMap.at(resolvedType).at(id).first;
+    llvm::FunctionType* funcType = drv.llvmModule->getFunction(rec->definer + '.' + id)->getFunctionType();
+
     vector<llvm::Value*> args{nullptr};//will replace with self after checking if null and casting
-    for(_expr* arg : argList) {
-        args.push_back(arg->codegen(drv));
+    for(int i = 0; i < argList.size(); ++i) {
+        _expr*& arg = argList[i];
+        llvm::Value* curArg = arg->codegen(drv);
+        llvm::Value* castedArg = drv.llvmBuilder->CreateBitCast(curArg, drv.llvmModule->getFunction(rec->definer + '.' + id)->getArg(1 + i)->getType()); //first arg is always self
+        args.push_back(castedArg);
     }
 
     //codegen the caller
@@ -854,15 +882,6 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     drv.llvmBuilder->CreateBr(notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
-
-    //we're only interested in the INDEX of the function we're trying to call, and the function index will be the same in any function
-    //that is part of the same hierarchy, so just use the static type of the callerExpr to get A methodRec that will do
-    //NOTE: This is not necessarily the correct methodRec, but its offset info and method signature are sufficient
-    string resolvedType = caller->type;
-    if(resolvedType == "SELF_TYPE") resolvedType = drv.currentClassEnv->id;
-
-    methodRec* rec = drv.implementationMap.at(resolvedType).at(id).first;
-    llvm::FunctionType* funcType = drv.llvmModule->getFunction(rec->definer + '.' + id)->getFunctionType();
 
     int funcOffset = drv.implementationMap.at(resolvedType).at(id).second;
 
@@ -1005,14 +1024,17 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
 
     llvm::Value* diff = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "diff");
     llvm::Value* i1;
-    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0));
+    llvm::Value* zero = llvm::ConstantInt::get(diff->getType(), llvm::APInt(32, 0));
     if(OP == LT) {
+        zero->mutateType(diff->getType());
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLT, diff, zero);
     }
     else if(OP == LE) {
+        zero->mutateType(diff->getType());
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, diff, zero);
     }
     else if(OP == EQUALS) {
+        zero->mutateType(diff->getType());
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, diff, zero);
     }
 
@@ -1111,6 +1133,143 @@ llvm::Value* _block::codegen(ParserDriver& drv) {
         (*it)->codegen(drv);
     }
     return (*(body.end() - 1))->codegen(drv);
+}
+
+llvm::Value* _case::codegen(ParserDriver& drv) {
+    //TODO LLVMnull check the _switchee result
+
+    llvm::Value* _switchee = switchee->codegen(drv);
+    llvm::Value* vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(_switchee, vtableOffset, "vtablePtr_ptr");
+    llvm::Value* vtablePtr = drv.llvmBuilder->CreateLoad(vtablePtr_ptr, "vtablePtr");
+
+
+    //TODO for every single class, find the lub of the available types (the types from each case branch) and then
+    // have a check that sees
+    vector<pair<string, pair<llvm::BasicBlock*, llvm::BasicBlock*>>> blocks; //for each _caseElement, insert a check block and an actual block
+    for(auto classIt : drv.classMap) {
+        blocks.push_back({classIt.first,
+            {llvm::BasicBlock::Create(*drv.llvmContext, classIt.first + "Check", drv.cur_func),
+//            llvm::BasicBlock::Create(*drv.llvmContext, classIt.first + "Block", drv.cur_func)}});
+             nullptr}});
+    }
+    llvm::BasicBlock* caseError = llvm::BasicBlock::Create(*drv.llvmContext, "noCaseAvail", drv.cur_func);
+    blocks.push_back({"ERROR", {caseError, nullptr}});
+
+
+//    for(int i = 0; i < caseList.size(); ++i) {
+//        drv.llvmBuilder->SetInsertPoint(blocks[i].first); drv.currentBlocks.push_back(blocks[i].first);
+//
+//        llvm::Value* vtableGlobalCast = drv.llvmBuilder->CreateBitCast(
+//            drv.llvmModule->getNamedGlobal(caseList[i]->type + "_v"),
+//            llvm::FunctionType::get(llvm::Type::getVoidTy(*drv.llvmContext), true)->getPointerTo()->getPointerTo(),
+//            caseList[i]->type + "VtableGlobalCast");
+//        llvm::Value* check = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, vtableGlobalCast, vtablePtr, caseList[i]->type + "_i1");
+//        drv.llvmBuilder->CreateCondBr(check, blocks[i].second, blocks[i + 1].first);
+//
+//        drv.llvmBuilder->SetInsertPoint(blocks[i].second); drv.currentBlocks.push_back(blocks[i].second);
+//
+//        llvm::Value* _caseBranch = caseList[i]->caseBranch->codegen(drv);
+//        llvm::Value* caseBranchCasted = drv.llvmBuilder->CreateBitCast(_caseBranch, drv.llvmModule->getTypeByName(type + "_c")->getPointerTo(), "caseBranchCasted");
+//
+//        caseResults.push_back({caseBranchCasted, drv.currentBlocks.back()});
+//        drv.llvmBuilder->CreateBr(blocks.back().first); //branch to end label
+//    }
+
+//    drv.llvmBuilder->SetInsertPoint(blocks.back().first); drv.currentBlocks.push_back(blocks.back().first);
+//    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(drv.llvmModule->getTypeByName(type + "_c")->getPointerTo(), caseList.size());
+//    for(auto p : caseResults) {
+//        phi->addIncoming(p.first, p.second);
+//    }
+//    return phi;
+    map<string, llvm::BasicBlock*> caseBlocks;
+    for(auto it : caseList) {
+        caseBlocks.insert({it->type, llvm::BasicBlock::Create(*drv.llvmContext, it->type + "Case", drv.cur_func)});
+    }
+    drv.llvmBuilder->CreateBr(blocks[0].second.first);
+    vector<pair<llvm::Value*, llvm::BasicBlock*>> caseResults;
+    for(int i = 0; i < blocks.size() - 1; ++i) {
+        pair<string, pair<llvm::BasicBlock*, llvm::BasicBlock*>>& block = blocks[i];
+
+        drv.llvmBuilder->SetInsertPoint(block.second.first); drv.currentBlocks.push_back(block.second.first);
+
+        string current = block.first;
+        bool found = false;
+        while(current != "Object") {
+            if(caseBlocks.find(current) != caseBlocks.end()) {
+                found = true;
+                break;
+            }
+            else {
+                current = drv.inherGraph.at(current).first; //update to parent
+            }
+        }
+        if(!found) { //check for Object case
+            if(caseBlocks.find(current) != caseBlocks.end()) {
+                found = true;
+            }
+        }
+
+
+        drv.llvmBuilder->SetInsertPoint(block.second.first); drv.currentBlocks.push_back(block.second.first);
+        llvm::Value* vtableGlobalCast = drv.llvmBuilder->CreateBitCast(
+            drv.llvmModule->getNamedGlobal(block.first + "_v"),
+            llvm::FunctionType::get(llvm::Type::getVoidTy(*drv.llvmContext), true)->getPointerTo()->getPointerTo(),
+            block.first + "VtableGlobalCast");
+        llvm::Value* i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, vtablePtr, vtableGlobalCast);
+        if(found) {
+            drv.llvmBuilder->CreateCondBr(i1, caseBlocks.at(current), blocks[i + 1].second.first);
+        }
+        else {
+            drv.llvmBuilder->CreateCondBr(i1, caseError, blocks[i + 1].second.first);
+        }
+    }
+
+    llvm::BasicBlock* esac = llvm::BasicBlock::Create(*drv.llvmContext, "esac", drv.cur_func);
+    drv.llvmBuilder->SetInsertPoint(caseError); drv.currentBlocks.push_back(caseError);
+    if(drv.cur_func->getReturnType() == llvm::Type::getVoidTy(*drv.llvmContext)) {
+        drv.llvmBuilder->CreateRetVoid();
+    }
+    else {
+        drv.llvmBuilder->CreateRet(llvm::Constant::getNullValue(drv.cur_func->getReturnType()));
+    }
+
+
+    map<string, llvm::Value*>& localsMap = drv.currentMethodEnv->localsMap;
+//    //call alloca for each identifier, and we can codegen the init expression in _letBinding
+//    for(_letBinding* binding : bindingList) {
+//        string resolvedType = binding->type;
+//        if(resolvedType == "SELF_TYPE") {
+//            resolvedType = drv.currentClassEnv->id;
+//        }
+//        llvm::Type* llvmType = drv.llvmModule->getTypeByName(resolvedType + "_c");
+//
+//        localsMap[selfEnv->id + '.' + binding->id] = drv.llvmBuilder->CreateAlloca(
+//                llvmType->getPointerTo(), 0, nullptr, id + '.' + binding->id);
+//    }
+
+    for(auto it : caseList) {
+        drv.top = it->getSelfEnv();
+        llvm::BasicBlock* thisCase = caseBlocks.at(it->type);
+        drv.llvmBuilder->SetInsertPoint(thisCase); drv.currentBlocks.push_back(thisCase);
+
+        localsMap[drv.top->id + '.' + it->id] = drv.llvmBuilder->CreateAlloca(drv.llvmModule->getTypeByName(it->type + "_c")->getPointerTo(), nullptr, it->id + "doublePtr");
+        llvm::Value* castedSwitchee = drv.llvmBuilder->CreateBitCast(_switchee, drv.llvmModule->getTypeByName(it->type + "_c")->getPointerTo());
+        drv.llvmBuilder->CreateStore(castedSwitchee, localsMap[drv.top->id + '.' + it->id]);
+
+        llvm::Value* caseRes = it->caseBranch->codegen(drv);
+        llvm::Value* caseResCasted = drv.llvmBuilder->CreateBitCast(caseRes, drv.llvmModule->getTypeByName(type + "_c")->getPointerTo(), "caseResCasted");
+        caseResults.push_back({caseResCasted, drv.currentBlocks.back()});
+        drv.llvmBuilder->CreateBr(esac);
+        drv.top = drv.top->prevLetCase;
+    }
+
+    drv.llvmBuilder->SetInsertPoint(esac); drv.currentBlocks.push_back(esac);
+    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(drv.llvmModule->getTypeByName(type + "_c")->getPointerTo(), caseList.size(), "casePhi");
+    for(auto caseResult : caseResults) {
+        caseResult.first->mutateType(drv.llvmModule->getTypeByName(type + "_c")->getPointerTo());
+        phi->addIncoming(caseResult.first, caseResult.second);
+    }
+    return phi;
 }
 
 llvm::Value* _let::codegen(ParserDriver& drv) {
