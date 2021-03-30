@@ -93,7 +93,7 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvm::Value* length_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 1, "length_ptr");
     llvmBuilder->CreateStore(
             llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)0, true)),
-            length_ptr);
+        length_ptr);
     llvm::Value* maxlength_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 2, "maxlength_ptr");
     llvmBuilder->CreateStore(
             llvm::ConstantInt::get(
@@ -819,7 +819,14 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     }
 
     //codegen the caller
-    args[0] = caller->codegen(drv);
+    llvm::Value* _caller = caller->codegen(drv);
+    if(caller->type == "SELF_TYPE") {
+        string resolvedType = drv.currentClassEnv->id;
+        args[0] = drv.llvmBuilder->CreateBitCast(_caller, drv.llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo());
+    }
+    else {
+        args[0] = _caller;
+    }
     llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "isNull", drv.cur_func);
     llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "notNull", drv.cur_func);
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
@@ -871,7 +878,14 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     }
 
     //codegen the caller
-    args[0] = caller->codegen(drv);
+    llvm::Value* _caller = caller->codegen(drv);
+    if(caller->type == "SELF_TYPE") {
+        string resolvedType = drv.currentClassEnv->id;
+        args[0] = drv.llvmBuilder->CreateBitCast(_caller, drv.llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo());
+    }
+    else {
+        args[0] = _caller;
+    }
     llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "isNull", drv.cur_func);
     llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "notNull", drv.cur_func);
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
@@ -1024,17 +1038,14 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
 
     llvm::Value* diff = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "diff");
     llvm::Value* i1;
-    llvm::Value* zero = llvm::ConstantInt::get(diff->getType(), llvm::APInt(32, 0));
+    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0, true));
     if(OP == LT) {
-        zero->mutateType(diff->getType());
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLT, diff, zero);
     }
     else if(OP == LE) {
-        zero->mutateType(diff->getType());
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, diff, zero);
     }
     else if(OP == EQUALS) {
-        zero->mutateType(diff->getType());
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, diff, zero);
     }
 
@@ -1149,38 +1160,12 @@ llvm::Value* _case::codegen(ParserDriver& drv) {
     for(auto classIt : drv.classMap) {
         blocks.push_back({classIt.first,
             {llvm::BasicBlock::Create(*drv.llvmContext, classIt.first + "Check", drv.cur_func),
-//            llvm::BasicBlock::Create(*drv.llvmContext, classIt.first + "Block", drv.cur_func)}});
              nullptr}});
     }
     llvm::BasicBlock* caseError = llvm::BasicBlock::Create(*drv.llvmContext, "noCaseAvail", drv.cur_func);
     blocks.push_back({"ERROR", {caseError, nullptr}});
 
 
-//    for(int i = 0; i < caseList.size(); ++i) {
-//        drv.llvmBuilder->SetInsertPoint(blocks[i].first); drv.currentBlocks.push_back(blocks[i].first);
-//
-//        llvm::Value* vtableGlobalCast = drv.llvmBuilder->CreateBitCast(
-//            drv.llvmModule->getNamedGlobal(caseList[i]->type + "_v"),
-//            llvm::FunctionType::get(llvm::Type::getVoidTy(*drv.llvmContext), true)->getPointerTo()->getPointerTo(),
-//            caseList[i]->type + "VtableGlobalCast");
-//        llvm::Value* check = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, vtableGlobalCast, vtablePtr, caseList[i]->type + "_i1");
-//        drv.llvmBuilder->CreateCondBr(check, blocks[i].second, blocks[i + 1].first);
-//
-//        drv.llvmBuilder->SetInsertPoint(blocks[i].second); drv.currentBlocks.push_back(blocks[i].second);
-//
-//        llvm::Value* _caseBranch = caseList[i]->caseBranch->codegen(drv);
-//        llvm::Value* caseBranchCasted = drv.llvmBuilder->CreateBitCast(_caseBranch, drv.llvmModule->getTypeByName(type + "_c")->getPointerTo(), "caseBranchCasted");
-//
-//        caseResults.push_back({caseBranchCasted, drv.currentBlocks.back()});
-//        drv.llvmBuilder->CreateBr(blocks.back().first); //branch to end label
-//    }
-
-//    drv.llvmBuilder->SetInsertPoint(blocks.back().first); drv.currentBlocks.push_back(blocks.back().first);
-//    llvm::PHINode* phi = drv.llvmBuilder->CreatePHI(drv.llvmModule->getTypeByName(type + "_c")->getPointerTo(), caseList.size());
-//    for(auto p : caseResults) {
-//        phi->addIncoming(p.first, p.second);
-//    }
-//    return phi;
     map<string, llvm::BasicBlock*> caseBlocks;
     for(auto it : caseList) {
         caseBlocks.insert({it->type, llvm::BasicBlock::Create(*drv.llvmContext, it->type + "Case", drv.cur_func)});
@@ -1235,17 +1220,6 @@ llvm::Value* _case::codegen(ParserDriver& drv) {
 
 
     map<string, llvm::Value*>& localsMap = drv.currentMethodEnv->localsMap;
-//    //call alloca for each identifier, and we can codegen the init expression in _letBinding
-//    for(_letBinding* binding : bindingList) {
-//        string resolvedType = binding->type;
-//        if(resolvedType == "SELF_TYPE") {
-//            resolvedType = drv.currentClassEnv->id;
-//        }
-//        llvm::Type* llvmType = drv.llvmModule->getTypeByName(resolvedType + "_c");
-//
-//        localsMap[selfEnv->id + '.' + binding->id] = drv.llvmBuilder->CreateAlloca(
-//                llvmType->getPointerTo(), 0, nullptr, id + '.' + binding->id);
-//    }
 
     for(auto it : caseList) {
         drv.top = it->getSelfEnv();
