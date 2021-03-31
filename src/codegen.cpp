@@ -55,7 +55,16 @@ void ParserDriver::declareExterns() {
         "exit",
         llvm::FunctionType::get(
             llvm::Type::getVoidTy(*llvmContext),
-            llvm::Type::getInt32Ty(*llvmContext), false));
+            llvm::Type::getInt32Ty(*llvmContext),
+            false));
+
+    //declare extern strcmp
+    llvmModule->getOrInsertFunction(
+        "strcmp",
+        llvm::FunctionType::get(
+            llvm::Type::getInt64Ty(*llvmContext),
+            vector<llvm::Type*>{llvm::Type::getInt8PtrTy(*llvmContext),llvm::Type::getInt8PtrTy(*llvmContext)},
+            false));
 }
 
 void ParserDriver::gen_llvmStringTypeAndMethods() {
@@ -100,14 +109,14 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateStore(llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(*llvmContext)), char_star_ptr);
     llvm::Value* length_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 1, "length_ptr");
     llvmBuilder->CreateStore(
-            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)0, true)),
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)0, true)),
         length_ptr);
     llvm::Value* maxlength_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 2, "maxlength_ptr");
     llvmBuilder->CreateStore(
-            llvm::ConstantInt::get(
-                    llvm::Type::getInt64Ty(*llvmContext),
-                    llvm::APInt(64, (uint64_t)0, true)),
-            maxlength_ptr);
+        llvm::ConstantInt::get(
+            llvm::Type::getInt64Ty(*llvmContext),
+            llvm::APInt(64, (uint64_t)0, true)),
+        maxlength_ptr);
     llvm::Value* factor_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 3, "factor_ptr");
     llvmBuilder->CreateStore(
             llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, (uint64_t)16, true)),
@@ -1074,17 +1083,90 @@ llvm::Value* _arith::codegen(ParserDriver& drv) {
 }
 
 llvm::Value* _relational::codegen(ParserDriver& drv) {
+    llvm::BasicBlock* getVtablePtrsBlock = llvm::BasicBlock::Create(*drv.llvmContext, "getVtablePtrsBlock", drv.cur_func);
+    llvm::BasicBlock* VoidCheck = llvm::BasicBlock::Create(*drv.llvmContext, "VoidCheck", drv.cur_func);
+    llvm::BasicBlock* IntCheck = llvm::BasicBlock::Create(*drv.llvmContext, "IntCheck", drv.cur_func);
+    llvm::BasicBlock* BoolCheck = llvm::BasicBlock::Create(*drv.llvmContext, "BoolCheck", drv.cur_func);
+    llvm::BasicBlock* StringCheck = llvm::BasicBlock::Create(*drv.llvmContext, "StringCheck", drv.cur_func);
+    llvm::BasicBlock* VoidBlock = llvm::BasicBlock::Create(*drv.llvmContext, "VoidBlock", drv.cur_func);
+    llvm::BasicBlock* IntBlock = llvm::BasicBlock::Create(*drv.llvmContext, "IntBlock", drv.cur_func);
+    llvm::BasicBlock* BoolBlock = llvm::BasicBlock::Create(*drv.llvmContext, "BoolBlock", drv.cur_func);
+    llvm::BasicBlock* StringBlock = llvm::BasicBlock::Create(*drv.llvmContext, "StringBlock", drv.cur_func);
+
+    llvm::BasicBlock* PointerBlock = llvm::BasicBlock::Create(*drv.llvmContext, "PointerBlock", drv.cur_func);
+    llvm::BasicBlock* EndBlock = llvm::BasicBlock::Create(*drv.llvmContext, "EndBlock", drv.cur_func);
+
+    llvm::Constant* i1true = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), llvm::APInt(1, (uint64_t)1, false));
+    llvm::Constant* i1false = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), llvm::APInt(1, (uint64_t)0, false));
+    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(64, 0, true));
+
+
+    llvm::Value* numBytes = llvm::ConstantInt::get(
+            llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 8 * (firstAttrOffset) + 1, false)); //vtable pointer, typeNamePtr, raw value (1 bit int)
+    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
+    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "castedMallocRes");
+
     llvm::Value* LLVMlhs = lhs->codegen(drv);
     llvm::Value* LLVMrhs = rhs->codegen(drv);
+    llvm::Value* LLVMlhs_cast;
+    llvm::Value* LLVMrhs_cast;
 
-    llvm::Value* rawInt1_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs, firstAttrOffset, "rawInt1_ptr");
+    drv.llvmBuilder->CreateBr(VoidCheck);
+    drv.llvmBuilder->SetInsertPoint(VoidCheck); drv.currentBlocks.push_back(VoidCheck);
+    //Check LHS
+    llvm::Value* LHSisvoid = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LLVMlhs, llvm::Constant::getNullValue(LLVMlhs->getType()), "LHSisvoid");
+    //Check RHS
+    llvm::Value* RHSisvoid = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LLVMrhs, llvm::Constant::getNullValue(LLVMrhs->getType()), "RHSisvoid");
+    //check if either are void
+    llvm::Value* existsVoid = drv.llvmBuilder->CreateOr(LHSisvoid, RHSisvoid, "existsVoid");
+    drv.llvmBuilder->CreateCondBr(existsVoid, VoidBlock, getVtablePtrsBlock);
+
+    //In this block, we know at least one of the two is void.
+    drv.llvmBuilder->SetInsertPoint(VoidBlock); drv.currentBlocks.push_back(VoidBlock);
+    llvm::Value* bothVoid = drv.llvmBuilder->CreateAnd(LHSisvoid, RHSisvoid);
+
+    //the possibilities are void op void, nonvoid op void, void op nonvoid
+    if(OP == EQUALS || OP == LE) {// = or <=
+        //just construct a bool using bool bothVoid
+        drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, bothVoid});
+    }
+    else { // <
+        //since void op void ::= false whenever op is <, all 3 possibilities are FALSE
+        drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1false});
+    }
+    drv.llvmBuilder->CreateBr(EndBlock);
+
+    //vtable pointers must be loaded AFTER void comparison otherwise we'll segfault
+    //when trying to load the vtablePtr (or anything else, we're null lol)
+    drv.llvmBuilder->SetInsertPoint(getVtablePtrsBlock); drv.currentBlocks.push_back(getVtablePtrsBlock);
+    llvm::Value* LHS_vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs, vtableOffset);
+    llvm::Value* LHS_vtablePtr = drv.llvmBuilder->CreateLoad(LHS_vtablePtr_ptr);
+    llvm::Value* RHS_vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs, vtableOffset);
+    llvm::Value* RHS_vtablePtr = drv.llvmBuilder->CreateLoad(RHS_vtablePtr_ptr);
+    drv.llvmBuilder->CreateBr(IntCheck);
+
+
+
+    //we know neither are void at this point
+    drv.llvmBuilder->SetInsertPoint(IntCheck); drv.currentBlocks.push_back(IntCheck);
+    llvm::Value* IntVtableGlobalCast = drv.llvmBuilder->CreateBitCast(
+        drv.llvmModule->getNamedGlobal("Int_v"),
+        llvm::FunctionType::get(llvm::Type::getVoidTy(*drv.llvmContext), true)->getPointerTo()->getPointerTo(),
+        "IntVtableGlobalCast");
+    llvm::Value* LHSisInt = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LHS_vtablePtr, IntVtableGlobalCast);
+    llvm::Value* RHSisInt = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, RHS_vtablePtr, IntVtableGlobalCast);
+    llvm::Value* bothInt = drv.llvmBuilder->CreateAnd(LHSisInt, RHSisInt, "bothInt");
+    drv.llvmBuilder->CreateCondBr(bothInt, IntBlock, BoolCheck);
+
+    drv.llvmBuilder->SetInsertPoint(IntBlock); drv.currentBlocks.push_back(IntBlock);
+    LLVMlhs_cast = drv.llvmBuilder->CreateBitCast(LLVMlhs, drv.llvmModule->getTypeByName("Int_c")->getPointerTo(), "lhs_cast");
+    LLVMrhs_cast = drv.llvmBuilder->CreateBitCast(LLVMrhs, drv.llvmModule->getTypeByName("Int_c")->getPointerTo(), "rhs_cast");
+    llvm::Value* rawInt1_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs_cast, firstAttrOffset, "rawInt1_ptr");
     llvm::Value* rawInt1 = drv.llvmBuilder->CreateLoad(rawInt1_ptr, "rawInt1");
-    llvm::Value* rawInt2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs, firstAttrOffset, "rawInt2_ptr");
+    llvm::Value* rawInt2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs_cast, firstAttrOffset, "rawInt2_ptr");
     llvm::Value* rawInt2 = drv.llvmBuilder->CreateLoad(rawInt2_ptr, "rawInt2");
-
     llvm::Value* diff = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "diff");
     llvm::Value* i1;
-    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0, true));
     if(OP == LT) {
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLT, diff, zero);
     }
@@ -1094,13 +1176,91 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
     else if(OP == EQUALS) {
         i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, diff, zero);
     }
-
-    //essentially the same as _bool::codegen from here on below
-    llvm::Value* numBytes = llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 8 * firstAttrOffset + 1, false)); //vtable pointer, typeNamePtr, raw value (1 bit int)
-    llvm::Value* mallocRes = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes");
-    llvm::Value* castedMallocRes = drv.llvmBuilder->CreateBitCast(mallocRes, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "castedMallocRes");
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
+    drv.llvmBuilder->CreateBr(EndBlock);
+
+    drv.llvmBuilder->SetInsertPoint(BoolCheck); drv.currentBlocks.push_back(BoolCheck);
+    llvm::Value* BoolVtableGlobalCast = drv.llvmBuilder->CreateBitCast(
+        drv.llvmModule->getNamedGlobal("Bool_v"),
+        llvm::FunctionType::get(llvm::Type::getVoidTy(*drv.llvmContext), true)->getPointerTo()->getPointerTo(),
+        "BoolVtableGlobalCast");
+    llvm::Value* LHSisBool = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LHS_vtablePtr, BoolVtableGlobalCast);
+    llvm::Value* RHSisBool = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, RHS_vtablePtr, BoolVtableGlobalCast);
+    llvm::Value* bothBool = drv.llvmBuilder->CreateAnd(LHSisBool, RHSisBool, "bothBool");
+    drv.llvmBuilder->CreateCondBr(bothBool, BoolBlock, StringCheck);
+
+    drv.llvmBuilder->SetInsertPoint(BoolBlock); drv.currentBlocks.push_back(BoolBlock);
+    LLVMlhs_cast = drv.llvmBuilder->CreateBitCast(LLVMlhs, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "lhs_cast");
+    LLVMrhs_cast = drv.llvmBuilder->CreateBitCast(LLVMrhs, drv.llvmModule->getTypeByName("Bool_c")->getPointerTo(), "rhs_cast");
+    llvm::Value* rawBool1_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs_cast, firstAttrOffset, "rawBool1_ptr");
+    llvm::Value* rawBool1 = drv.llvmBuilder->CreateLoad(rawBool1_ptr, "rawBool1");
+    llvm::Value* rawBool2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs_cast, firstAttrOffset, "rawBool2_ptr");
+    llvm::Value* rawBool2 = drv.llvmBuilder->CreateLoad(rawBool2_ptr, "rawBool2");
+    if(OP == LT) {
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_ULT, rawBool1, rawBool2);
+    }
+    else if(OP == LE) {
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_ULE, rawBool1, rawBool2);
+    }
+    else if(OP == EQUALS) {
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, rawBool1, rawBool2);
+    }
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
+    drv.llvmBuilder->CreateBr(EndBlock);
+
+    drv.llvmBuilder->SetInsertPoint(StringCheck); drv.currentBlocks.push_back(StringCheck);
+    llvm::Value* StringVtableGlobalCast = drv.llvmBuilder->CreateBitCast(
+            drv.llvmModule->getNamedGlobal("String_v"),
+            llvm::FunctionType::get(llvm::Type::getVoidTy(*drv.llvmContext), true)->getPointerTo()->getPointerTo(),
+            "StringVtableGlobalCast");
+    llvm::Value* LHSisString = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LHS_vtablePtr, StringVtableGlobalCast);
+    llvm::Value* RHSisString = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, RHS_vtablePtr, StringVtableGlobalCast);
+    llvm::Value* bothString = drv.llvmBuilder->CreateAnd(LHSisString, RHSisString, "bothString");
+    drv.llvmBuilder->CreateCondBr(bothString, StringBlock, PointerBlock);
+
+    drv.llvmBuilder->SetInsertPoint(StringBlock); drv.currentBlocks.push_back(StringBlock);
+    LLVMlhs_cast = drv.llvmBuilder->CreateBitCast(LLVMlhs, drv.llvmModule->getTypeByName("String_c")->getPointerTo(), "lhs_cast");
+    LLVMrhs_cast = drv.llvmBuilder->CreateBitCast(LLVMrhs, drv.llvmModule->getTypeByName("String_c")->getPointerTo(), "rhs_cast");
+    llvm::Value* rawLLVMString1_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs_cast, firstAttrOffset, "rawLLVMString1_ptr");
+    llvm::Value* rawi8Ptr1_ptr = drv.llvmBuilder->CreateStructGEP(rawLLVMString1_ptr, 0, "rawi8Ptr1_ptr");
+    llvm::Value* rawi8Ptr1 = drv.llvmBuilder->CreateLoad(rawi8Ptr1_ptr, "rawi8Ptr1");
+    llvm::Value* rawLLVMString2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs_cast, firstAttrOffset, "rawLLVMString2_ptr");
+    llvm::Value* rawi8Ptr2_ptr = drv.llvmBuilder->CreateStructGEP(rawLLVMString2_ptr, 0, "rawi8Ptr2_ptr");
+    llvm::Value* rawi8Ptr2 = drv.llvmBuilder->CreateLoad(rawi8Ptr2_ptr, "rawi8Ptr2");
+    llvm::Value* strCmpRes = drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("strcmp"),
+        vector<llvm::Value*>{rawi8Ptr1, rawi8Ptr2},
+        "strCmpRes");
+    if(OP == LT) {
+        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_SLT, strCmpRes, zero);
+    }
+    else if(OP == LE) {
+        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_SLE, strCmpRes, zero);
+    }
+    else if(OP == EQUALS) {
+        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_EQ, strCmpRes, zero);
+    }
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
+    drv.llvmBuilder->CreateBr(EndBlock);
+
+    drv.llvmBuilder->SetInsertPoint(PointerBlock); drv.currentBlocks.push_back(PointerBlock);
+    if(OP == LT) { //defined to always return false
+        i1 = i1false;
+    }
+    else {
+        llvm::Value* LHS_RHS_sameType = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LHS_vtablePtr, RHS_vtablePtr);
+        //to compare pointer addresses, we need the same pointer type (not guaranteed).
+        //but it's a pointer comparison, so types don't matter, so just make them match types
+        llvm::Value* LLVMlhs_i64PtrCast = drv.llvmBuilder->CreateBitCast(LLVMlhs, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+        llvm::Value* LLVMrhs_i64PtrCast = drv.llvmBuilder->CreateBitCast(LLVMrhs, llvm::Type::getInt64PtrTy(*drv.llvmContext));
+        llvm::Value* LHS_RHS_sameAddr = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, LLVMlhs_i64PtrCast, LLVMrhs_i64PtrCast);
+        //if either of the two above are false, then the comparison is false. otherwise, true
+        i1 = drv.llvmBuilder->CreateAnd(LHS_RHS_sameType, LHS_RHS_sameAddr, "bothSameObj");
+    }
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
+    drv.llvmBuilder->CreateBr(EndBlock);
+
+    drv.llvmBuilder->SetInsertPoint(EndBlock); drv.currentBlocks.push_back(EndBlock);
     return castedMallocRes;
 }
 
