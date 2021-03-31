@@ -762,13 +762,14 @@ void ParserDriver::genUserMethods() {
             }
             llvm::Value* ret = methodNode->body->codegen(*this);
 
-            string resolvedType = methodIt.second->returnType;
-            if(methodIt.second->returnType == "SELF_TYPE") resolvedType = classIt.first;
-            llvm::Value* ret_cast = llvmBuilder->CreateBitCast(
-                ret,
-                llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo(),
-                "ret_cast");
-            llvmBuilder->CreateRet(ret_cast);
+            llvm::Value* retCast;
+            if(methodIt.second->returnType == "SELF_TYPE") {
+                retCast = llvmBuilder->CreateBitCast(ret, llvm::Type::getInt64PtrTy(*llvmContext), "retCasted");
+            }
+            else {
+                retCast = llvmBuilder->CreateBitCast(ret, cur_func->getReturnType(), "retCasted");
+            }
+            llvmBuilder->CreateRet(retCast);
 
             //now take care of block order
             for(int i = 1; i < currentBlocks.size(); ++i) {
@@ -1527,11 +1528,16 @@ llvm::Value* _id::codegen(ParserDriver& drv) {
     }
 
     if(drv.top != nullptr) {//locals - letCase
-        map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(drv.top->id + '.' + value);
-        if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
-            llvm::Value* doublePtr = searchResIt->second;
-            retThis = drv.llvmBuilder->CreateLoad(doublePtr); retThis->setName(drv.top->id + '.' + value + "_loaded");
-            found = true;
+        letCaseEnv* current = drv.top;
+        while(current != nullptr) {
+            map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(current->id + '.' + value);
+            if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
+                llvm::Value* doublePtr = searchResIt->second;
+                retThis = drv.llvmBuilder->CreateLoad(doublePtr); retThis->setName(current->id + '.' + value + "_loaded");
+                found = true;
+                break;
+            }
+            current = current->prevLetCase;
         }
     }
     if(!found) {//locals - methodParams
@@ -1559,12 +1565,18 @@ llvm::Value* _assign::codegen(ParserDriver& drv) {
 
     //locals first, then methodParams, then attributes
     if(drv.top != nullptr) {
-        map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(drv.top->id + '.' + id);
-        if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
-            lhs_doublePtr = searchResIt->second;
-            lhsType = drv.top->getRec(id)->type;
-            found = true;
+        letCaseEnv* current = drv.top;
+        while(current != nullptr) {
+            map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find(current->id + '.' + id);
+            if(searchResIt != drv.currentMethodEnv->localsMap.end()) {
+                lhs_doublePtr = searchResIt->second;
+                lhsType = current->getRec(id)->type;
+                found = true;
+                break;
+            }
+            current = current->prevLetCase;
         }
+
     }
     if(!found) {
         map<string, llvm::Value*>::iterator searchResIt = drv.currentMethodEnv->localsMap.find("methodParam." + id);

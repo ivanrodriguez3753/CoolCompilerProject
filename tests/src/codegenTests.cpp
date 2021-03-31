@@ -111,7 +111,7 @@ INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/cells.cl",
         "CoolProgramsFull/hello-world.cl",
         "CoolProgramsFull/list.cl",
-//        "CoolProgramsFull/new-complex.cl"
+        "CoolProgramsFull/new-complex.cl",
         "CoolProgramsFull/primes.cl",
 //        "CoolProgramsFull/print-cool.cl",
         "CoolProgramsFull/hs.cl"
