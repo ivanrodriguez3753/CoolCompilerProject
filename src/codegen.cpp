@@ -490,18 +490,25 @@ void ParserDriver::genCtrs() {
             typeNamePtr);
         //make a block for each attribute and place in correct order so that attributes get initialized top to bottom, as
         //the user would expect
-        vector<llvm::BasicBlock*> attrBlocks(classIt.second.size());
+        vector<pair<_attr*, llvm::BasicBlock*>> attrBlocks(classIt.second.size());
         for(auto attrIt : classIt.second) {
-            attrBlocks[attrIt.second.second] = llvm::BasicBlock::Create(*llvmContext, attrIt.first + ".attr.init", cur_func);
-        }
-        for(int i = 0; i < (int)attrBlocks.size() - 1; ++i) {
-            attrBlocks[i]->moveBefore(attrBlocks[i + 1]);
+            attrBlocks[attrIt.second.second] = {(_attr*)attrIt.second.first->treeNode, llvm::BasicBlock::Create(*llvmContext, attrIt.first + ".attr.init", cur_func)};
         }
 
 
-        for(auto attrIt : classIt.second) {
+        llvm::BasicBlock* end_b = llvm::BasicBlock::Create(*llvmContext, "end", cur_func);
+        if(attrBlocks.size()) {
+            llvmBuilder->CreateBr(attrBlocks.front().second);
+        }
+        else {
+            llvmBuilder->CreateBr(end_b);
+        }
+
+        for(int i = 0; i < attrBlocks.size(); i++) {
+            auto b = attrBlocks[i];
+
             llvm::Type* llvmType;
-            const string& type = attrIt.second.first->type;
+            const string& type = b.first->type;
             string resolvedType = type;
             if(type == "SELF_TYPE") {
                 resolvedType = classIt.first;
@@ -510,11 +517,11 @@ void ParserDriver::genCtrs() {
             else {
                 llvmType = llvmModule->getTypeByName(type + "_c")->getPointerTo();
             }
-            llvm::BasicBlock* attr_b = attrBlocks[attrIt.second.second];
+            llvm::BasicBlock* attr_b = b.second;
             llvmBuilder->SetInsertPoint(attr_b); currentBlocks.push_back(attr_b);
 
             llvm::Value* storeAtEnd;
-            _expr*& optInit = ((_attr*)(attrIt.second.first->treeNode))->optInit;
+            _expr*& optInit = b.first->optInit;
             if(resolvedType == "String" || resolvedType == "Int" || resolvedType == "Bool") {
                 if(resolvedType == "String") {
                     if(!optInit) {
@@ -543,28 +550,21 @@ void ParserDriver::genCtrs() {
                     storeAtEnd = llvm::Constant::getNullValue(llvmType);
                 }
             }
-            llvm::Value* castedStoreAtEnd = llvmBuilder->CreateBitCast(storeAtEnd, llvmModule->getTypeByName(attrIt.second.first->type + "_c")->getPointerTo());
+
+            llvm::Value* castedStoreAtEnd = llvmBuilder->CreateBitCast(storeAtEnd, llvmModule->getTypeByName(b.first->type + "_c")->getPointerTo());
             llvmBuilder->CreateStore(
                 castedStoreAtEnd,
-                llvmBuilder->CreateStructGEP(self, firstAttrOffset + attrIt.second.second));
+                llvmBuilder->CreateStructGEP(self, firstAttrOffset + i));
+            if(i != attrBlocks.size() - 1) {
+                llvmBuilder->CreateBr(attrBlocks[i + 1].second);
+            }
+            else {
+                llvmBuilder->CreateBr(end_b);
+            }
         }
 
-        llvm::BasicBlock* end_b = llvm::BasicBlock::Create(*llvmContext, "end", cur_func);
         llvmBuilder->SetInsertPoint(end_b); currentBlocks.push_back(end_b);
         llvmBuilder->CreateRetVoid();
-
-        //now take care of LLVM's required br instruction on block dropthroughs
-        llvmBuilder->SetInsertPoint(entry_b);
-        if(attrBlocks.size()) {
-            llvmBuilder->CreateBr(attrBlocks[0]);
-            llvmBuilder->SetInsertPoint(attrBlocks[0]);
-            for(int i = 1; i < (int)attrBlocks.size() ; ++i) {
-                llvmBuilder->CreateBr(attrBlocks[i]);
-                llvmBuilder->SetInsertPoint(attrBlocks[i]);
-            }
-            llvmBuilder->SetInsertPoint(attrBlocks[(int)attrBlocks.size() - 1]);
-        }
-        llvmBuilder->CreateBr(end_b);
 
         for(int i = 1; i < currentBlocks.size(); ++i) {
             currentBlocks[i]->moveAfter(currentBlocks[i - 1]);
