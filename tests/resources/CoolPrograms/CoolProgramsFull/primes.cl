@@ -32,7 +32,7 @@ class Main inherits IO {
 
   out : Int <-		-- out is our 'output'.  Its values are the primes.
     {
-      out_string("2 is trivially prime.\n");
+      out_string("2 is prime.\n");
       2;
     };
 

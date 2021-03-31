@@ -49,6 +49,13 @@ void ParserDriver::declareExterns() {
     llvm::FunctionType* memcpy_ftype = llvm::FunctionType::get(
         charPtrTy, vector<llvm::Type*>{charPtrTy, charPtrTy, llvm::Type::getInt64Ty(*llvmContext)}, false);
     llvmModule->getOrInsertFunction("memcpy", memcpy_ftype);
+
+    //declare extern exit
+    llvmModule->getOrInsertFunction(
+        "exit",
+        llvm::FunctionType::get(
+            llvm::Type::getVoidTy(*llvmContext),
+            llvm::Type::getInt32Ty(*llvmContext), false));
 }
 
 void ParserDriver::gen_llvmStringTypeAndMethods() {
@@ -128,6 +135,8 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateBr(loopHeader);
 
     llvmBuilder->SetInsertPoint(loopEnd);
+    //TODO figure out why printf breaks on >16 character strings
+    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), vector<llvm::Value*>{this_ptr, curChar});
     llvmBuilder->CreateRetVoid();
 
     //DESTRUCTOR
@@ -651,9 +660,9 @@ void ParserDriver::genObject_abort() {
     llvm::Function* f = llvmModule->getFunction("Object.abort");
     llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
     llvmBuilder->SetInsertPoint(b);
-    //TODO implement, returning null for now so it compiles in LLVM
-    llvm::Value* retThis = llvmBuilder->CreateAlloca(llvmModule->getTypeByName("Object_c"));
-    llvmBuilder->CreateRet(retThis);
+    llvmBuilder->CreateCall(llvmModule->getFunction("printf"), llvmBuilder->CreateGlobalStringPtr("abort\n", ".str.abort", 0, llvmModule));
+    llvmBuilder->CreateCall(llvmModule->getFunction("exit"), llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), 1, false)); //1 is error return code
+    llvmBuilder->CreateRet(llvm::Constant::getNullValue(llvmModule->getTypeByName("Object_c")->getPointerTo()));
 }
 void ParserDriver::genObject_copy() {
     llvm::Function* f = llvmModule->getFunction("Object.copy");
