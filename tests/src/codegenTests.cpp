@@ -110,12 +110,12 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/length.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
-//        "CoolProgramsFull/atoi.cl",
+        "CoolProgramsFull/atoi.cl",
 //        "CoolProgramsFull/cells.cl",
         "CoolProgramsFull/hello-world.cl",
         "CoolProgramsFull/list.cl",
         "CoolProgramsFull/new-complex.cl",
         "CoolProgramsFull/primes.cl",
-//        "CoolProgramsFull/print-cool.cl",
+        "CoolProgramsFull/print-cool.cl",
         "CoolProgramsFull/hs.cl"
 ));

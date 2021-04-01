@@ -822,8 +822,7 @@ void ParserDriver::genString_substr() {
     llvm::Value* coolLength = llvmBuilder->CreateSub(length, llvm::ConstantInt::get(int64Ty, 1, false), "coollength");
     llvm::Value* charPtr_ptr = llvmBuilder->CreateStructGEP(self, 0, "charPtr_ptr");
     llvm::Value* buffer = llvmBuilder->CreateLoad(charPtr_ptr, "buffer");
-    llvm::Value* sublength = llvmBuilder->CreateAdd(i, l, "sublength");
-    llvm::Value* shortEnough = llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, coolLength, sublength, "shortEnough");
+    llvm::Value* shortEnough = llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, coolLength, l, "shortEnough");
     llvmBuilder->CreateCondBr(shortEnough, invalidBlock, validBlock);
 
     llvmBuilder->SetInsertPoint(validBlock);
