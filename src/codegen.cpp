@@ -65,6 +65,15 @@ void ParserDriver::declareExterns() {
             llvm::Type::getInt64Ty(*llvmContext),
             vector<llvm::Type*>{llvm::Type::getInt8PtrTy(*llvmContext),llvm::Type::getInt8PtrTy(*llvmContext)},
             false));
+
+    //declare extern strcat
+    llvmModule->getOrInsertFunction(
+        "strcat",
+        llvm::FunctionType::get(
+            llvm::Type::getInt8PtrTy(*llvmContext),
+            vector<llvm::Type*>{llvm::Type::getInt8PtrTy(*llvmContext),llvm::Type::getInt8PtrTy(*llvmContext)},
+            false));
+
 }
 
 void ParserDriver::gen_llvmStringTypeAndMethods() {
@@ -715,10 +724,44 @@ void ParserDriver::genObject_type_name() {
 void ParserDriver::genString_concat() {
     llvm::Function* f = llvmModule->getFunction("String.concat");
     llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvm::Value *self, *concatThis;
+    //TODO not important but setting argument names causes getFunction("String.concat") to return null
+    //self = f->getArg(0); self->setName("self"); concatThis = f->getArg(1); f->setName("concatThis");
+    self = f->getArg(0); concatThis = f->getArg(1);
+
     llvmBuilder->SetInsertPoint(b);
-    //TODO implement, returning null for now so it compiles in LLVM
-    llvm::Value* retThis = llvmBuilder->CreateAlloca(llvmModule->getTypeByName("String_c"));
-    llvmBuilder->CreateRet(retThis);
+    llvm::Value* LLVMStringPtr_self = llvmBuilder->CreateStructGEP(self, firstAttrOffset, "LLVMStringPtr_self");
+    llvm::Value* charPtr_ptr_self = llvmBuilder->CreateStructGEP(LLVMStringPtr_self, 0, "chatPtr_ptr_self");
+    llvm::Value* charPtr_self = llvmBuilder->CreateLoad(charPtr_ptr_self);
+    llvm::Value* lengthPtr_self = llvmBuilder->CreateStructGEP(LLVMStringPtr_self, 1, "lengthPtr_self");
+    llvm::Value* length_self =  llvmBuilder->CreateLoad(lengthPtr_self, "length_self");
+    llvm::Value* LLVMStringPtr_concatThis = llvmBuilder->CreateStructGEP(concatThis, firstAttrOffset, "LLVMStringPtr_concatThis");
+    llvm::Value* charPtr_ptr_concatThis = llvmBuilder->CreateStructGEP(LLVMStringPtr_concatThis, 0, "charPtr_ptr_concatThis");
+    llvm::Value* charPtr_concatThis = llvmBuilder->CreateLoad(charPtr_ptr_concatThis, "charPtr_concatThis");
+    //make a copy of charPtr_self
+    llvm::Value* newBuffer = llvmBuilder->CreateCall(llvmModule->getFunction("malloc"), vector<llvm::Value*>{length_self});
+    llvmBuilder->CreateCall(llvmModule->getFunction("memcpy"), vector<llvm::Value*>{newBuffer, charPtr_self, length_self});
+    llvmBuilder->CreateCall(llvmModule->getFunction("strcat"), vector<llvm::Value*>{newBuffer, charPtr_concatThis});
+    llvm::Value* mallocRes_LLVMString = llvmBuilder->CreateCall(
+        llvmModule->getFunction("malloc"),
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, 32, false)),
+        "mallocRes_LLVMString");
+    llvm::Value* castedMallocRes_LLVMString = llvmBuilder->CreateBitCast(
+        mallocRes_LLVMString, llvmModule->getTypeByName("LLVMString")->getPointerTo(), "castedMallocRes_LLVMString");
+    //TODO bigInt is kind of a bandaid
+    llvm::Value* bigInt = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, 1000, false));
+    llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{castedMallocRes_LLVMString, newBuffer, bigInt});
+    llvm::Value* mallocRes_COOLString = llvmBuilder->CreateCall(
+        llvmModule->getFunction("malloc"),
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, 8 * (firstAttrOffset + 1), false)),
+        "mallocRes_COOLString");
+    llvm::Value* castedMallocRes_COOLString = llvmBuilder->CreateBitCast(
+        mallocRes_COOLString, llvmModule->getTypeByName("String_c")->getPointerTo(), "castedMallocRes_COOLString");
+    llvm::Value* LLVMString_loaded = llvmBuilder->CreateLoad(castedMallocRes_LLVMString, "LLVMString_loaded");
+    llvmBuilder->CreateCall(llvmModule->getFunction("String..ctr"), vector<llvm::Value*>{castedMallocRes_COOLString, LLVMString_loaded});
+    llvmBuilder->CreateRet(castedMallocRes_COOLString);
+    llvmBuilder->CreateRet(llvm::Constant::getNullValue(llvmModule->getTypeByName("String_c")->getPointerTo()));
+
 }
 void ParserDriver::genString_length() {
     llvm::Function* f = llvmModule->getFunction("String.length");

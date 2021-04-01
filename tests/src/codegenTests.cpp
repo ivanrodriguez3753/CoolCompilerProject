@@ -105,7 +105,8 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/usingBasePointers.cl",
     "CoolProgramsAssembly/case.cl",
     "CoolProgramsAssembly/typeName.cl",
-    "CoolProgramsAssembly/substr.cl"
+    "CoolProgramsAssembly/substr.cl",
+    "CoolProgramsAssembly/concat.cl"
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
 //        "CoolProgramsFull/atoi.cl",
