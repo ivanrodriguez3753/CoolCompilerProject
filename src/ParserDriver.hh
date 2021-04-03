@@ -80,6 +80,8 @@ public:
      */
     map<string, pair<string, set<string>>> inherGraph;
 
+    vector<pair<int, string>> errorLog;
+
     ParserDriver();
     /**
      * builds all the non letCase environments and symbol tables, so it just traverses the top three levels of the tree

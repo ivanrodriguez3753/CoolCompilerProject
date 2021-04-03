@@ -93,6 +93,9 @@ public:
 
     void prettyPrint(ostream&os, string indentPrefix) const override;
     void print(ostream& os) const override;
+
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _class : public _env {

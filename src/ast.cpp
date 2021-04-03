@@ -571,6 +571,30 @@ void _program::decorate(ParserDriver& drv) {
         klass->decorate(drv);
         drv.currentClassEnv = nullptr;
     }
+
+    semanticCheck(drv);
+}
+
+void _program::semanticCheck(ParserDriver &drv) {
+    bool mainClassExists = (drv.implementationMap.find("Main") != drv.implementationMap.end());
+    if(!mainClassExists) {
+        //CLASS-1
+        drv.errorLog.emplace_back(0, "Didn't define a Main class!");
+    }
+
+    if(mainClassExists) {
+        bool mainMethodExists = (drv.implementationMap.at("Main").find("main") != drv.implementationMap.at("Main").end());
+        if(!mainMethodExists) {
+            //METHOD-1
+            drv.errorLog.emplace_back(0, "Didn't define a main method in Main!");
+        }
+        else {
+            //METHOD-2
+            if(drv.implementationMap.at("Main").at("main").first->numArgs) {
+                drv.errorLog.emplace_back(0, "Main.main must have 0 args");
+            }
+        }
+    }
 }
 
 void _class::decorate(ParserDriver& drv) {
