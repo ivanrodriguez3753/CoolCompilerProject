@@ -111,7 +111,7 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
 ));
 INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
         "CoolProgramsFull/atoi.cl",
-//        "CoolProgramsFull/cells.cl",
+        "CoolProgramsFull/cells.cl",
         "CoolProgramsFull/hello-world.cl",
         "CoolProgramsFull/list.cl",
         "CoolProgramsFull/new-complex.cl",

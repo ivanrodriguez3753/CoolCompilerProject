@@ -210,6 +210,8 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateCall(llvmModule->getFunction("memcpy"), vector<llvm::Value*>{output, char_ptr, length});
     llvmBuilder->CreateCall(llvmModule->getFunction("free"), vector<llvm::Value*>{char_ptr});
     llvmBuilder->CreateStore(output, char_ptr_ptr);
+    maxlength_ptr = llvmBuilder->CreateStructGEP(String, this_ptr, 2, "maxlength_ptr");
+    llvmBuilder->CreateStore(r, maxlength_ptr);
     llvmBuilder->CreateRetVoid();
 
     //CONCATCHAR
