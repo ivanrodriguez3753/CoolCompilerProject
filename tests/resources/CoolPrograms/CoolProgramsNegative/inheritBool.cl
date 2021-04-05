@@ -1,4 +1,4 @@
-class Main2 inherits IO {
+class Main inherits Bool {
     main() : Object {
         new Object
     };

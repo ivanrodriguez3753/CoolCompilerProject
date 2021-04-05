@@ -101,6 +101,8 @@ public:
     void codegen();
 
     string computeLub(set<string> s);
+    bool conforms(string T1, string T2);
+
 
     int result;
 

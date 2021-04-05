@@ -98,6 +98,14 @@ void _attr::print(ostream &os) const {
     }
 }
 
+void _attr::semanticCheck(ParserDriver &drv) {
+    if(optInit) {
+        if(!drv.conforms(optInit->type, type)) {
+            drv.errorLog.emplace_back(lineNo, "Initializer expression's static type does not conform to attribute's declared type");
+        }
+    }
+}
+
 void _method::prettyPrint(ostream& os, const string indentPrefix) const {
     os << indentPrefix + T + "METHOD: " + id + ", " + returnType << endl;
     os << indentPrefix + indent + T + "FORMALS_LIST: " + to_string(formalsList.size()) + " formalsList" << endl;
@@ -168,9 +176,152 @@ void _selfDispatch::decorate(ParserDriver &drv) {
     }
 
     //SELF_TYPE resolution isn't needed since only implementationMap expects resolved SELF_TYPEs
-    type = drv.implementationMap.at(drv.currentClassEnv->id).at(id).first->returnType;
+    map<string, pair<methodRec*, int>>& map = drv.implementationMap.at(drv.currentClassEnv->id);
+    if(map.find(id) != map.end()) {
+        type = map.at(id).first->returnType;
+    }
+    else {
+        type = "Object"; //placeholder, will catch error in semanticCheck to keep all the error checking in one place
+    }
     isDecorated = true;
+
+    semanticCheck(drv);
 }
+
+void _selfDispatch::semanticCheck(ParserDriver& drv) {
+    map<string, pair<methodRec*, int>>& map = drv.implementationMap.at(drv.currentClassEnv->id);
+    bool hasMethod = true;
+    bool error = false;
+
+    if(map.find(id) == map.end()) {
+        //EXPR$$$
+        drv.errorLog.emplace_back(lineNo, "Class " + drv.currentClassEnv->id + " does not inherit nor define method " + id);
+        hasMethod = false;
+        error = true;
+    }
+    if(!error && hasMethod) {
+        if (argList.size() != map.at(id).first->numArgs) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "Incorrect number of arguments passed to method");
+            error = true;
+        }
+    }
+    if(!error && hasMethod) {
+        vector<objRec*> formalParams;
+        for(auto it = map.at(id).first->link->symTable.begin(); it != map.at(id).first->link->symTable.end(); it++) {
+            if(it->first != "self") {
+                formalParams.push_back((objRec*)it->second);
+            }
+        }
+        sort(formalParams.begin(), formalParams.end(), [](const objRec* lhs, const objRec* rhs) {
+            return lhs->localOffset < rhs->localOffset;
+        });
+
+        for(int i = 0; i < formalParams.size(); ++i) {
+            if(!drv.conforms(argList[i]->type, formalParams[i]->type)) {
+                error = true;
+                break;
+            }
+        }
+        if(error) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "One or more passed parameters do not conform to formal parameter's declared type");
+        }
+    }
+}
+
+void _dynamicDispatch::semanticCheck(ParserDriver& drv) {
+    string resolvedCallerType = caller->type;
+    if(resolvedCallerType == "SELF_TYPE") resolvedCallerType = drv.currentClassEnv->id;
+
+    map<string, pair<methodRec*, int>>& map = drv.implementationMap.at(resolvedCallerType);
+    bool hasMethod = true;
+    bool error = false;
+    if(map.find(id) == map.end()) {
+        //EXPR$$$
+        drv.errorLog.emplace_back(lineNo, "Class " + drv.currentClassEnv->id + " does not inherit nor define method " + id);
+        hasMethod = false;
+        error = true;
+    }
+    if(!error && hasMethod) {
+        if(argList.size() != map.at(id).first->numArgs) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "Incorrect number of arguments passed to method");
+            error = true;
+        }
+    }
+    if(!error && hasMethod) {
+        vector<objRec*> formalParams;
+        for(auto it = map.at(id).first->link->symTable.begin(); it != map.at(id).first->link->symTable.end(); it++) {
+            if(it->first != "self") {
+                formalParams.push_back((objRec*)it->second);
+            }
+        }
+        sort(formalParams.begin(), formalParams.end(), [](const objRec* lhs, const objRec* rhs) {
+            return lhs->localOffset < rhs->localOffset;
+        });
+
+        bool error = false;
+        for(int i = 0; i < formalParams.size(); ++i) {
+            if(!drv.conforms(argList[i]->type, formalParams[i]->type)) {
+                error = true;
+                break;
+            }
+        }
+        if(error) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "One or more passed parameters do not conform to formal parameter's declared type");
+        }
+    }
+}
+
+void _staticDispatch::semanticCheck(ParserDriver &drv) {
+    map<string, pair<methodRec*, int>>& map = drv.implementationMap.at(staticType);
+    bool hasMethod = true;
+    bool error = false;
+
+    if(!drv.conforms(caller->type, staticType)) {
+        drv.errorLog.emplace_back(lineNo, "Caller's static type must conform to @Type");
+        error = true;
+    }
+    if(!error && map.find(id) == map.end()) {
+        //EXPR$$$
+        drv.errorLog.emplace_back(lineNo, "Class " + drv.currentClassEnv->id + " does not inherit nor define method " + id);
+        hasMethod = false;
+        error = true;
+    }
+    if(!error && hasMethod) {
+        if(argList.size() != map.at(id).first->numArgs) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "Incorrect number of arguments passed to method");
+            error = true;
+        }
+    }
+    if(!error && hasMethod) {
+        vector<objRec*> formalParams;
+        for(auto it = map.at(id).first->link->symTable.begin(); it != map.at(id).first->link->symTable.end(); it++) {
+            if(it->first != "self") {
+                formalParams.push_back((objRec*)it->second);
+            }
+        }
+        sort(formalParams.begin(), formalParams.end(), [](const objRec* lhs, const objRec* rhs) {
+            return lhs->localOffset < rhs->localOffset;
+        });
+
+        bool error = false;
+        for(int i = 0; i < formalParams.size(); ++i) {
+            if(!drv.conforms(argList[i]->type, formalParams[i]->type)) {
+                error = true;
+                break;
+            }
+        }
+        if(error) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "One or more passed parameters do not conform to formal parameter's declared type");
+        }
+    }
+}
+
 
 void _dynamicDispatch::print(ostream &os) const {
     os << caller->lineNo << endl;
@@ -201,7 +352,13 @@ void _dynamicDispatch::decorate(ParserDriver &drv) {
     //resolve the caller's type, in case it is SELF_TYPE
     if(callerTypeResolved == "SELF_TYPE") callerTypeResolved = drv.currentClassEnv->id;
 
-    string methodReturnType = drv.implementationMap.at(callerTypeResolved).at(id).first->returnType;
+    string methodReturnType;
+    if(drv.implementationMap.at(callerTypeResolved).find(id) == drv.implementationMap.at(callerTypeResolved).end()) {
+        methodReturnType = "Object"; //placeholder, will catch error in semanticCheck to keep all the error checks in one place
+    }
+    else {
+        methodReturnType = drv.implementationMap.at(callerTypeResolved).at(id).first->returnType;
+    }
     if(methodReturnType == "SELF_TYPE") {
         type = callerType; //we want to be able to return SELF_TYPE. we just needed to resolve to search implementationMap
     }
@@ -209,6 +366,8 @@ void _dynamicDispatch::decorate(ParserDriver &drv) {
         type = methodReturnType;
     }
     isDecorated = true;
+
+    semanticCheck(drv);
 }
 
 void _staticDispatch::print(ostream &os) const {
@@ -241,8 +400,16 @@ void _staticDispatch::decorate(ParserDriver &drv) {
     //resolve SELF_TYPE if necessary (someExpr@SELF_TYPE.methodName())
     string resolvedAtType = staticType;
     if(resolvedAtType == "SELF_TYPE") resolvedAtType = drv.currentClassEnv->id;
-    type = drv.implementationMap.at(resolvedAtType).at(id).first->returnType;
+    if(drv.implementationMap.at(resolvedAtType).find(id) != drv.implementationMap.at(resolvedAtType).end()) {
+        type = drv.implementationMap.at(resolvedAtType).at(id).first->returnType;
+    }
+    else {
+        type = "Object"; //placeholder, will catch error in semanticCheck to keep all the error checking in one place
+    }
+
     isDecorated = true;
+
+    semanticCheck(drv);
 }
 
 void _id::print(ostream &os) const {
@@ -367,6 +534,15 @@ void _if::decorate(ParserDriver &drv) {
 
     type = drv.computeLub(staticTypes);
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+void _if::semanticCheck(ParserDriver &drv) {
+    //EXPR$$$
+    if(predicate->type != "Bool") {
+        drv.errorLog.emplace_back(lineNo, "Predicate has static type " + predicate->type + " instead of Bool");
+    }
 }
 
 void _while::print(ostream &os) const {
@@ -384,6 +560,16 @@ void _while::decorate(ParserDriver &drv) {
 
     type = "Object"; //defined in the Cool Reference Manual
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+
+void _while::semanticCheck(ParserDriver &drv) {
+    //EXPR$$$
+    if(predicate->type != "Bool") {
+        drv.errorLog.emplace_back(lineNo, "Predicate has static type " + predicate->type + " instead of Bool");
+    }
 }
 
 void _assign::print(ostream& os) const {
@@ -456,6 +642,14 @@ void _arith::decorate(ParserDriver &drv) {
 
     type = "Int";
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+void _arith::semanticCheck(ParserDriver& drv) {
+    if(lhs->type != "Int" || rhs->type != "Int") {
+        drv.errorLog.emplace_back(lineNo, "Operands to an arithmetic expression must have static type Int");
+    }
 }
 
 void _relational::print(ostream& os) const {
@@ -476,6 +670,24 @@ void _relational::decorate(ParserDriver &drv) {
 
     type = "Bool";
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+
+/**
+* From the reference manual:
+* The wrinkle in the rule for equality is that any types may be freely compared except Int, String and Bool, which
+* may only be compared with objects of the same type. The cases for < and <= are similar to the rule for equality
+*/
+void _relational::semanticCheck(ParserDriver &drv) {
+    set<string> BoolIntStringSet{"Bool", "Int", "String"};
+    if(BoolIntStringSet.find(lhs->type) != BoolIntStringSet.end() || BoolIntStringSet.find(rhs->type) != BoolIntStringSet.end()) {
+        if(lhs->type != rhs->type) {
+            //EXPR$$$
+            drv.errorLog.emplace_back(lineNo, "Bool/Int/String can only be compared against another Bool/Int/String");
+        }
+    }
 }
 
 void _unary::print(ostream& os) const {
@@ -495,6 +707,23 @@ void _unary::decorate(ParserDriver &drv) {
     else if(OP == OPS::NOT) type = "Bool";
 
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+void _unary::semanticCheck(ParserDriver& drv) {
+    if(OP == NOT) {
+        //EXPR$$$
+        if(expr->type != "Bool") {
+            drv.errorLog.emplace_back(lineNo, "not operand has static type " + expr->type + " instead of Bool");
+        }
+    }
+    else if(OP == NEG) {
+        //EXPR$$$
+        if(expr->type != "Int") {
+            drv.errorLog.emplace_back(lineNo, "negate (~) operand has type " + expr->type + " instead of Int");
+        }
+    }
 }
 
 void _let::print(ostream& os) const {
@@ -578,18 +807,18 @@ void _program::decorate(ParserDriver& drv) {
 void _program::semanticCheck(ParserDriver &drv) {
     bool mainClassExists = (drv.implementationMap.find("Main") != drv.implementationMap.end());
     if(!mainClassExists) {
-        //CLASS-1
+        //CLASS$$$
         drv.errorLog.emplace_back(0, "Didn't define a Main class!");
     }
 
     if(mainClassExists) {
         bool mainMethodExists = (drv.implementationMap.at("Main").find("main") != drv.implementationMap.at("Main").end());
         if(!mainMethodExists) {
-            //METHOD-1
+            //METHOD$$$
             drv.errorLog.emplace_back(0, "Didn't define a main method in Main!");
         }
         else {
-            //METHOD-2
+            //METHOD$$$
             if(drv.implementationMap.at("Main").at("main").first->numArgs) {
                 drv.errorLog.emplace_back(0, "Main.main must have 0 args");
             }
@@ -621,13 +850,37 @@ void _class::decorate(ParserDriver& drv) {
 
     for(_method* method : featureList.second) {
         drv.currentMethodEnv = drv.currentClassEnv->getMethodRec(method->id)->link;
-        method->body->decorate(drv);
+        method->decorate(drv);
         drv.currentMethodEnv = nullptr;
+    }
+
+    semanticCheck(drv);
+}
+
+void _class::semanticCheck(ParserDriver &drv) {
+
+    if(superId == "Bool" || superId == "Int" || superId == "String") {
+        //CLASS$$$
+        drv.errorLog.emplace_back(superLineNo, "Must not inherit from Bool/Int/String");
     }
 }
 
 void _method::decorate(ParserDriver& drv) {
     body->decorate(drv);
+    semanticCheck(drv);
+}
+
+void _method::semanticCheck(ParserDriver& drv) {
+    string retTypeResolved = returnType;
+    if(retTypeResolved == "SELF_TYPE") retTypeResolved = drv.currentClassEnv->id;
+    string bodyTypeResolved = body->type;
+    if(bodyTypeResolved == "SELF_TYPE") bodyTypeResolved = drv.currentClassEnv->id;
+
+    //METHOD$$$
+    if(!drv.conforms(bodyTypeResolved, retTypeResolved)) {
+        drv.errorLog.emplace_back(lineNo, "Body expression's static type must conform to method's declared return type");
+    }
+
 }
 
 void _bool::decorate(ParserDriver& drv) {
@@ -639,6 +892,40 @@ void _assign::decorate(ParserDriver& drv) {
     rhs->decorate(drv);
     type = rhs->type;
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+void _assign::semanticCheck(ParserDriver &drv) {
+    bool found = false;
+    objRec* rec;
+
+    if(drv.top != nullptr) {
+        letCaseEnv* current = drv.top;
+        while(current != nullptr) {
+             rec = current->getRec(id);
+             if(rec) {
+                 found = true;
+                 break;
+             }
+             current = current->prevLetCase;
+        }
+    }
+    if(!found) {
+        rec = drv.currentMethodEnv->getRec(id);
+        if(rec) {
+            found = true;
+        }
+    }
+    if(!found) {
+        rec = drv.classMap.at(drv.currentClassEnv->id).at(id).first;
+    }
+
+    //EXPR$$$
+    if(!drv.conforms(rhs->type, rec->type)) {
+        drv.errorLog.emplace_back(lineNo, "RHS static type " + rhs->type + " does not conform to LHS static type " + rec->type);
+    }
+
 }
 
 void _let::decorate(ParserDriver& drv) {
@@ -646,7 +933,7 @@ void _let::decorate(ParserDriver& drv) {
 
     //traverse the initializers, at the current scope
     for(_letBinding* binding : bindingList) {
-        if(binding->optInit) binding->optInit->decorate(drv);
+        binding->decorate(drv);
     }
 
     //traversing the body, which is the first block that can use the new identifiers,
@@ -657,10 +944,39 @@ void _let::decorate(ParserDriver& drv) {
 
     type = body->type;
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+void _let::semanticCheck(ParserDriver &drv) {
+    if(!bindingList.size()) {
+        //EXPR$$$
+        drv.errorLog.emplace_back(lineNo, "Let expression must introduce at least 1 identifier");
+    }
+    set<string> identifiers;
+    for(_letBinding* binding : bindingList) {
+        if(identifiers.find(binding->id) == identifiers.end()) {
+            identifiers.insert(binding->id);
+        }
+        else {
+            drv.errorLog.emplace_back(binding->lineNo, "Let expression must introduce unique identifiers");
+        }
+    }
+}
+
+void _letBinding::semanticCheck(ParserDriver &drv) {
+    if(!drv.conforms(optInit->type, type)) {
+        //EXPR$$$
+        drv.errorLog.emplace_back(lineNo, "Initializer expression static type does not conform to declared type");
+    }
 }
 
 void _letBinding::decorate(ParserDriver& drv) {
-    if(optInit) optInit->decorate(drv);
+    if(optInit) {
+        optInit->decorate(drv);
+        semanticCheck(drv);
+    }
+
 }
 
 void _int::decorate(ParserDriver& drv) {
@@ -673,8 +989,22 @@ void _block::decorate(ParserDriver& drv) {
         expr->decorate(drv);
     }
 
-    type = body.back()->type;
+    if(body.size()) {
+        type = body.back()->type;
+    }
+    else {
+        type = "Object"; //placeholder, will catch error in semanticCheck
+    }
+
     isDecorated = true;
+
+    semanticCheck(drv);
+}
+
+void _block::semanticCheck(ParserDriver& drv) {
+    if(!body.size()) {
+        drv.errorLog.emplace_back(lineNo, "Block expression must have at least one subexpression");
+    }
 }
 
 void _case::decorate(ParserDriver& drv) {
@@ -697,10 +1027,34 @@ void _case::decorate(ParserDriver& drv) {
         drv.top = drv.top->prevLetCase;
     }
 
+    //has to be called before computeLub
+    semanticCheck(drv);
 
-    type = drv.computeLub(choices);
+    if(choices.size()) {
+        type = drv.computeLub(choices);
+    }
+    else{
+        type = "Object"; //placeholder, will error out by the semanticAnalyzer
+    }
 
     isDecorated = true;
+
+
+}
+
+void _case::semanticCheck(ParserDriver &drv) {
+    if(!caseList.size()) {
+        drv.errorLog.emplace_back(lineNo, "Case expression must introduce at least one case");
+    }
+    set<string> caseTypes;
+    for(_caseElement* kase : caseList) {
+        if(caseTypes.find(kase->type) == caseTypes.end()) {
+            caseTypes.insert(kase->type);
+        }
+        else {
+            drv.errorLog.emplace_back(lineNo, "Case branches must have unique types");
+        }
+    }
 }
 
 void _caseElement::decorate(ParserDriver& drv) {

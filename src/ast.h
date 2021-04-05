@@ -128,6 +128,9 @@ public:
     void print(ostream& os) const override;
     void decorate(ParserDriver& drv) override;
     void decorateAttrInitExprs(ParserDriver& drv);
+
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _feature {
@@ -161,7 +164,8 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const;
     void print(ostream& os) const override;
     void decorate(ParserDriver& drv) override;
-
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _attr : public _symTable, public _feature {
@@ -180,7 +184,7 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override;
     void print(ostream& os) const override;
 
-
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _letBinding : public _symTable{
@@ -199,6 +203,8 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 
@@ -281,6 +287,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _case : public _expr, _env {
@@ -303,6 +311,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _caseElement : public _env {
@@ -372,6 +382,8 @@ public:
     void decorate(ParserDriver& drv) override;
 
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _dynamicDispatch : public _dispatch {
@@ -385,6 +397,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _staticDispatch : public _dispatch {
@@ -400,6 +414,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _if : public _expr {
@@ -416,6 +432,9 @@ public:
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
 
+private:
+    void semanticCheck(ParserDriver& drv);
+
 };
 
 class _while : public _expr {
@@ -430,6 +449,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _assign : public _expr {
@@ -443,6 +464,8 @@ public:
     void prettyPrint(ostream &os, const string indentPrefix) const override {}
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _string : public _expr {
@@ -473,6 +496,8 @@ public:
     llvm::Value* codegen(ParserDriver& drv) override;
 
     _block(int l, vector<_expr*> b) : _expr(l), body(b) {}
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _new : public _expr {
@@ -520,6 +545,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _relational : public _expr {
@@ -539,6 +566,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _unary : public _expr {
@@ -557,6 +586,8 @@ public:
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
+private:
+    void semanticCheck(ParserDriver& drv);
 };
 
 class _internal : public _expr {
