@@ -93,6 +93,7 @@ public:
     void buildInternalsAst();
     void populateClassImplementationMaps();
     void populateMaps(string klass); //helper method
+    void decorateAST();
 
     void printClassMap(ostream& os);
     void printImplementationMap(ostream& os);

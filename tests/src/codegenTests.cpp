@@ -54,8 +54,7 @@ TEST_P(codegenFixture, positive) {
     drv.buildEnvs();
     drv.populateClassImplementationMaps();
 
-    drv.internalsAst->decorateInternals(drv.env); //TODO: make a driver call
-    drv.ast->decorate(drv); //TODO: same. wrap in a driver call
+    drv.decorateAST();
 
     drv.codegen();
     writeLLFile(drv);

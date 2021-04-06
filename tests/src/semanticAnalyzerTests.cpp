@@ -30,8 +30,7 @@ TEST_P(semanticAnalyzerFixturePositive, positive) {
     drv.buildEnvs();
     drv.populateClassImplementationMaps();
 
-    drv.internalsAst->decorateInternals(drv.env);
-    drv.ast->decorate(drv);
+    drv.decorateAST();
 
     drv.printClassMap(actual);
     drv.printImplementationMap(actual);
@@ -120,8 +119,7 @@ TEST_P(semanticAnalyzerFixtureNegativeWithRef, negative) {
     drv.buildEnvs();
     drv.populateClassImplementationMaps();
 
-    drv.internalsAst->decorateInternals(drv.env);
-    drv.ast->decorate(drv);
+    drv.decorateAST();
 
     writeMyOutputToCoolProgramsDir(actual.str(), GetParam() + "-type-ivan");
 
@@ -191,8 +189,7 @@ TEST_P(semanticAnalyzerFixtureNegativeWithoutRef, negative) {
     drv.buildEnvs();
     drv.populateClassImplementationMaps();
 
-    drv.internalsAst->decorateInternals(drv.env);
-    drv.ast->decorate(drv);
+    drv.decorateAST();
 
     sort(drv.errorLog.begin(), drv.errorLog.end(), [](const pair<int, string> lhs, const pair<int, string> rhs) {
         return lhs.first < rhs.first;

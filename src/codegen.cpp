@@ -914,6 +914,10 @@ void ParserDriver::genLLVMmain() {
     llvmBuilder->CreateRet(llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(32, 0, false)));
 }
 
+void ParserDriver::decorateAST() {
+    internalsAst->decorateInternals(env);
+    ast->decorate(*this);
+}
 
 
 llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
