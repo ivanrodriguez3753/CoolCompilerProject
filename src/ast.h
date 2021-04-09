@@ -249,7 +249,7 @@ public:
      * @param drv
      * @return
      */
-    string resolveType(ParserDriver& drv);
+    static string resolveType(ParserDriver& drv, string type);
 };
 
 class _bool : public _expr {

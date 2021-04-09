@@ -682,8 +682,10 @@ void _relational::decorate(ParserDriver &drv) {
 */
 void _relational::semanticCheck(ParserDriver &drv) {
     set<string> BoolIntStringSet{"Bool", "Int", "String"};
-    if(BoolIntStringSet.find(lhs->type) != BoolIntStringSet.end() || BoolIntStringSet.find(rhs->type) != BoolIntStringSet.end()) {
-        if(lhs->type != rhs->type) {
+    string lhsTypeResolved = _expr::resolveType(drv, lhs->type);
+    string rhsTypeResolved = _expr::resolveType(drv, rhs->type);
+    if(BoolIntStringSet.find(lhsTypeResolved) != BoolIntStringSet.end() || BoolIntStringSet.find(rhsTypeResolved) != BoolIntStringSet.end()) {
+        if(lhsTypeResolved != rhsTypeResolved) {
             //EXPR$$$
             drv.errorLog.emplace_back(lineNo, "Bool/Int/String can only be compared against another Bool/Int/String");
         }
@@ -871,13 +873,8 @@ void _method::decorate(ParserDriver& drv) {
 }
 
 void _method::semanticCheck(ParserDriver& drv) {
-    string retTypeResolved = returnType;
-    if(retTypeResolved == "SELF_TYPE") retTypeResolved = drv.currentClassEnv->id;
-    string bodyTypeResolved = body->type;
-    if(bodyTypeResolved == "SELF_TYPE") bodyTypeResolved = drv.currentClassEnv->id;
-
     //METHOD$$$
-    if(!drv.conforms(bodyTypeResolved, retTypeResolved)) {
+    if(!drv.conforms(body->type, returnType)) {
         drv.errorLog.emplace_back(lineNo, "Body expression's static type must conform to method's declared return type");
     }
 
@@ -1061,7 +1058,7 @@ void _caseElement::decorate(ParserDriver& drv) {
     caseBranch->decorate(drv);
 }
 
-string _expr::resolveType(ParserDriver &drv) {
+string _expr::resolveType(ParserDriver &drv, string type) {
     if(type != "SELF_TYPE") return type;
     else {
         return drv.currentClassEnv->id;

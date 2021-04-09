@@ -1143,7 +1143,7 @@ llvm::Value* _if::codegen(ParserDriver& drv) {
     phi->addIncoming(false_res_cast, false_res_cast_block);
 
     string resolvedType = type;
-    if(type == "SELF_TYPE") resolvedType = resolveType(drv);
+    if(type == "SELF_TYPE") resolvedType = resolveType(drv, type);
     return drv.llvmBuilder->CreatePointerCast(phi, drv.llvmModule->getTypeByName(resolvedType + "_c")->getPointerTo(), "if_res_cast");
 }
 

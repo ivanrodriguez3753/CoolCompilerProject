@@ -383,7 +383,7 @@ void _class::decorateAttrInitExprs(ParserDriver &drv) {
 
 bool ParserDriver::conforms(string T1, string T2) {
     if(T1 == "SELF_TYPE") T1 = currentClassEnv->id;
-    if(T1 == "SELF_TYPE") T2 = currentClassEnv->id;
+    if(T2 == "SELF_TYPE") T2 = currentClassEnv->id;
     if(T1 == T2) return true;
     set<string> rhsChildren = inherGraph.at(T2).second;
     return (rhsChildren.find(T1) != rhsChildren.end());
