@@ -165,7 +165,7 @@ INSTANTIATE_TEST_SUITE_P(negative, semanticAnalyzerFixtureNegativeWithRef, testi
     "CoolProgramsNegative/staticDispatch@TypeNonconformance.cl",
     "CoolProgramsNegative/letInit.cl",
     "CoolProgramsNegative/methodReturnType.cl",
-    "CoolProgramsNegative/methodSELF_TYPEReturnType.cl"
+    "CoolProgramsNegative/methodSELF_TYPEreturnType.cl"
 
 ));
 

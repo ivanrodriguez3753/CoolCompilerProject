@@ -7,39 +7,39 @@ class Main inherits IO {
 
     main() : Object {{
         if small < big then {
-            out_string("< works");
+            out_string("< works\n");
         }else {
-            out_string("< DOES NOT work");
+            out_string("< DOES NOT work\n");
         }fi;
 
         if small = small then {
-            out_string("= works");
+            out_string("= works\n");
         }else {
-            out_string("= DOES NOT work");
+            out_string("= DOES NOT work\n");
         }fi;
 
         if small <= big then {
-            out_string("<= works");
+            out_string("<= works\n");
         }else {
-            out_string("<= DOES NOT work");
+            out_string("<= DOES NOT work\n");
         }fi;
 
         if small2 < big2 then {
-            out_string("< works");
+            out_string("< works\n");
         }else {
-            out_string("< DOES NOT work");
+            out_string("< DOES NOT work\n");
         }fi;
 
         if small2 = small2 then {
-            out_string("= works");
+            out_string("= works\n");
         }else {
-            out_string("= DOES NOT work");
+            out_string("= DOES NOT work\n");
         }fi;
 
         if small2 <= big2 then {
-            out_string("<= works");
+            out_string("<= works\n");
         }else {
-            out_string("<= DOES NOT work");
+            out_string("<= DOES NOT work\n");
         }fi;
     }};
 };
