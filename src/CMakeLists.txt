@@ -1,5 +1,5 @@
 #https://cmake.org/pipermail/cmake/2002-September/003028.html
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.16)
 project(CoolCompilerProjectSource)
 
 set(CMAKE_CXX_STANDARD 14)

@@ -62,7 +62,7 @@ void ParserDriver::declareExterns() {
     llvmModule->getOrInsertFunction(
         "strcmp",
         llvm::FunctionType::get(
-            llvm::Type::getInt64Ty(*llvmContext),
+            llvm::Type::getInt32Ty(*llvmContext),
             vector<llvm::Type*>{llvm::Type::getInt8PtrTy(*llvmContext),llvm::Type::getInt8PtrTy(*llvmContext)},
             false));
 
@@ -1222,8 +1222,8 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
 
     llvm::Constant* i1true = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), llvm::APInt(1, (uint64_t)1, false));
     llvm::Constant* i1false = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*drv.llvmContext), llvm::APInt(1, (uint64_t)0, false));
-    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(64, 0, true));
-
+    llvm::Value* zero32 = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(32, 0, true));
+    llvm::Value* zero64 = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0, true));
 
     llvm::Value* numBytes = llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 8 * (firstAttrOffset) + 1, false)); //vtable pointer, typeNamePtr, raw value (1 bit int)
@@ -1292,13 +1292,13 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
     llvm::Value* diff = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "diff");
     llvm::Value* i1;
     if(OP == LT) {
-        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLT, diff, zero);
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLT, diff, zero64);
     }
     else if(OP == LE) {
-        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, diff, zero);
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, diff, zero64);
     }
     else if(OP == EQUALS) {
-        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, diff, zero);
+        i1 = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, diff, zero64);
     }
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
     drv.llvmBuilder->CreateBr(EndBlock);
@@ -1358,13 +1358,13 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
         vector<llvm::Value*>{rawi8Ptr1, rawi8Ptr2},
         "strCmpRes");
     if(OP == LT) {
-        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_SLT, strCmpRes, zero);
+        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_SLT, strCmpRes, zero32);
     }
     else if(OP == LE) {
-        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_SLE, strCmpRes, zero);
+        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_SLE, strCmpRes, zero32);
     }
     else if(OP == EQUALS) {
-        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_EQ, strCmpRes, zero);
+        i1 = drv.llvmBuilder->CreateCmp(llvm::CmpInst::ICMP_EQ, strCmpRes, zero32);
     }
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("Bool..ctr"), vector<llvm::Value*>{castedMallocRes, i1});
     drv.llvmBuilder->CreateBr(EndBlock);
