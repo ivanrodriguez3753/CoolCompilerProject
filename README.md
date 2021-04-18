@@ -11,24 +11,28 @@ The following build instructions assume you are on a fresh new Ubuntu 20.10 VM. 
   $ chmod +x installDependenciesUbuntu20.10.sh <br/>
   $ ./installDependenciesUbuntu20.10.sh <br/>
   
-4. All dependencies should be good to go. Now we can build the CoolCompilerProject (and test project) following the usual build-from-source steps: <br/>
+4. In order to avoid using environment variables, follow the unix/linux file system conventions by sym-linking the newly installed clang with the expected 'clang' and 'clang++' commands:
+  $ sudo ln -s /usr/bin/clang-11 /usr/bin/clang
+  $ sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++
+
+5. All dependencies should be good to go. Now we can build the CoolCompilerProject (and test project) following the usual build-from-source steps: <br/>
   $ mkdir build <br/>
   $ cd build <br/>
   $ cmake .. <br/>
   $ make <br/>
   
-5. To run the compiler, cd into ~/build/src and run the executable with the optional --ast flag and with the required filename.cl parameter. If the input file is well-formed, it will produce filename.ll <br/>
+6. To run the compiler, cd into ~/build/src and run the executable with the optional --ast flag and with the required filename.cl parameter. If the input file is well-formed, it will produce filename.ll <br/>
   $ cd src <br/>
   $ ./CoolCompilerProject hello-world.cl <br/>
 
-6. To run the test project, copy the apporpriate reference compiler into a new file named "cool". The reference compiler and its destination are in ~root/tests/resources. Then run the tests executable <br/>
+7. To run the test project, copy the apporpriate reference compiler into a new file named "cool". The reference compiler and its destination are in ~root/tests/resources. Then run the tests executable <br/>
   $ cd ~root/tests/resources <br/>
   $ cp cool-linux-x64-64 cool <br/>
   $ chmod a+x cool
   $ cd ../../build/tests
   $ ./tests
 
-7. Since the CoolCompiler targets LLVM, we need to take the output file and run it through clang <br/>
+8. Since the CoolCompiler targets LLVM, we need to take the output file and run it through clang <br/>
   $ clang hello-world.ll <br/>
   $ ./a.out <br/>
   
