@@ -14,7 +14,7 @@ sudo make install
 cd ../
 
 #cmake
-sudo apt install cmake-3.16.3-3ubuntu2
+sudo apt install cmake-3.16.3=3ubuntu2
 
 #clang
 sudo apt install clang-11=1:11.0.0-2
