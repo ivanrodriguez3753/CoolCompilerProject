@@ -157,12 +157,13 @@ protected:
         actual << ifs.rdbuf();
     }
     pair<int, int> extractInts(stringstream& expected, stringstream& actual) {
-        string e = expected.str();
-        string a = actual.str();
+        int e_int, a_int;
+        expected >> e_int;
+        actual >> a_int;
 
         //the reference compiler gives line number of the error at position 7, and this implementation
         //gives the line number of the error at the very end
-        return {atoi(&e.at(7)), atoi(&(*--a.end()))};
+        return {e_int, a_int};
     }
 };
 TEST_P(codegenFixtureNegative, negative) {
@@ -186,5 +187,10 @@ TEST_P(codegenFixtureNegative, negative) {
 
 }
 INSTANTIATE_TEST_SUITE_P(codegenNegative, codegenFixtureNegative, testing::Values(
-        "CoolProgramsAssembly/RuntimeNegative/dynamicDispatchOnVoid.cl"
+        "CoolProgramsAssembly/RuntimeNegative/dynamicDispatchOnVoid.cl",
+        "CoolProgramsAssembly/RuntimeNegative/staticDispatchOnVoid.cl",
+        "CoolProgramsAssembly/RuntimeNegative/caseNoMatchingBranch.cl",
+        "CoolProgramsAssembly/RuntimeNegative/caseVoidSwitchee.cl"
+
+
 ));

@@ -1075,13 +1075,24 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     else {
         args[0] = _caller;
     }
-    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "isNull", drv.cur_func);
-    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "notNull", drv.cur_func);
+    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "staticDispCheck_isNull", drv.cur_func);
+    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "staticDispCheck_notNull", drv.cur_func);
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
     drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(isNull_b); drv.currentBlocks.push_back(isNull_b);
-    //TODO syscall ABORT with message "dispatch on void"
+    drv.llvmBuilder->CreateCall(
+            drv.llvmModule->getFunction("printf"),
+            drv.runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::DYNAMIC_DISP_ON_VOID]);
+    drv.llvmBuilder->CreateCall(
+            drv.llvmModule->getFunction("printf"),
+            vector<llvm::Value*>{
+                    drv.percentdPtr,
+                    llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, lineNo, false))});
+    drv.llvmBuilder->CreateCall(
+            drv.llvmModule->getFunction("exit"),
+            llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(32, 1, false)));
+    //LLVM still needs to compile so we need to ret something or branch to another block
     drv.llvmBuilder->CreateBr(notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
@@ -1492,27 +1503,46 @@ llvm::Value* _block::codegen(ParserDriver& drv) {
 llvm::Value* _case::codegen(ParserDriver& drv) {
     //TODO LLVMnull check the _switchee result
 
-    llvm::Value* _switchee = switchee->codegen(drv);
-    llvm::Value* vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(_switchee, vtableOffset, "vtablePtr_ptr");
-    llvm::Value* vtablePtr = drv.llvmBuilder->CreateLoad(vtablePtr_ptr, "vtablePtr");
-
-
-    //TODO for every single class, find the lub of the available types (the types from each case branch) and then
-    // have a check that sees
+    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "caseSwitcheeNullCheck_isNull", drv.cur_func);
+    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "caseSwitcheeNullCheck_nullNull", drv.cur_func);
     vector<pair<string, pair<llvm::BasicBlock*, llvm::BasicBlock*>>> blocks; //for each _caseElement, insert a check block and an actual block
     for(auto classIt : drv.classMap) {
         blocks.push_back({classIt.first,
             {llvm::BasicBlock::Create(*drv.llvmContext, classIt.first + "Check", drv.cur_func),
-             nullptr}});
+            nullptr}});
     }
     llvm::BasicBlock* caseError = llvm::BasicBlock::Create(*drv.llvmContext, "noCaseAvail", drv.cur_func);
     blocks.push_back({"ERROR", {caseError, nullptr}});
-
 
     map<string, llvm::BasicBlock*> caseBlocks;
     for(auto it : caseList) {
         caseBlocks.insert({it->type, llvm::BasicBlock::Create(*drv.llvmContext, it->type + "Case", drv.cur_func)});
     }
+
+    llvm::Value* _switchee = switchee->codegen(drv);
+    llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, _switchee, llvm::Constant::getNullValue(_switchee->getType()));
+    drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
+
+    drv.llvmBuilder->SetInsertPoint(isNull_b); drv.currentBlocks.push_back(isNull_b);
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("printf"),
+        drv.runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::CASE_ON_VOID]);
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("printf"),
+        vector<llvm::Value*>{
+            drv.percentdPtr,
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, lineNo, false))});
+    drv.llvmBuilder->CreateCall(
+            drv.llvmModule->getFunction("exit"),
+            llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(32, 1, false)));
+    //LLVM still needs to compile so we need to ret something or branch to another block
+    drv.llvmBuilder->CreateBr(notNull_b);
+
+    drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
+    llvm::Value* vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(_switchee, vtableOffset, "vtablePtr_ptr");
+    llvm::Value* vtablePtr = drv.llvmBuilder->CreateLoad(vtablePtr_ptr, "vtablePtr");
+
+
     drv.llvmBuilder->CreateBr(blocks[0].second.first);
     vector<pair<llvm::Value*, llvm::BasicBlock*>> caseResults;
     for(int i = 0; i < blocks.size() - 1; ++i) {
@@ -1554,6 +1584,15 @@ llvm::Value* _case::codegen(ParserDriver& drv) {
 
     llvm::BasicBlock* esac = llvm::BasicBlock::Create(*drv.llvmContext, "esac", drv.cur_func);
     drv.llvmBuilder->SetInsertPoint(caseError); drv.currentBlocks.push_back(caseError);
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("printf"),
+        drv.runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::CASE_NO_MATCHING_BR]);
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("printf"),
+        vector<llvm::Value*>{
+            drv.percentdPtr,
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, lineNo, false))});
+    drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("exit"), llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), 1, false));
     if(drv.cur_func->getReturnType() == llvm::Type::getVoidTy(*drv.llvmContext)) {
         drv.llvmBuilder->CreateRetVoid();
     }

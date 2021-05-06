@@ -3,8 +3,7 @@ class Main inherits IO {
     voidAttr : Object; --This will be void because it has not been initialized
 
     main() : Object {{
-        out_string(nonvoidAttr@Object.type_name());
-        out_string("\n");
+        nonvoidAttr@Object.type_name();
         out_string(voidAttr@Object.type_name());
     }};
 };
