@@ -62,6 +62,28 @@ public:
     map<string, pair<int, llvm::Constant*>> strLits{
         {"", {0, llvmBuilder->CreateGlobalStringPtr(llvm::StringRef(""), ".str.0", 0, llvmModule)}}}; //empty string
 
+    llvm::Value* percentdPtr = llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("%d"), ".str.percentd", 0, llvmModule);
+    /**
+     * This compiler is implementing five (six if you consider static/dynamic dispatch different) runtime errors:
+     * dispatch on void, case on void, executing a case statement without a matching branch, division by zero,
+     * and substr out of range
+     */
+    enum RUNTIME_ERROR_CODES{
+        STATIC_DISP_ON_VOID = 0, DYNAMIC_DISP_ON_VOID, CASE_ON_VOID, CASE_NO_MATCHING_BR, DIV_BY_ZERO, SUBSTR_OUT_OF_RANGE
+    };
+
+    /**
+     * Error messages for the runtime errors. Follow up with a call to printf that prints the line number of the
+     * problematic expression.
+     */
+    map<int, llvm::Constant*> runtimeErrorStrings {
+        {STATIC_DISP_ON_VOID, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Static dispatch on void. Check line ", ".str.STATIC_DISP_ON_VOID", 0, llvmModule)},
+        {DYNAMIC_DISP_ON_VOID, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Dynamic dispatch on void. Check line ", ".str.DYNAMIC_DISP_ON_VOID", 0, llvmModule)},
+        {CASE_ON_VOID, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Case switchee is void. Check line ", ".str.CASE_ON_VOID", 0, llvmModule)},
+        {CASE_NO_MATCHING_BR, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: No matching branch for case expression. Check line ", ".str.CASE_NO_MATCHING_BR", 0, llvmModule)},
+        {DIV_BY_ZERO, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Divide by zero. Check line ", ".str.DIV_BY_ZERO", 0, llvmModule)},
+        {SUBSTR_OUT_OF_RANGE, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Substring indices are out of range. Check line ", ".str.SUBSTR_OUT_OF_RANGE", 0, llvmModule)}
+    };
 
 
 

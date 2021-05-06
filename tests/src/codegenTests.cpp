@@ -7,7 +7,7 @@
 #include "ParserDriver.hh"
 using namespace std;
 
-class codegenFixture : public testing::TestWithParam<string> {
+class codegenFixturePositive : public testing::TestWithParam<string> {
 protected:
 
     stringstream expected, actual;
@@ -46,7 +46,7 @@ protected:
         actual << ifs.rdbuf();
     }
 };
-TEST_P(codegenFixture, positive) {
+TEST_P(codegenFixturePositive, positive) {
     ParserDriver drv;
 
     drv.parse(buildToResourcesPath + "CoolPrograms/" + GetParam());
@@ -64,7 +64,7 @@ TEST_P(codegenFixture, positive) {
     ASSERT_EQ(actual.str(), expected.str());
 
 }
-INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
+INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixturePositive, testing::Values(
     "CoolProgramsAssembly/printIntLiteral.cl",
     "CoolProgramsAssembly/printIntAttrNoInit.cl",
     "CoolProgramsAssembly/printIntAttrInit.cl",
@@ -108,7 +108,7 @@ INSTANTIATE_TEST_SUITE_P(positiveCodegen, codegenFixture, testing::Values(
     "CoolProgramsAssembly/concat.cl",
     "CoolProgramsAssembly/length.cl"
 ));
-INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
+INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixturePositive, testing::Values(
         "CoolProgramsFull/atoi.cl",
         "CoolProgramsFull/cells.cl",
         "CoolProgramsFull/hello-world.cl",
@@ -117,4 +117,74 @@ INSTANTIATE_TEST_SUITE_P(codegenFull, codegenFixture, testing::Values(
         "CoolProgramsFull/primes.cl",
         "CoolProgramsFull/print-cool.cl",
         "CoolProgramsFull/hs.cl"
+));
+class codegenFixtureNegative : public testing::TestWithParam<string> {
+protected:
+
+    stringstream expected, actual;
+    string llContents;
+    string llFileName;
+    string outputFileName;
+
+    void SetUp() override {
+        generateReference(expected, GetParam(), "--full");
+    }
+    void TearDown() override {
+
+    }
+    void writeLLFile(ParserDriver& drv) {
+        llFileName = buildToResourcesPath + "CoolPrograms/" + GetParam();
+        llFileName.replace(llFileName.find(".cl"), 3, ".ll");
+        ofstream llFile(llFileName);
+
+        llvm::raw_string_ostream ostr(llContents);
+        drv.llvmModule->print(ostr, nullptr);
+        llFile << stringstream(llContents).rdbuf();
+        llFile.close();
+    }
+    void LL_compileRunSave() {
+        outputFileName = llFileName;
+        outputFileName.replace(outputFileName.find(".ll"), 3, ".cl-out-ivan");
+        string clangCmd = "clang " + llFileName;
+        system(clangCmd.c_str());
+        string aoutCmd = "./a.out &> " + outputFileName;
+        system(aoutCmd.c_str());
+        string rm_aoutCmd = "rm -f a.out";
+        system(rm_aoutCmd.c_str());
+    }
+    void loadOutputInStream() {
+        ifstream ifs(outputFileName);
+        actual << ifs.rdbuf();
+    }
+    pair<int, int> extractInts(stringstream& expected, stringstream& actual) {
+        string e = expected.str();
+        string a = actual.str();
+
+        //the reference compiler gives line number of the error at position 7, and this implementation
+        //gives the line number of the error at the very end
+        return {atoi(&e.at(7)), atoi(&(*--a.end()))};
+    }
+};
+TEST_P(codegenFixtureNegative, negative) {
+    ParserDriver drv;
+
+    drv.parse(buildToResourcesPath + "CoolPrograms/" + GetParam());
+    drv.buildInternalsAst();
+    drv.buildEnvs();
+    drv.populateClassImplementationMaps();
+
+    drv.decorateAST();
+
+    drv.codegen();
+    writeLLFile(drv);
+    LL_compileRunSave();
+    loadOutputInStream();
+
+    pair<int, int> errorLines = extractInts(expected, actual);
+
+    ASSERT_EQ(errorLines.first, errorLines.second);
+
+}
+INSTANTIATE_TEST_SUITE_P(codegenNegative, codegenFixtureNegative, testing::Values(
+        "CoolProgramsAssembly/RuntimeNegative/dynamicDispatchOnVoid.cl"
 ));

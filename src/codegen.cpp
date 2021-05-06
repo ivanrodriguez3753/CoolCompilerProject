@@ -157,7 +157,6 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateBr(loopHeader);
 
     llvmBuilder->SetInsertPoint(loopEnd);
-    //TODO figure out why printf breaks on >16 character strings
     llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString.concatChar"), vector<llvm::Value*>{this_ptr, curChar});
     llvmBuilder->CreateRetVoid();
 
@@ -631,7 +630,7 @@ void ParserDriver::genIO_out_int() {
     );
 
     llvm::Function* printf = llvmModule->getFunction("printf");
-    vector<llvm::Value*> printf_args{llvmBuilder->CreateGlobalStringPtr(llvm::StringRef("%d"), ".str.percentd", 0, llvmModule)};
+    vector<llvm::Value*> printf_args{percentdPtr};
     llvm::Value* raw_int_ptr = llvmBuilder->CreateStructGEP(
         llvmModule->getTypeByName("Int_c"),
         castedArg,
@@ -1006,13 +1005,24 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     else {
         args[0] = _caller;
     }
-    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "isNull", drv.cur_func);
-    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "notNull", drv.cur_func);
+    llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "dynDispCheck_isNull", drv.cur_func);
+    llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "dynDispCheck_notNull", drv.cur_func);
     llvm::Value* isNull = drv.llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_EQ, args[0], llvm::Constant::getNullValue(args[0]->getType()));
     drv.llvmBuilder->CreateCondBr(isNull, isNull_b, notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(isNull_b); drv.currentBlocks.push_back(isNull_b);
-    //TODO syscall ABORT with message "dispatch on void"
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("printf"),
+        drv.runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::DYNAMIC_DISP_ON_VOID]);
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("printf"),
+        vector<llvm::Value*>{
+            drv.percentdPtr,
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, lineNo, false))});
+    drv.llvmBuilder->CreateCall(
+        drv.llvmModule->getFunction("exit"),
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(32, 1, false)));
+    //LLVM still needs to compile so we need to ret something or branch to another block
     drv.llvmBuilder->CreateBr(notNull_b);
 
     drv.llvmBuilder->SetInsertPoint(notNull_b); drv.currentBlocks.push_back(notNull_b);
