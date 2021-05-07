@@ -1212,6 +1212,34 @@ llvm::Value* _arith::codegen(ParserDriver& drv) {
     llvm::Value* rawInt2_ptr = drv.llvmBuilder->CreateStructGEP(LLVMrhs, firstAttrOffset, "rawInt2_ptr");
     llvm::Value* rawInt2 = drv.llvmBuilder->CreateLoad(rawInt2_ptr, "rawInt2");
 
+    if(OP == DIVIDE) {
+//        llvm::BasicBlock* zeroDividendCheck = llvm::BasicBlock::Create(*drv.llvmContext, "zeroDividendCheck", drv.cur_func);
+        llvm::BasicBlock* invalidDivision = llvm::BasicBlock::Create(*drv.llvmContext, "invalidDivision", drv.cur_func);
+        llvm::BasicBlock* validDivision = llvm::BasicBlock::Create(*drv.llvmContext, "validDivision", drv.cur_func);
+
+//        drv.llvmBuilder->SetInsertPoint(zeroDividendCheck); drv.currentBlocks.push_back(zeroDividendCheck);
+        llvm::Value* dividendIsZero = drv.llvmBuilder->CreateICmp(
+            llvm::CmpInst::ICMP_EQ,
+            llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0, true)),
+            rawInt2);
+        drv.llvmBuilder->CreateCondBr(dividendIsZero, invalidDivision, validDivision);
+
+        drv.llvmBuilder->SetInsertPoint(invalidDivision); drv.currentBlocks.push_back(invalidDivision);
+        drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("printf"), drv.runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::DIV_BY_ZERO]);
+        drv.llvmBuilder->CreateCall(
+            drv.llvmModule->getFunction("printf"),
+            vector<llvm::Value*>{
+                drv.percentdPtr,
+                llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, lineNo, false))});
+        drv.llvmBuilder->CreateCall(
+            drv.llvmModule->getFunction("exit"),
+            llvm::ConstantInt::get(llvm::Type::getInt32Ty(*drv.llvmContext), llvm::APInt(32, 1, false)));
+        //LLVM still needs to compile so we need to ret something or branch to another block
+        drv.llvmBuilder->CreateBr(validDivision);
+
+        drv.llvmBuilder->SetInsertPoint(validDivision); drv.currentBlocks.push_back(validDivision);
+    }
+
     llvm::Value* sum;
     if(OP == MINUS) sum = drv.llvmBuilder->CreateSub(rawInt1, rawInt2, "sum");
     else if(OP == PLUS) sum = drv.llvmBuilder->CreateAdd(rawInt1, rawInt2, "sum");

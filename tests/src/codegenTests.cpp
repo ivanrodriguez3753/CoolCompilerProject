@@ -190,7 +190,11 @@ INSTANTIATE_TEST_SUITE_P(codegenNegative, codegenFixtureNegative, testing::Value
         "CoolProgramsAssembly/RuntimeNegative/dynamicDispatchOnVoid.cl",
         "CoolProgramsAssembly/RuntimeNegative/staticDispatchOnVoid.cl",
         "CoolProgramsAssembly/RuntimeNegative/caseNoMatchingBranch.cl",
-        "CoolProgramsAssembly/RuntimeNegative/caseVoidSwitchee.cl"
+        "CoolProgramsAssembly/RuntimeNegative/caseVoidSwitchee.cl",
+        "CoolProgramsAssembly/RuntimeNegative/divByZeroLiteral.cl",
+        "CoolProgramsAssembly/RuntimeNegative/divByZeroVar.cl",
+        "CoolProgramsAssembly/RuntimeNegative/divByZeroAfterMutation.cl",
+        "CoolProgramsAssembly/RuntimeNegative/divByZeroExpression.cl"
 
 
 ));
