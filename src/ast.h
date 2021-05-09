@@ -31,7 +31,7 @@ public:
 
     virtual void print(ostream& os) const = 0;
     virtual void prettyPrint(ostream& os, string prefix) const = 0;
-    virtual void decorate(ParserDriver& drv){std::cout << "should not have been called!\n"; exit(0);} //TODO: make pure virtual once everything is done being implemented
+    virtual void decorate(ParserDriver& drv){std::cout << "should not have been called!\n"; exit(0);}
 
     _node(int l) : lineNo(l) {}
 protected:
@@ -124,7 +124,7 @@ public:
         return (classRec*) selfRec;
     }
 
-    void prettyPrint(ostream& os, const string indentPrefix) const;
+    void prettyPrint(ostream& os, string indentPrefix) const override;
     void print(ostream& os) const override;
     void decorate(ParserDriver& drv) override;
     void decorateAttrInitExprs(ParserDriver& drv);
@@ -161,7 +161,7 @@ public:
         return (methodRec *) selfRec;
     }
 
-    void prettyPrint(ostream &os, const string indentPrefix) const;
+    void prettyPrint(ostream &os, string indentPrefix) const override;
     void print(ostream& os) const override;
     void decorate(ParserDriver& drv) override;
 private:
@@ -181,10 +181,13 @@ public:
     objRec* getSelfRec() const override {
         return (objRec*)selfRec;
     }
-    void prettyPrint(ostream &os, const string indentPrefix) const override;
+    void prettyPrint(ostream &os, string indentPrefix) const override;
     void print(ostream& os) const override;
 
     void semanticCheck(ParserDriver& drv);
+
+    //Defined this to conform with pure virtualness in _node
+    void decorate(ParserDriver& drv) override {cout << "decorate should not be called by an _attr" << endl; exit(1);}
 };
 
 class _letBinding : public _symTable{
@@ -199,7 +202,7 @@ public:
     objRec* getSelfRec() const override {
         return (objRec*)selfRec;
     }
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -226,8 +229,11 @@ public:
         return (letCaseRec*)selfRec;
     }
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override;
+    void prettyPrint(ostream &os, string indentPrefix) const override;
     void print(ostream& os) const override;
+
+    //Defined this to conform with pure virtualness in _node
+    void decorate(ParserDriver& drv) override {cout << "decorate should not be called by an _formal" << endl; exit(1);}
 };
 
 class _expr : public _node {
@@ -256,7 +262,7 @@ class _bool : public _expr {
 public:
     const bool value;
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override;
+    void prettyPrint(ostream &os, string indentPrefix) const override;
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -282,7 +288,7 @@ public:
     letCaseRec* getSelfRec() const override {
         return (letCaseRec*)selfRec;
     }
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -306,7 +312,7 @@ public:
     letCaseRec* getSelfRec() const override {
         return (letCaseRec*)selfRec;
     }
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -331,7 +337,7 @@ public:
     objRec* getSelfRec() const override {
         return (objRec*)selfRec;
     }
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -343,7 +349,7 @@ public:
 
     _int(int l, int v) : _expr(l), value(v) {}
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -354,7 +360,7 @@ class _id : public _expr {
 public:
     const string value;
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     _id(int l, string v) : _expr(l), value(v) { }
@@ -377,7 +383,7 @@ public:
     _selfDispatch(int l, string i, vector<_expr*> aL) : _dispatch(l, i, aL) {}
 
     void print(ostream& os) const override;
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
 
@@ -393,7 +399,7 @@ public:
     _dynamicDispatch(int l, string i, vector<_expr*> aL, _expr* c) : _dispatch(l, i, aL), caller(c) {}
 
     void print(ostream& os) const override;
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
@@ -410,7 +416,7 @@ public:
     _staticDispatch(int l, string i, vector<_expr*> aL, _expr* c, string s, int tL) : _dispatch(l, i, aL), caller(c), staticType(s), typeLineNo(tL) {}
 
     void print(ostream& os) const override;
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
@@ -427,7 +433,7 @@ public:
     _if(int l, _expr* p, _expr* t, _expr* e) : _expr(l), predicate(p), tthen(t), eelse(e) {}
 
     void print(ostream& os) const override;
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
@@ -445,7 +451,7 @@ public:
     _while(int l, _expr* p, _expr* b) : _expr(l), predicate(p), body(b) {}
 
     void print(ostream& os) const override;
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
 
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
@@ -461,7 +467,7 @@ public:
     _assign(int l, string i, _expr* r) : _expr(l), id(i), rhs(r) {}
 
     void print(ostream& os) const override;
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void decorate(ParserDriver& drv) override;
     llvm::Value* codegen(ParserDriver& drv) override;
 private:
@@ -473,7 +479,7 @@ public:
     const string value;
     int llvmKey; //string literals are enumarated, using the enumeration appended to ".str." as its identifier
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     _string(int l, string v) : _expr(l), value(v) {}
@@ -489,7 +495,7 @@ class _block : public _expr {
 public:
     vector<_expr*> body;
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -507,7 +513,7 @@ public:
 
     _new(int l, string i, int tL) : _expr(l), id(i), typeLineNo(tL) {}
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -520,7 +526,7 @@ public:
 
     _isvoid(int l, _expr* e) : _expr(l), expr(e) {}
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -540,7 +546,7 @@ public:
 
     _arith(int l, _expr* left, int op, _expr* right) : _expr(l), lhs(left), OP(op), rhs(right) {}
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -561,7 +567,7 @@ public:
 
     _relational(int l, _expr* left, int op, _expr* right) : _expr(l), lhs(left), OP(op), rhs(right) {};
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -581,7 +587,7 @@ public:
 
     _unary(int l, _expr* e, int op) : _expr(l), expr(e), OP(op) {}
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
@@ -592,11 +598,12 @@ private:
 
 class _internal : public _expr {
 public:
+
     const string classDotMethod;
 
     _internal(string s) : _expr(0), classDotMethod(s) {}
 
-    void prettyPrint(ostream &os, const string indentPrefix) const override {}
+    void prettyPrint(ostream &os, string indentPrefix) const override {}
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
