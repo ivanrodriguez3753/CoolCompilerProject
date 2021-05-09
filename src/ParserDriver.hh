@@ -69,12 +69,12 @@ public:
      * and substr out of range
      */
     enum RUNTIME_ERROR_CODES{
-        STATIC_DISP_ON_VOID = 0, DYNAMIC_DISP_ON_VOID, CASE_ON_VOID, CASE_NO_MATCHING_BR, DIV_BY_ZERO, SUBSTR_OUT_OF_RANGE
+        STATIC_DISP_ON_VOID = 0, DYNAMIC_DISP_ON_VOID, CASE_ON_VOID, CASE_NO_MATCHING_BR, DIV_BY_ZERO, SUBSTR_OUT_OF_RANGE, SUBSTR_NEG_ARG
     };
 
     /**
      * Error messages for the runtime errors. Follow up with a call to printf that prints the line number of the
-     * problematic expression.
+     * problematic expression, except for SUBSTR_OUT_OF_RANGE which is always reported as occurring on line 0.
      */
     map<int, llvm::Constant*> runtimeErrorStrings {
         {STATIC_DISP_ON_VOID, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Static dispatch on void. Check line ", ".str.STATIC_DISP_ON_VOID", 0, llvmModule)},
@@ -82,7 +82,8 @@ public:
         {CASE_ON_VOID, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Case switchee is void. Check line ", ".str.CASE_ON_VOID", 0, llvmModule)},
         {CASE_NO_MATCHING_BR, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: No matching branch for case expression. Check line ", ".str.CASE_NO_MATCHING_BR", 0, llvmModule)},
         {DIV_BY_ZERO, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Divide by zero. Check line ", ".str.DIV_BY_ZERO", 0, llvmModule)},
-        {SUBSTR_OUT_OF_RANGE, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Substring indices are out of range. Check line ", ".str.SUBSTR_OUT_OF_RANGE", 0, llvmModule)}
+        {SUBSTR_OUT_OF_RANGE, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: Substring indices are out of range. Reporting error from internal function on line 0", ".str.SUBSTR_OUT_OF_RANGE", 0, llvmModule)},
+        {SUBSTR_NEG_ARG, llvmBuilder->CreateGlobalStringPtr("RUNTIME ERROR: One or both arguments to substr has negative value. Reporting error from internal function on line 0", ".str.SUBSTR_NEG_ARG", 0, llvmModule)}
     };
 
 

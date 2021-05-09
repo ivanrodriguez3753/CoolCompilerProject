@@ -194,7 +194,9 @@ INSTANTIATE_TEST_SUITE_P(codegenNegative, codegenFixtureNegative, testing::Value
         "CoolProgramsAssembly/RuntimeNegative/divByZeroLiteral.cl",
         "CoolProgramsAssembly/RuntimeNegative/divByZeroVar.cl",
         "CoolProgramsAssembly/RuntimeNegative/divByZeroAfterMutation.cl",
-        "CoolProgramsAssembly/RuntimeNegative/divByZeroExpression.cl"
-
+        "CoolProgramsAssembly/RuntimeNegative/divByZeroExpression.cl",
+        "CoolProgramsAssembly/RuntimeNegative/substrOutOfRange.cl",
+        "CoolProgramsAssembly/RuntimeNegative/substrNegStartArg.cl",
+        "CoolProgramsAssembly/RuntimeNegative/substrNegLengthArg.cl"
 
 ));

@@ -811,6 +811,9 @@ void ParserDriver::genString_substr() {
     llvm::IntegerType* int64Ty = llvm::Type::getInt64Ty(*llvmContext);
     llvm::Function* f = llvmModule->getFunction("String.substr");
     llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
+    llvm::BasicBlock* negArgCheck = llvm::BasicBlock::Create(*llvmContext, "negArgCheck", f);
+    llvm::BasicBlock* startOrLengthIsNeg_b = llvm::BasicBlock::Create(*llvmContext, "startOrLengthIsNeg_b", f);
+    llvm::BasicBlock* startAndLengthAreValid_b = llvm::BasicBlock::Create(*llvmContext, "startAndLengthAreValid_b", f);
     llvm::BasicBlock* validBlock = llvm::BasicBlock::Create(*llvmContext, "valid", f);
     llvm::BasicBlock* invalidBlock = llvm::BasicBlock::Create(*llvmContext, "invalid", f);
     llvm::Value *String_self, *Int_i, *Int_l; String_self = f->getArg(0); Int_i = f->getArg(1); Int_l = f->getArg(2);
@@ -822,13 +825,42 @@ void ParserDriver::genString_substr() {
     llvm::Value* i = llvmBuilder->CreateLoad(rawPtr_i, "i");
     llvm::Value* rawPtr_l = llvmBuilder->CreateStructGEP(Int_l, firstAttrOffset, "rawPtr_l");
     llvm::Value* l = llvmBuilder->CreateLoad(rawPtr_l, "l");
+    llvmBuilder->CreateBr(negArgCheck);
+
+    llvmBuilder->SetInsertPoint(negArgCheck);
+    llvm::Value* startIndexIsNeg = llvmBuilder->CreateICmp(
+        llvm::CmpInst::ICMP_SLT,
+        i,
+        llvm::ConstantInt::get(int64Ty, 0, true),
+        "startIndexIsNeg");
+    llvm::Value* lengthIsNeg = llvmBuilder->CreateICmp(
+        llvm::CmpInst::ICMP_SLT,
+        l,
+        llvm::ConstantInt::get(int64Ty, 0, true),
+        "lengthIsNeg");
+    llvm::Value* startOrLengthIsNeg = llvmBuilder->CreateOr(startIndexIsNeg, lengthIsNeg, "startOrLengthIsNeg");
+
+
+    llvmBuilder->CreateCondBr(startOrLengthIsNeg, startOrLengthIsNeg_b, startAndLengthAreValid_b);
+
+    llvmBuilder->SetInsertPoint(startOrLengthIsNeg_b);
+    llvmBuilder->CreateCall(
+        llvmModule->getFunction("printf"),
+        runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::SUBSTR_NEG_ARG]);
+    llvmBuilder->CreateCall(
+        llvmModule->getFunction("exit"),
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), llvm::APInt(32, 1, false)));
+    llvmBuilder->CreateBr(startAndLengthAreValid_b);
+
+    llvmBuilder->SetInsertPoint(startAndLengthAreValid_b);
     llvm::Value* length_ptr = llvmBuilder->CreateStructGEP(self, 1, "length_ptr");
     llvm::Value* length = llvmBuilder->CreateLoad(length_ptr, "length");
     llvm::Value* coolLength = llvmBuilder->CreateSub(length, llvm::ConstantInt::get(int64Ty, 1, false), "coollength");
     llvm::Value* charPtr_ptr = llvmBuilder->CreateStructGEP(self, 0, "charPtr_ptr");
     llvm::Value* buffer = llvmBuilder->CreateLoad(charPtr_ptr, "buffer");
-    llvm::Value* shortEnough = llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, coolLength, l, "shortEnough");
-    llvmBuilder->CreateCondBr(shortEnough, invalidBlock, validBlock);
+    llvm::Value* startPlusLength = llvmBuilder->CreateAdd(i, l, "startPlusLength");
+    llvm::Value* shortEnough = llvmBuilder->CreateICmp(llvm::CmpInst::ICMP_SLE, startPlusLength, coolLength, "shortEnough");
+    llvmBuilder->CreateCondBr(shortEnough, validBlock, invalidBlock);
 
     llvmBuilder->SetInsertPoint(validBlock);
     llvm::Value* startPtr = llvmBuilder->CreateGEP(buffer, i, "startPtr");
@@ -844,7 +876,12 @@ void ParserDriver::genString_substr() {
     llvmBuilder->CreateRet(castedMallocRes_COOLString);
 
     llvmBuilder->SetInsertPoint(invalidBlock);
-    llvmBuilder->CreateCall(llvmModule->getFunction("Object.abort"), vector<llvm::Value*>{llvm::Constant::getNullValue(llvmModule->getTypeByName("Object_c")->getPointerTo())});
+    llvmBuilder->CreateCall(
+        llvmModule->getFunction("printf"),
+        runtimeErrorStrings[ParserDriver::RUNTIME_ERROR_CODES::SUBSTR_OUT_OF_RANGE]);
+    llvmBuilder->CreateCall(
+        llvmModule->getFunction("exit"),
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*llvmContext), 1, false));
     llvmBuilder->CreateRet(llvm::Constant::getNullValue(llvmModule->getTypeByName("String_c")->getPointerTo()));
 }
 
