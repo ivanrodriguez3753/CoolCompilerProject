@@ -24,7 +24,8 @@ int main(int argc, char* argv[]) {
     bool printAST = false;
 
     if(argc == 3) {
-        if(argv[1] != "--ast") {
+        string s = argv[1];
+        if(s != "--ast") {
             cerr << "Only supported option is --ast" << endl;
         }
         else {
@@ -53,6 +54,7 @@ int main(int argc, char* argv[]) {
             cerr << "ERROR: " + to_string(entry.first) + ": " + entry.second << endl;
         }
         cout << "Halted before codegen due to outstanding errors from the type checker\n";
+        exit(1);
     }
 
     drv.codegen();

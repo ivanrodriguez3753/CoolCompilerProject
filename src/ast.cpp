@@ -6,19 +6,14 @@
 
 
 void _node::print(ostream& os) const {
-    cout << "called _node::print\n";
+    os << "called _node::print\n";
 }
 
 const string _node::T = "├──";
 const string _node::indent = "|   ";
-void _node::prettyPrint(ostream&os, string indentPrefix) const {
-    //TODO
-    cout << indentPrefix + T + "SHOULDN'T BE CALLED: PLACEHOLDER, MAKE PURE VIRTUAL LATER" << endl;
-}
 
 void _program::prettyPrint(ostream& os, const string indentPrefix) const {
-    //TODO: give information on which thread parsed this portion of the program (a subset of the global class list)
-    cout << indentPrefix + T + "PROGRAM:THREAD_NUM" << endl;
+    os << indentPrefix + T + "PROGRAM" << endl;
 
     for(_class* klass : classList) {
         klass->prettyPrint(os, indentPrefix + indent);
@@ -33,14 +28,13 @@ void _program::print(ostream &os) const {
 }
 
 void _class::prettyPrint(ostream& os, const string indentPrefix) const {
-    cout << indentPrefix + T + "CLASS: " + id << endl;
+    os << indentPrefix + T + "CLASS: " + id << endl;
     if(superId != "Object") {
-        cout << indentPrefix + indent + T + "INHERITS:" + superId << endl;
+        os << indentPrefix + indent + T + "INHERITS:" + superId << endl;
     }
-    cout << indentPrefix + indent + T + "FEATURE_LIST: " + to_string(featureList.first.size()) + " attributes, "
+    os << indentPrefix + indent + T + "FEATURE_LIST: " + to_string(featureList.first.size()) + " attributes, "
         + to_string(featureList.second.size()) + " methods" << endl;
 
-    //TODO print in the order encountered instead of all attributes followed by all methods
     for(_attr* attr : featureList.first) {
         attr->prettyPrint(os, indentPrefix + indent + indent);
     }
@@ -83,8 +77,9 @@ void _class::print(ostream &os) const {
 }
 
 void _attr::prettyPrint(ostream& os, const string indentPrefix) const {
-    cout << indentPrefix + T + "ATTR: " + id + ", " + type << endl;
-    //TODO: print initExpr
+    os << indentPrefix + T + "ATTR: " + id + ", " + type << endl;
+
+    if(optInit) optInit->prettyPrint(os, indentPrefix + indent);
 }
 
 void _attr::print(ostream &os) const {
@@ -108,11 +103,12 @@ void _attr::semanticCheck(ParserDriver &drv) {
 
 void _method::prettyPrint(ostream& os, const string indentPrefix) const {
     os << indentPrefix + T + "METHOD: " + id + ", " + returnType << endl;
-    os << indentPrefix + indent + T + "FORMALS_LIST: " + to_string(formalsList.size()) + " formalsList" << endl;
+    os << indentPrefix + indent + T + "FORMALS_LIST: " + to_string(formalsList.size()) + " formals" << endl;
     for(_formal* formal : formalsList) {
-        os << indentPrefix + indent + indent + T + "FORMAL: " + formal->id + ", " + formal->type << endl;
+        formal->prettyPrint(os, indentPrefix + indent + indent);
     }
-    os << indentPrefix + indent + T + "METHOD_BODY: XYZ EXPRESSION" << endl;
+
+    body->prettyPrint(os, indentPrefix + indent);
 }
 
 void _method::print(ostream &os) const {
@@ -130,7 +126,7 @@ void _method::print(ostream &os) const {
 }
 
 void _formal::prettyPrint(ostream&os, const string indentPrefix) const {
-
+    os << indentPrefix + T + "FORMAL: " + id + ", " + type << endl;
 }
 
 void _formal::print(ostream &os) const {
@@ -139,7 +135,9 @@ void _formal::print(ostream &os) const {
 }
 
 void _bool::prettyPrint(ostream &os, const string indentPrefix) const {
-
+    os << indentPrefix + T + "BOOL: ";
+    if(value) os << "true" << endl;
+    else os << "false" << endl;
 }
 
 void _bool::print(ostream& os) const {
@@ -156,6 +154,10 @@ void _int::print(ostream &os) const {
     os << value << endl;
 }
 
+void _int::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "INT: " + to_string(value) << endl;
+}
+
 void _selfDispatch::print(ostream &os) const {
     os << lineNo << endl;
     if(isDecorated) os << type << endl;
@@ -167,6 +169,13 @@ void _selfDispatch::print(ostream &os) const {
     os << argList.size() << endl;
     for(_expr* expr : argList) {
         expr->print(os);
+    }
+}
+
+void _selfDispatch::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "SELF_DISPATCH: " + id + ", " + to_string(argList.size()) + " arguments" << endl;
+    for(_expr* expr : argList) {
+        expr->prettyPrint(os, indentPrefix + indent);
     }
 }
 
@@ -339,6 +348,16 @@ void _dynamicDispatch::print(ostream &os) const {
     }
 }
 
+void _dynamicDispatch::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "DYNAMIC_DISPATCH: " + id + ", caller and " + to_string(argList.size()) + " arguments" << endl;
+
+    caller->prettyPrint(os, indentPrefix + indent);
+
+    for(_expr* expr : argList) {
+        expr->prettyPrint(os, indentPrefix + indent);
+    }
+}
+
 void _dynamicDispatch::decorate(ParserDriver &drv) {
     for(_expr* arg : argList) {
         arg->decorate(drv);
@@ -390,6 +409,18 @@ void _staticDispatch::print(ostream &os) const {
     }
 }
 
+void _staticDispatch::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "STATIC_DISPATCH: " + id + ", @static_type, caller, and " + to_string(argList.size()) + " arguments" << endl;
+
+    os << indentPrefix + indent + T + "@STATIC_TYPE: " + staticType << endl;
+    caller->prettyPrint(os, indentPrefix + indent);
+
+    for(_expr* expr : argList) {
+        expr->prettyPrint(os, indentPrefix + indent);
+    }
+}
+
+
 void _staticDispatch::decorate(ParserDriver &drv) {
     for(_expr* arg : argList) {
         arg->decorate(drv);
@@ -419,6 +450,9 @@ void _id::print(ostream &os) const {
     os << lineNo << endl << value << endl;
 }
 
+void _id::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "IDENTIFIER: " + value << endl;
+}
 
 /**
  * always check letCaseEnv, then methodEnv, then classEnv
@@ -476,6 +510,10 @@ void _string::print(ostream &os) const {
     os << value << endl;
 }
 
+void _string::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "STRING: " + "\"" + value + "\"" << endl;
+}
+
 string _string::resolveEscapes() {
     string returnThis = value;
     int i = 0;
@@ -525,6 +563,14 @@ void _if::print(ostream& os) const {
     eelse->print(os);
 }
 
+void _if::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "IF" << endl;
+
+    predicate->prettyPrint(os, indentPrefix + indent);
+    tthen->prettyPrint(os, indentPrefix + indent);
+    eelse->prettyPrint(os, indentPrefix + indent);
+}
+
 void _if::decorate(ParserDriver &drv) {
     predicate->decorate(drv);
     tthen->decorate(drv);
@@ -552,6 +598,13 @@ void _while::print(ostream &os) const {
 
     predicate->print(os);
     body->print(os);
+}
+
+void _while::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "WHILE" << endl;
+
+    predicate->prettyPrint(os, indentPrefix + indent);
+    body->prettyPrint(os, indentPrefix + indent);
 }
 
 void _while::decorate(ParserDriver &drv) {
@@ -583,6 +636,12 @@ void _assign::print(ostream& os) const {
     rhs->print(os);
 }
 
+void _assign::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "ASSIGNMENT: " + id << endl;
+
+    rhs->prettyPrint(os, indentPrefix + indent);
+}
+
 void _block::print(ostream &os) const {
     os << lineNo << endl; //just use line number of first expression
     if(isDecorated) os << type << endl;
@@ -594,6 +653,13 @@ void _block::print(ostream &os) const {
     }
 }
 
+void _block::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "BLOCK: " + to_string(body.size()) + " expressions" << endl;
+    for(_expr* expr : body) {
+        expr->prettyPrint(os, indentPrefix + indent);
+    }
+}
+
 void _new::print(ostream &os) const {
     os << lineNo << endl;
     if(isDecorated) os << type << endl;
@@ -601,6 +667,10 @@ void _new::print(ostream &os) const {
 
     os << typeLineNo << endl;
     os << id << endl;
+}
+
+void _new::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "NEW: " << id << endl;
 }
 
 void _new::decorate(ParserDriver &drv) {
@@ -614,6 +684,12 @@ void _isvoid::print(ostream &os) const {
     os << "isvoid" << endl;
 
     expr->print(os);
+}
+
+void _isvoid::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "ISVOID" << endl;
+
+    expr->prettyPrint(os, indentPrefix + indent);
 }
 
 void _isvoid::decorate(ParserDriver &drv) {
@@ -634,6 +710,17 @@ void _arith::print(ostream &os) const {
 
     lhs->print(os);
     rhs->print(os);
+}
+
+void _arith::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "ARITHMETIC: ";
+    if(OP == PLUS) os << "PLUS +" << endl;
+    else if(OP == MINUS) os << "MINUS -" << endl;
+    else if(OP == TIMES) os << "TIMES *" << endl;
+    else if(OP == DIVIDE) os << "DIVIDE /" << endl;
+
+    lhs->prettyPrint(os, indentPrefix + indent);
+    rhs->prettyPrint(os, indentPrefix + indent);
 }
 
 void _arith::decorate(ParserDriver &drv) {
@@ -702,6 +789,18 @@ void _unary::print(ostream& os) const {
     expr->print(os);
 }
 
+void _unary::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "UNARY: ";
+    if(OP == NOT) {
+        os << "NOT" << endl;
+    }
+    else if(OP == NEG) {
+        os << "NEGATE ~" << endl;
+    }
+
+    expr->prettyPrint(os, indentPrefix + indent);
+}
+
 void _unary::decorate(ParserDriver &drv) {
     expr->decorate(drv);
 
@@ -741,6 +840,16 @@ void _let::print(ostream& os) const {
     body->print(os);
 }
 
+void _let::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "LET: " + to_string(bindingList.size()) << " bindings" << endl;
+
+    for(_letBinding* binding : bindingList) {
+        binding->prettyPrint(os, indentPrefix + indent);
+    }
+
+    body->prettyPrint(os, indentPrefix + indent);
+}
+
 void _letBinding::print(ostream& os) const {
     if(!optInit) os << "let_binding_no_init" << endl;
     else os << "let_binding_init" << endl;
@@ -753,11 +862,24 @@ void _letBinding::print(ostream& os) const {
 
 }
 
+void _letBinding::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "LET BINDING: " + id + ", " + type << endl;
+
+    if(optInit) optInit->prettyPrint(os, indentPrefix + indent);
+}
+
+
 void _caseElement::print(ostream &os) const {
     os << lineNo << endl << id << endl;
     os << type_lineno << endl << type << endl;
 
     caseBranch->print(os);
+}
+
+void _caseElement::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "CASE BRANCH: " + id + ", " + type << endl;
+
+    caseBranch->prettyPrint(os, indentPrefix + indent);
 }
 
 void _case::print(ostream &os) const {
@@ -773,11 +895,23 @@ void _case::print(ostream &os) const {
     }
 }
 
+void _case::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "CASE: " + to_string(caseList.size()) + " branches" << endl;
+
+    for(_caseElement* ccase : caseList) {
+        ccase->prettyPrint(os, indentPrefix + indent);
+    }
+}
+
 void _internal::print(ostream &os) const {
     os << lineNo << endl;
     if(isDecorated) os << type << endl;
     os << "internal" << endl;
     os << classDotMethod << endl;
+}
+
+void _internal::prettyPrint(ostream &os, string indentPrefix) const {
+    os << indentPrefix + T + "INTERNAL: " + classDotMethod << endl;
 }
 
 void _internal::decorate(ParserDriver &drv) {
