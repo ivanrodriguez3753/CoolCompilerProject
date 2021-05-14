@@ -413,7 +413,7 @@ void ParserDriver::genVTables() {
     }
 }
 void ParserDriver::genStructDefs() {
-    //All structures are laid out as follows: vtable ptr, then all attributes
+    //All structures are laid out as follows: vtable ptr, ptr to char* with class name, then all attributes
     //Bool/Int/String are handled separately because their struct defs differ from what they have on the symbol table
     map<string, map<string, pair<objRec*, int>>> classMap_noPrimitives = classMap;
     classMap_noPrimitives.erase(classMap_noPrimitives.find("Bool"));
@@ -1148,7 +1148,6 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     ret->mutateType(funcType->getReturnType());
 
     return ret;
-    return nullptr;
 }
 
 llvm::Value* _while::codegen(ParserDriver& drv) {
@@ -1248,11 +1247,9 @@ llvm::Value* _arith::codegen(ParserDriver& drv) {
     llvm::Value* rawInt2 = drv.llvmBuilder->CreateLoad(rawInt2_ptr, "rawInt2");
 
     if(OP == DIVIDE) {
-//        llvm::BasicBlock* zeroDividendCheck = llvm::BasicBlock::Create(*drv.llvmContext, "zeroDividendCheck", drv.cur_func);
         llvm::BasicBlock* invalidDivision = llvm::BasicBlock::Create(*drv.llvmContext, "invalidDivision", drv.cur_func);
         llvm::BasicBlock* validDivision = llvm::BasicBlock::Create(*drv.llvmContext, "validDivision", drv.cur_func);
 
-//        drv.llvmBuilder->SetInsertPoint(zeroDividendCheck); drv.currentBlocks.push_back(zeroDividendCheck);
         llvm::Value* dividendIsZero = drv.llvmBuilder->CreateICmp(
             llvm::CmpInst::ICMP_EQ,
             llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 0, true)),
@@ -1345,7 +1342,7 @@ llvm::Value* _relational::codegen(ParserDriver& drv) {
     drv.llvmBuilder->CreateBr(EndBlock);
 
     //vtable pointers must be loaded AFTER void comparison otherwise we'll segfault
-    //when trying to load the vtablePtr (or anything else, we're null lol)
+    //when trying to load the vtablePtr (or anything else)
     drv.llvmBuilder->SetInsertPoint(getVtablePtrsBlock); drv.currentBlocks.push_back(getVtablePtrsBlock);
     llvm::Value* LHS_vtablePtr_ptr = drv.llvmBuilder->CreateStructGEP(LLVMlhs, vtableOffset);
     llvm::Value* LHS_vtablePtr = drv.llvmBuilder->CreateLoad(LHS_vtablePtr_ptr);
