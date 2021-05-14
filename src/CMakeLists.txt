@@ -36,9 +36,9 @@ add_definitions(${LLVM_DEFINITIONS})
 llvm_map_components_to_libnames(llvm_libs core support irreader)
 
 
-add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h environment.cpp codegen.cpp)
+add_library(MyLibrary ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h codegen.cpp)
 target_link_libraries(MyLibrary PUBLIC ${llvm_libs})
-add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h environment.cpp codegen.cpp)
+add_executable(CoolCompilerProject main.cpp ${FLEX_lexer_OUTPUTS} ${BISON_parser_OUTPUTS} ParserDriver.hh ParserDriver.cpp ast.h ast.cpp environment.h codegen.cpp)
 target_link_libraries(CoolCompilerProject PUBLIC MyLibrary stdc++ ${llvm_libs})
 
 target_include_directories(CoolCompilerProject
