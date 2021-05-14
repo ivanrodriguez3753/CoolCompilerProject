@@ -82,11 +82,6 @@ public:
         return (globalEnv*)selfEnv;
     }
 
-    /**
-     * This is the global, root node per parser instance, and globals do not have an associated record.
-     * TODO: later implement a programRec type since we're gonna put all the parallel bits together in a global-global tree
-     * @return nullptr
-     */
     rec* getSelfRec() const override {
         return nullptr;
     }

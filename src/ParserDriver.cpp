@@ -66,8 +66,7 @@ void ParserDriver::buildEnvs() {
     vector<_class*> classListFull = ast->classList;
     classListFull.insert(classListFull.end(), internalsAst->classList.begin(), internalsAst->classList.end());
 
-    env = new globalEnv(nullptr, "global"); //TODO: ADD THREAD NUMBER
-
+    env = new globalEnv(nullptr, "global");
 
     for(_class* klass : classListFull) {
         classEnv* class_env = new classEnv(env, klass->id);
@@ -96,7 +95,7 @@ void ParserDriver::buildEnvs() {
         }
         int formalCtr = 0;
         for(auto method : class_env->methodsSymTable) {
-            method.second->link->symTable.insert({"self", new objRec(nullptr, 0, -1, "SELF_TYPE")}); //TODO: set offset to a negative but investigate what needs to be done so that self is in the symTable for each method but doesn't affect other things
+            method.second->link->symTable.insert({"self", new objRec(nullptr, 0, -1, "SELF_TYPE")});
             for(auto formal : ((_method*)(method.second->treeNode))->formalsList) {
                 method.second->link->symTable.insert({formal->id, new objRec(formal, formal->lineNo, formalCtr++, formal->type)});
             }

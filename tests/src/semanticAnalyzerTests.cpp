@@ -7,9 +7,6 @@ using namespace std;
 
 class semanticAnalyzerFixturePositive : public testing::TestWithParam<string> {
 protected:
-    //TODO: find out why only an instance ParserDriver is working instead of one with the fixture
-    //ParserDriver drv
-
     const string TYPE = "--type";
 
     stringstream expected, actual;
@@ -22,7 +19,6 @@ protected:
     }
 };
 TEST_P(semanticAnalyzerFixturePositive, positive) {
-    //TODO: find out why only an instance ParserDriver is working instead of one with the fixture
     ParserDriver drv;
 
     drv.parse(buildToResourcesPath + "CoolPrograms/" + GetParam());
@@ -89,8 +85,6 @@ INSTANTIATE_TEST_SUITE_P(semanticAnalyzerFull, semanticAnalyzerFixturePositive, 
 ));
 class semanticAnalyzerFixtureNegativeWithRef : public testing::TestWithParam<string> {
 protected:
-    //TODO: find out why only an instance ParserDriver is working instead of one with the fixture
-
     //using full because we want to save the stuff that shows up on the command line
     //which in this case is "ERROR: <lineNo>..."
     const string FULL = "--full";
@@ -171,7 +165,6 @@ INSTANTIATE_TEST_SUITE_P(negative, semanticAnalyzerFixtureNegativeWithRef, testi
 
 class semanticAnalyzerFixtureNegativeWithoutRef : public testing::TestWithParam<string> {
 protected:
-    //TODO: find out why only an instance ParserDriver is working instead of one with the fixture
     map<string, vector<int>> expectedErrorsMap {
         {"CoolProgramsNegative/let0Identifiers.cl", {3}},
         {"CoolProgramsNegative/letRepeatIdentifier.cl", {3}},

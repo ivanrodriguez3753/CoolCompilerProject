@@ -381,7 +381,7 @@ void _dynamicDispatch::decorate(ParserDriver &drv) {
     if(methodReturnType == "SELF_TYPE") {
         type = callerType; //we want to be able to return SELF_TYPE. we just needed to resolve to search implementationMap
     }
-    else if(methodReturnType != "SELF_TYPE") {//TODO document this section. using else if to be clear, but after documentation just use else
+    else {
         type = methodReturnType;
     }
     isDecorated = true;
@@ -965,7 +965,6 @@ void _program::semanticCheck(ParserDriver &drv) {
 void _class::decorate(ParserDriver& drv) {
     assemblyConstructorEnv = new methodEnv(nullptr, "");
 
-    //TODO use class map for this instead of traversing links
     //set up all attributes including inherited attributes.
     classEnv* currentTraverseInh = drv.currentClassEnv;
     while(currentTraverseInh != nullptr) {
@@ -977,8 +976,8 @@ void _class::decorate(ParserDriver& drv) {
         else currentTraverseInh = nullptr;
     }
 
+    //the 0 and -1 parameters are unimportant
     assemblyConstructorEnv->symTable.insert({"self", new objRec(nullptr, 0, -1, "SELF_TYPE")});
-    //the 0 and -1 parameters are more or less unimportant
 
     drv.currentMethodEnv = assemblyConstructorEnv;
     decorateAttrInitExprs(drv);

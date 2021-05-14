@@ -108,7 +108,6 @@ public:
     ParserDriver();
     /**
      * builds all the non letCase environments and symbol tables, so it just traverses the top three levels of the tree
-     * TODO: can do this as part of the ast construction, maybe? but it would be bottom up
      */
     void buildEnvs();
     letCaseEnv* buildLetEnv(_let* letNode);

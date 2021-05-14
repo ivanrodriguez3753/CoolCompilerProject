@@ -249,7 +249,7 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvm::Function* concat_func = llvm::Function::Create(concat_func_type, llvm::GlobalValue::ExternalLinkage, "LLVMString.concat", llvmModule);
     this_ptr = concat_func->getArg(0); this_ptr->setName("self");
     llvm::Value* concatThis = concat_func->getArg(1); concatThis->setName("concatThis");
-    //this function is a loop that calls concatChar TODO refactor later
+    //this function is a loop that calls concatChar
     llvm::BasicBlock* entry = llvm::BasicBlock::Create(*llvmContext, "entry", concat_func);
     llvm::BasicBlock* loop_header = llvm::BasicBlock::Create(*llvmContext, "loop_header", concat_func);
     llvm::BasicBlock* loop_body = llvm::BasicBlock::Create(*llvmContext, "loop_body", concat_func);
@@ -711,7 +711,7 @@ void ParserDriver::genObject_type_name() {
     llvm::Value* castedMallocRes_LLVMString = llvmBuilder->CreateBitCast(mallocRes_LLVMString, llvmModule->getTypeByName("LLVMString")->getPointerTo(), "castedMallocRes_LLVMString");
     llvm::Value* typeNamePtr_ptr = llvmBuilder->CreateStructGEP(self, typeNameOffset, "typeNamePtr_ptr");
     llvm::Value* typeNamePtr = llvmBuilder->CreateLoad(typeNamePtr_ptr, "typeNamePtr");
-    //TODO bigInt is kind of a bandaid
+    //choice of 1000 is just an arbitrary, large number
     llvm::Value* bigInt = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*llvmContext), llvm::APInt(64, 1000, false));
     llvmBuilder->CreateCall(llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{castedMallocRes_LLVMString, typeNamePtr, bigInt});
 
@@ -729,8 +729,6 @@ void ParserDriver::genString_concat() {
     llvm::Function* f = llvmModule->getFunction("String.concat");
     llvm::BasicBlock* b = llvm::BasicBlock::Create(*llvmContext, "entry", f);
     llvm::Value *self, *concatThis;
-    //TODO not important but setting argument names causes getFunction("String.concat") to return null
-    //self = f->getArg(0); self->setName("self"); concatThis = f->getArg(1); f->setName("concatThis");
     self = f->getArg(0); concatThis = f->getArg(1);
 
     llvmBuilder->SetInsertPoint(b);
@@ -984,7 +982,7 @@ llvm::Value* _selfDispatch::codegen(ParserDriver& drv) {
     llvm::FunctionCallee fc((llvm::FunctionType*)drv.llvmModule->getFunction(definer + '.' + id)->getType(), func);
 
     llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, args, "ret");
-    //TODO figure out why ret type is a function pointer. for now, use mutateType
+    //not sure why ret type is a function pointer. use mutateType because it didn't break anything
     ret->mutateType(drv.llvmModule->getFunction(definer + '.' + id)->getReturnType());
 
     return ret;
@@ -1079,7 +1077,7 @@ llvm::Value* _dynamicDispatch::codegen(ParserDriver& drv) {
     args[0] = drv.llvmBuilder->CreateBitCast(args[0], funcType->getParamType(0));
 
     llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, args, "ret");
-    //TODO figure out why ret type is a function pointer. for now, use mutateType
+    //not sure why ret type is a function pointer. use mutateType because it didn't break anything
     ret->mutateType(funcType->getReturnType());
 
     return ret;
@@ -1146,7 +1144,7 @@ llvm::Value* _staticDispatch::codegen(ParserDriver& drv) {
     args[0] = drv.llvmBuilder->CreateBitCast(args[0], funcType->getParamType(0));
 
     llvm::CallInst* ret = drv.llvmBuilder->CreateCall(fc, args, "ret");
-    //TODO figure out why ret type is a function pointer. for now, use mutateType
+    //not sure why ret type is a function pointer. use mutateType because it didn't break anything
     ret->mutateType(funcType->getReturnType());
 
     return ret;
@@ -1545,7 +1543,7 @@ llvm::Value* _string::codegen(ParserDriver& drv) {
     llvm::Value* mallocRes_LLVMString = drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("malloc"), vector<llvm::Value*>{numBytes}, "mallocRes_LLVMString");
     llvm::Value* castedMallocRes_LLVMString = drv.llvmBuilder->CreateBitCast(mallocRes_LLVMString, drv.llvmModule->getTypeByName("LLVMString")->getPointerTo(), "castedMallocRes_LLVMString");
     llvm::Value* stringPtr = drv.strLits.at(value).second;
-    //TODO bigInt is kind of a bandaid
+    //choice of 1000 is just an arbitrary, large number
     llvm::Value* bigInt = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*drv.llvmContext), llvm::APInt(64, 1000, false));
     drv.llvmBuilder->CreateCall(drv.llvmModule->getFunction("LLVMString..ctr"), vector<llvm::Value*>{castedMallocRes_LLVMString, stringPtr, bigInt});
 
@@ -1566,8 +1564,6 @@ llvm::Value* _block::codegen(ParserDriver& drv) {
 }
 
 llvm::Value* _case::codegen(ParserDriver& drv) {
-    //TODO LLVMnull check the _switchee result
-
     llvm::BasicBlock* isNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "caseSwitcheeNullCheck_isNull", drv.cur_func);
     llvm::BasicBlock* notNull_b = llvm::BasicBlock::Create(*drv.llvmContext, "caseSwitcheeNullCheck_nullNull", drv.cur_func);
     vector<pair<string, pair<llvm::BasicBlock*, llvm::BasicBlock*>>> blocks; //for each _caseElement, insert a check block and an actual block
