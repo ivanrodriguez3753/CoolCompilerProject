@@ -35,6 +35,10 @@ public:
 
     _node(int l) : lineNo(l) {}
 protected:
+
+    /**
+     * constants for the prettyPrint utility
+     */
     const static string T;
     const static string indent;
 
@@ -75,8 +79,6 @@ public:
 
     void decorate(ParserDriver& drv) override;
     void decorateInternals(env* env);
-
-
 
     globalEnv* getSelfEnv() const override {
         return (globalEnv*)selfEnv;
@@ -168,6 +170,9 @@ public:
     const string type;
     const int typeLineNo;
 
+    /**
+     * null if initialization is not present
+     */
     _expr* optInit;
 
     _attr(int l, int tl, string i, string t, _expr* oI, int e) : _symTable(l, i), type(t), typeLineNo(tl), optInit(oI), _feature(e) {
@@ -235,6 +240,7 @@ class _expr : public _node {
 public:
     _expr(int l) : _node(l) {}
     virtual ~_expr() = default;
+
     /**
      * this is the static type of the expression.
      */
@@ -243,7 +249,7 @@ public:
 
 
     virtual void decorate(ParserDriver& drv) = 0;
-    virtual llvm::Value* codegen(ParserDriver& drv) {cout << "THIS SHOULDN'T BE CALLED, ABORTING\n"; exit(0);}
+    virtual llvm::Value* codegen(ParserDriver& drv) = 0;
 
     /**
      * This method assumes that currentMethodEnv and currentClassEnv are correct
@@ -364,6 +370,9 @@ public:
     llvm::Value* codegen(ParserDriver& drv) override;
 };
 
+/**
+ * base class for all 3 dispatch types
+ */
 class _dispatch : public _expr {
 public:
     const string id;
@@ -591,6 +600,9 @@ private:
     void semanticCheck(ParserDriver& drv);
 };
 
+/**
+ * represents internal methods that come with COOL out of the box
+ */
 class _internal : public _expr {
 public:
 
@@ -602,5 +614,8 @@ public:
     void print(ostream& os) const override;
 
     void decorate(ParserDriver& drv) override;
+
+    //defined to conform with pure virtualness of _expr
+    llvm::Value* codegen(ParserDriver& drv) override {}
 };
 #endif //COOLCOMPILERPROJECT_AST_H
