@@ -51,7 +51,7 @@ TEST_P(codegenFixturePositive, positive) {
 
     drv.parse(buildToResourcesPath + "CoolPrograms/" + GetParam());
     drv.buildInternalsAst();
-    drv.buildEnvs();
+    drv.buildClassAndMethodEnvs();
     drv.populateClassImplementationMaps();
 
     drv.decorateAST();
@@ -171,7 +171,7 @@ TEST_P(codegenFixtureNegative, negative) {
 
     drv.parse(buildToResourcesPath + "CoolPrograms/" + GetParam());
     drv.buildInternalsAst();
-    drv.buildEnvs();
+    drv.buildClassAndMethodEnvs();
     drv.populateClassImplementationMaps();
 
     drv.decorateAST();

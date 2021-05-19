@@ -151,7 +151,7 @@ public:
     /**
      * builds all the non letCase environments and symbol tables, so it just traverses the top three levels of the tree
      */
-    void buildEnvs();
+    void buildClassAndMethodEnvs();
 
     /**
      * Sets up a new scope for a let expression
@@ -247,7 +247,7 @@ private:
     /**
      * Declares all structs and functions so that the API is aware of them for when we reference them later
      */
-    void declaresStructsAndFuncs();
+    void declareStructsAndFuncs();
 
     /**
      * Generates the virtual function table for each type

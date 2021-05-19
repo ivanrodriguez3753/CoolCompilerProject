@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     }
 
     drv.buildInternalsAst();
-    drv.buildEnvs();
+    drv.buildClassAndMethodEnvs();
     drv.populateClassImplementationMaps();
     drv.decorateAST();
 

@@ -18,7 +18,7 @@ const int firstAttrOffset = 2;
 void ParserDriver::codegen() {
     declareExterns();
     gen_llvmStringTypeAndMethods();
-    declaresStructsAndFuncs();
+    declareStructsAndFuncs();
     genVTables();
     genStructDefs();
     genBoolIntStringCtrs();
@@ -279,7 +279,7 @@ void ParserDriver::gen_llvmStringTypeAndMethods() {
     llvmBuilder->CreateRetVoid();
 }
 
-void ParserDriver::declaresStructsAndFuncs() {
+void ParserDriver::declareStructsAndFuncs() {
     //declare struct types (class types and vtable types)
     for(auto classIt : implementationMap) {
         llvm::StructType::create(*llvmContext, llvm::StringRef(classIt.first + "_c"));

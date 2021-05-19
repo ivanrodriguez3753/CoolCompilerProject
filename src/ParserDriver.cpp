@@ -62,7 +62,7 @@ void ParserDriver::buildInternalsAst() {
 
 
 
-void ParserDriver::buildEnvs() {
+void ParserDriver::buildClassAndMethodEnvs() {
     vector<_class*> classListFull = ast->classList;
     classListFull.insert(classListFull.end(), internalsAst->classList.begin(), internalsAst->classList.end());
 
@@ -132,12 +132,14 @@ void ParserDriver::populateMaps(string klass) {
         for(pair<string, rec*> attrPair : curClassEnv->symTable) {
             orderedAttrs.push_back({attrPair.first, (objRec*)attrPair.second});
         }
+        //symbol table default ordering is alphabetical, but we need to place members in the same order such that
+        //any instance of a child in place of a parent will still work.
         sort(orderedAttrs.begin(), orderedAttrs.end(), [](const pair<string, objRec*> lhs, const pair<string, objRec*> rhs) {
             return lhs.second->localOffset < rhs.second->localOffset;
         });
         for(pair<string, objRec*> attr : orderedAttrs) {
            if(attrsAlreadyAdded.find(attr.first) != attrsAlreadyAdded.end()) {
-               cerr << "this attr has already been defined\n";
+               cerr << "the attr" + attr.first + " has already been defined\n";
                cerr << "skipping redefinition of this attr\n";
                continue;
             }
@@ -165,10 +167,13 @@ void ParserDriver::populateMaps(string klass) {
 }
 
 void ParserDriver::populateClassImplementationMaps() {
+
+    //Add nodes and edges representing the inheritance graph, with root 'Object'
     map<string, bool> visited;
 
-
+    //user defined classes
     vector<_class*> classListFull = ast->classList;
+    //built in classes, hardcoded into internalsAst
     classListFull.insert(classListFull.end(), internalsAst->classList.begin(), internalsAst->classList.end());
 
     //initialize
