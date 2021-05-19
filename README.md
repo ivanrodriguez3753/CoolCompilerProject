@@ -11,8 +11,8 @@ The following build instructions assume you are on a fresh new Ubuntu 20.10 VM. 
   $ chmod +x installDependenciesUbuntu20.10.sh <br/>
   $ ./installDependenciesUbuntu20.10.sh <br/>
   
-4. In order to avoid using environment variables, follow the unix/linux file system conventions by sym-linking the newly installed clang with the expected 'clang' and 'clang++' commands:
-  $ sudo ln -s /usr/bin/clang-11 /usr/bin/clang
+4. In order to avoid using environment variables, follow the unix/linux file system conventions by sym-linking the newly installed clang with the expected 'clang' and 'clang++' commands: <br/>
+  $ sudo ln -s /usr/bin/clang-11 /usr/bin/clang <br/>
   $ sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++
 
 5. All dependencies should be good to go. Now we can build the CoolCompilerProject (and test project) following the usual build-from-source steps: <br/>
@@ -28,9 +28,9 @@ The following build instructions assume you are on a fresh new Ubuntu 20.10 VM. 
 7. To run the test project, copy the apporpriate reference compiler into a new file named "cool". The reference compiler and its destination are in ~root/tests/resources. Then run the tests executable <br/>
   $ cd ~root/tests/resources <br/>
   $ cp cool-linux-x64-64 cool <br/>
-  $ chmod a+x cool
-  $ cd ../../build/tests
-  $ ./tests
+  $ chmod a+x cool <br/>
+  $ cd ../../build/tests <br/>
+  $ ./tests <br/>
 
 8. Since the CoolCompiler targets LLVM, we need to take the output file and run it through clang <br/>
   $ clang hello-world.ll <br/>
